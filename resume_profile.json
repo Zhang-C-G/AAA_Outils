@@ -1,6 +1,6 @@
 ﻿{
     "version":  1,
-    "updated_at":  "2026-04-23 22:59:17",
+    "updated_at":  "2026-04-24 00:07:41",
     "sections":  [
                      {
                          "id":  "basic_info",
@@ -10,66 +10,163 @@
                                       {
                                           "id":  "full_name",
                                           "label":  "姓名",
-                                          "value":  "",
+                                          "value":  "张成功",
                                           "aliases":  "姓名,名字,真实姓名",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "gender",
                                           "label":  "性别",
-                                          "value":  "",
+                                          "value":  "男",
                                           "aliases":  "性别",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "phone",
                                           "label":  "手机号",
-                                          "value":  "",
+                                          "value":  "16680512973",
                                           "aliases":  "手机,电话,联系电话",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "email",
                                           "label":  "邮箱",
-                                          "value":  "",
+                                          "value":  "2970654645@qq.com",
                                           "aliases":  "邮箱,电子邮箱,email",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "birth_date",
                                           "label":  "出生日期",
-                                          "value":  "",
+                                          "value":  "2002-03-28",
                                           "aliases":  "出生日期,生日",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "current_city",
                                           "label":  "现居城市",
-                                          "value":  "",
+                                          "value":  "法国尼斯",
                                           "aliases":  "现居城市,所在城市,居住地",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "hometown",
                                           "label":  "籍贯",
-                                          "value":  "",
+                                          "value":  "杭州",
                                           "aliases":  "籍贯,户籍,生源地",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "political_status",
                                           "label":  "政治面貌",
-                                          "value":  "",
+                                          "value":  "群众",
                                           "aliases":  "政治面貌",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "id_card_type",
+                                          "label":  "证件类型",
+                                          "value":  "身份证",
+                                          "aliases":  "证件类型,证件类别",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "id_card_no",
+                                          "label":  "身份证号",
+                                          "value":  "341323200203280732",
+                                          "aliases":  "身份证号,证件号,身份证号码",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "family_city",
+                                          "label":  "家庭所在城市",
+                                          "value":  "杭州",
+                                          "aliases":  "家庭所在城市,家庭城市",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "school_city",
+                                          "label":  "学校所在城市",
+                                          "value":  "法国尼斯",
+                                          "aliases":  "学校所在城市,学校城市",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "ethnicity",
+                                          "label":  "民族",
+                                          "value":  "汉族",
+                                          "aliases":  "民族",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "religion",
+                                          "label":  "宗教信仰",
+                                          "value":  "无",
+                                          "aliases":  "宗教信仰,宗教",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "height",
+                                          "label":  "身高",
+                                          "value":  "175",
+                                          "aliases":  "身高",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "weight",
+                                          "label":  "体重",
+                                          "value":  "64kg",
+                                          "aliases":  "体重",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "emergency_contact",
+                                          "label":  "紧急联系人",
+                                          "value":  "张悦",
+                                          "aliases":  "紧急联系人,紧急联络人",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "emergency_contact_phone",
+                                          "label":  "紧急联系人电话",
+                                          "value":  "19855351344",
+                                          "aliases":  "紧急联系人电话,紧急联系人手机号,紧急联系电话",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "internal_referral",
+                                          "label":  "是否内推",
+                                          "value":  "是",
+                                          "aliases":  "是否内推,内推",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "job_adjustment_accept",
+                                          "label":  "是否接受岗位调剂",
+                                          "value":  "是",
+                                          "aliases":  "是否接受岗位调剂,接受岗位调剂,岗位调剂",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "job_channel",
+                                          "label":  "了解招聘信息的渠道",
+                                          "value":  "官方网站",
+                                          "aliases":  "了解招聘信息的渠道,招聘渠道,信息渠道",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "work_experience",
+                                          "label":  "工作经验",
+                                          "value":  "应届生",
+                                          "aliases":  "工作经验,工作年限",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "hobbies",
+                                          "label":  "兴趣爱好",
+                                          "value":  "游戏建模，音乐制作，前沿技术，工具",
+                                          "aliases":  "兴趣爱好,爱好,兴趣",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -81,42 +178,51 @@
                                       {
                                           "id":  "target_role",
                                           "label":  "期望岗位",
-                                          "value":  "",
+                                          "value":  "JAVA后端开发",
                                           "aliases":  "期望岗位,应聘岗位,岗位方向",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "target_city",
                                           "label":  "期望城市",
-                                          "value":  "",
+                                          "value":  "杭州",
                                           "aliases":  "期望城市,工作城市",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "salary",
                                           "label":  "期望薪资",
-                                          "value":  "",
+                                          "value":  "10000",
                                           "aliases":  "期望薪资,薪资要求",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "job_type",
                                           "label":  "求职类型",
                                           "value":  "",
                                           "aliases":  "求职类型,全职,实习",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "arrival_time",
                                           "label":  "到岗时间",
-                                          "value":  "",
+                                          "value":  "2026-04-17",
                                           "aliases":  "到岗时间,入职时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "current_salary",
+                                          "label":  "当前薪资",
+                                          "value":  "0",
+                                          "aliases":  "当前薪资,目前薪资,现薪",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "target_industry",
+                                          "label":  "期望行业",
+                                          "value":  "计算机软件",
+                                          "aliases":  "期望行业,目标行业,行业方向",
+                                          "type":  "text"
                                       }
                                   ]
                      },
@@ -128,58 +234,93 @@
                                       {
                                           "id":  "school",
                                           "label":  "学校名称",
-                                          "value":  "",
+                                          "value":  "约兹大学（尼斯蔚蓝大学）",
                                           "aliases":  "学校,院校,毕业院校",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "college",
                                           "label":  "学院",
-                                          "value":  "",
+                                          "value":  "计算机与软件工程学院",
                                           "aliases":  "学院,院系",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "major",
                                           "label":  "专业",
-                                          "value":  "",
+                                          "value":  "软件工程",
                                           "aliases":  "专业",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "degree",
                                           "label":  "学历",
-                                          "value":  "",
+                                          "value":  "硕士",
                                           "aliases":  "学历",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "education_time",
                                           "label":  "就读时间",
-                                          "value":  "",
+                                          "value":  "2025-09-01 至 2027-07-01",
                                           "aliases":  "在校时间,起止时间,教育时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "gpa_rank",
                                           "label":  "GPA/排名",
-                                          "value":  "",
+                                          "value":  "前10%",
                                           "aliases":  "GPA,排名,绩点",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "courses",
                                           "label":  "主修课程",
-                                          "value":  "",
+                                          "value":  "Spring Boot微服务、分布式系统、Docker容器化、CI/CD、MongoDB/NoSQL、AWS 云计算与部署",
                                           "aliases":  "主修课程,核心课程",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "school_city",
+                                          "label":  "学校所在城市",
+                                          "value":  "法国尼斯",
+                                          "aliases":  "学校所在城市,学校城市",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "major_desc",
+                                          "label":  "专业描述",
+                                          "value":  "软件工程硕士，目标扎实 Java 与云原生方向，课程涵盖 Spring Boot 微服务、Docker 容器化、CI/CD、MongoDB/NoSQL 与 AWS 云部署。",
+                                          "aliases":  "专业描述,专业说明",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "education_entry_01",
+                                          "label":  "教育经历01",
+                                          "value":  "学校名称：江苏大学\n学院名称：机械学院\n学校所在城市：江苏省镇江市\n学历：本科\n专业：机械设计及其自动化\n起止日期：2020-09-01 至 2023-07-01\nGPA：3.18\n排名：前11%\n专业主要课程：C语言程序设计、数理统计与算法、机械设计、工程力学、Python编程、MATLAB",
+                                          "aliases":  "教育经历01,本科经历1,江苏大学",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "education_entry_02",
+                                          "label":  "教育经历02",
+                                          "value":  "学校名称：ESTIA工程师学院\n学院名称：ESTIA\n学校所在城市：法国比达尔\n学历：本科\n专业：工程学与技术\n起止日期：2023-09-01 至 2024-07-01\n排名：前10%\n专业主要课程：数据结构与算法、计算机网络、数据库原理、单片机与嵌入式",
+                                          "aliases":  "教育经历02,本科经历2,ESTIA工程师学院本科",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "education_entry_03",
+                                          "label":  "教育经历03",
+                                          "value":  "学校名称：ESTIA工程师学院\n学院名称：ESTIA\n学校所在城市：法国比达尔\n学历：硕士\n专业：通用工程（计算机与软件方向）\n起止日期：2024-09-01 至 2025-07-01\nGPA：3.33\n排名：前20%\n专业主要课程：Python基础、JAVA应用、数据库技术、PHP后端开发、JS全栈开发",
+                                          "aliases":  "教育经历03,硕士经历1,ESTIA工程师学院硕士",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "education_entry_04",
+                                          "label":  "教育经历04",
+                                          "value":  "学校名称：约兹大学（尼斯蔚蓝大学）\n学院名称：计算机与软件工程学院\n学校所在城市：法国尼斯\n学历：硕士\n专业：软件工程\n起止日期：2025-09-01 至 2027-07-01\n排名：前10%\n专业主要课程：Spring Boot微服务、分布式系统、Docker容器化、CI/CD、MongoDB/NoSQL、AWS 云计算与部署",
+                                          "aliases":  "教育经历04,硕士经历2,约兹大学,尼斯蔚蓝大学",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -191,34 +332,37 @@
                                       {
                                           "id":  "intern_company",
                                           "label":  "实习单位",
-                                          "value":  "",
+                                          "value":  "Wikicampers",
                                           "aliases":  "公司,实习单位,单位名称",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "intern_role",
                                           "label":  "实习岗位",
-                                          "value":  "",
+                                          "value":  "JAVA后端开发实习生",
                                           "aliases":  "岗位,职位,担任职务",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "intern_time",
                                           "label":  "实习时间",
-                                          "value":  "",
+                                          "value":  "2025-04-01 至 2025-08-01",
                                           "aliases":  "实习时间,起止时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "intern_desc",
                                           "label":  "实习内容",
-                                          "value":  "",
+                                          "value":  "公司：Wikicampers\n行业类别：其他\n工作地点：法国比达尔\n所在部门：产品与技术部\n职位名称：JAVA后端开发实习生\n工作时间：2025-04-01 至 2025-08-01\n详细内容：\n1. 查询能力规范化：抽象查询 DTO，支持状态、日期区间、更新时间、用户视角过滤，补齐参数校验与 Postman 文档。\n2. 接口校验与错误码标准化：完善日期边界与区间冲突校验，通过 @ControllerAdvice 实现统一异常映射与错误码返回。\n3. 对关键人工修改增加状态流转校验与幂等保护，减少重复提交与并发覆盖风险。\n实习成果：\n1. 抽象通用查询 DTO，统一查询口径，提升接口复用性与可维护性。\n2. 完善日期校验与错误返回，提升接口健壮性与可测试性。\n3. 补充 Backoffice 关键链路测试与 Postman 接口联调，降低回归风险。",
                                           "aliases":  "工作内容,职责描述,实习描述",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "intern_entry_01",
+                                          "label":  "实习经历01",
+                                          "value":  "公司名称：Wikicampers\n行业类别：其他\n工作地点：法国比达尔\n所在部门：产品与技术部\n职位名称：JAVA后端开发实习生\n起止日期：2025-04-01 至 2025-08-01\n详细内容：查询能力规范化、接口校验与错误码标准化、状态流转校验与幂等保护、Postman 文档与联调测试。\n实习成果：抽象通用查询 DTO，提升接口复用性；完善日期校验和错误返回；补充 Backoffice 关键链路测试，降低回归风险。",
+                                          "aliases":  "实习经历01,Wikicampers",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -230,34 +374,44 @@
                                       {
                                           "id":  "project_name",
                                           "label":  "项目名称",
-                                          "value":  "",
+                                          "value":  "AI志愿咨询服务系统",
                                           "aliases":  "项目名称",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "project_role",
                                           "label":  "项目角色",
-                                          "value":  "",
+                                          "value":  "核心开发人员",
                                           "aliases":  "项目角色,职责",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "project_time",
                                           "label":  "项目时间",
-                                          "value":  "",
+                                          "value":  "2025-07-01 至 2025-09-01",
                                           "aliases":  "项目时间,起止时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "project_desc",
                                           "label":  "项目描述",
-                                          "value":  "",
+                                          "value":  "项目名称：AI志愿咨询服务系统\n项目角色：核心开发人员\n起止日期：2025-07-01 至 2025-09-01\n项目链接：https://github.com/Zhang-C-G/P_LangChain4J.git\n详细信息：基于 Spring Boot 与 LangChain4j 构建智能 AI 咨询系统，为高考考生提供志愿院校智能问答、预约咨询、录取位点查询等服务，解决志愿填报信息不对称问题。\n项目中职责：\n1. 构建 RAG 架构的 PDF 志愿指南智能问答系统，并结合 Redis 实现高效检索，提升回答准确性。\n2. 实现 Redis 会话记忆持久化与用户隔离机制，保障多轮对话上下文连续性与数据安全。\n3. 优化 MCP 框架中的上下文管理与工具调度流程，提升系统响应率与扩展性。",
                                           "aliases":  "项目描述,项目内容,项目亮点",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "project_entry_01",
+                                          "label":  "项目经历01",
+                                          "value":  "项目名称：高并发本地生活服务平台（ToC）\n担任角色：核心开发人员\n起止日期：2025-12-01 至 2026-03-03\n项目链接：https://github.com/Master-2-MIAGE-MBDS-ANTENNES/spring-lecoincoin-lecoincoin.git\n详细信息：基于 Spring Boot 构建本地生活服务平台，涵盖店铺检索、登录风控、评论异步化及秒杀系统等核心模块。\n项目中职责：\n1. 在测试与调试阶段处理 Full GC、接口卡顿等问题，定位系统瓶颈并完成性能优化。\n2. 主动排查并定位根因，结合 JFR 日志与 JVM 参数调优提升稳定性。\n3. 针对频繁写场景优化缓存策略，提升查询效率与系统性能。",
+                                          "aliases":  "项目经历01,高并发本地生活服务平台,ToC",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "project_entry_02",
+                                          "label":  "项目经历02",
+                                          "value":  "项目名称：AI志愿咨询服务系统\n担任角色：核心开发人员\n起止日期：2025-07-01 至 2025-09-01\n项目链接：https://github.com/Zhang-C-G/P_LangChain4J.git\n详细信息：基于 Spring Boot 与 LangChain4j 构建智能 AI 咨询系统，为高考考生提供志愿院校智能问答、预约咨询、录取位点查询等服务，解决志愿填报信息不对称问题。\n项目中职责：\n1. 构建 RAG 架构的 PDF 志愿指南智能问答系统，并结合 Redis 实现高效检索，提升回答准确性。\n2. 实现 Redis 会话记忆持久化与用户隔离机制，保障多轮对话上下文连续性与数据安全。\n3. 优化 MCP 框架中的上下文管理与工具调度流程，提升系统响应率与扩展性。",
+                                          "aliases":  "项目经历02,AI志愿咨询服务系统",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -269,34 +423,44 @@
                                       {
                                           "id":  "position_org",
                                           "label":  "组织/部门",
-                                          "value":  "",
+                                          "value":  "班级",
                                           "aliases":  "组织,部门,班级",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "position_name",
                                           "label":  "职务",
-                                          "value":  "",
+                                          "value":  "中法混合班级学生代表",
                                           "aliases":  "职务,职位",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "position_time",
                                           "label":  "任职时间",
-                                          "value":  "",
+                                          "value":  "2025-09-01 至 2026-09-01",
                                           "aliases":  "任职时间,起止时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "position_desc",
                                           "label":  "工作内容",
-                                          "value":  "",
+                                          "value":  "职务名称：中法混合班级学生代表\n学生干部级别：班级\n起止日期：2025-09-01 至 2026-09-01\n职务描述：\n1. 担任中法混合班级学生代表，依托中法双语能力，搭建中外学生与法国学生、校方的双向沟通桥梁。\n2. 统筹协调班级事务，包括日常教学安排、作业任务、活动通知的双语同步传达，确保中法学生信息同步无偏差。\n3. 协助解决中法学生在课程学习、小组项目、生活适应中的沟通问题，累计处理各类协助事项 30+。",
                                           "aliases":  "工作内容,职责描述",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "position_entry_01",
+                                          "label":  "在校职务01",
+                                          "value":  "职务名称：班级学习委员\n学生干部级别：班级\n起止日期：2020-09-01 至 2023-07-01\n职务描述：持续整理各课程复习资料与知识框架，建立班级学习资料共享机制，提升同学获取信息与复习效率，形成稳定的学习支持体系。",
+                                          "aliases":  "在校职务01,班级学习委员",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "position_entry_02",
+                                          "label":  "在校职务02",
+                                          "value":  "职务名称：中法混合班级学生代表\n学生干部级别：班级\n起止日期：2025-09-01 至 2026-09-01\n职务描述：担任中法混合班级学生代表，依托中法双语能力搭建沟通桥梁；统筹日常教学、作业、活动通知的双语同步传达；协助解决课程学习、小组项目与生活适应中的沟通问题，累计处理协助事项 30+。",
+                                          "aliases":  "在校职务02,中法混合班级学生代表",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -308,34 +472,37 @@
                                       {
                                           "id":  "activity_name",
                                           "label":  "活动名称",
-                                          "value":  "",
+                                          "value":  "校园学业竞赛活动",
                                           "aliases":  "活动名称,赛事名称",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "activity_role",
                                           "label":  "担任角色",
-                                          "value":  "",
+                                          "value":  "统筹协调助理",
                                           "aliases":  "角色,分工",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "activity_time",
                                           "label":  "活动时间",
-                                          "value":  "",
+                                          "value":  "2026-02-01 至 2026-03-28",
                                           "aliases":  "活动时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "activity_desc",
                                           "label":  "活动描述",
-                                          "value":  "",
+                                          "value":  "活动名称：校园学业竞赛活动\n担任职务：统筹协调助理\n实践方式：全职\n起止日期：2026-02-01 至 2026-03-28\n活动内容：\n1. 日常事务协调：协助统筹奖金筹备会流程，负责任务清单梳理、分工确认、进度跟进等事务性工作，配合协调场地布置、节目衔接等关键环节的落地执行。\n2. 现场执行配合：综合调动协调并维护现场秩序，配合人员调度、流程衔接等突发情况处理，高效配合团队完成各项执行任务，助力活动顺利举办。",
                                           "aliases":  "活动描述,活动内容",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "activity_entry_01",
+                                          "label":  "校园活动01",
+                                          "value":  "活动名称：校园学业竞赛活动\n担任职务：统筹协调助理\n实践方式：全职\n起止日期：2026-02-01 至 2026-03-28\n活动内容：日常事务协调、场地与流程配合、现场秩序维护、突发情况处理，协助团队完成活动执行落地。",
+                                          "aliases":  "校园活动01,校园活动经历1",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -349,8 +516,7 @@
                                           "label":  "家庭成员情况",
                                           "value":  "",
                                           "aliases":  "家庭成员,家庭情况",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -362,34 +528,58 @@
                                       {
                                           "id":  "award_name",
                                           "label":  "奖项名称",
-                                          "value":  "",
+                                          "value":  "江苏大学创新大赛一等奖",
                                           "aliases":  "奖项名称,荣誉名称",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "award_time",
                                           "label":  "获奖时间",
-                                          "value":  "",
+                                          "value":  "2022-05-12",
                                           "aliases":  "获奖时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "award_level",
                                           "label":  "奖项级别",
-                                          "value":  "",
+                                          "value":  "校级",
                                           "aliases":  "奖项级别,奖项等级",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "award_desc",
                                           "label":  "奖项说明",
-                                          "value":  "",
+                                          "value":  "奖项类别：竞赛获奖\n奖项名称：江苏大学创新大赛一等奖\n获奖时间：2022-05-12\n奖项级别：校级\n奖项等级：一等奖\n奖项描述：围绕校园环保与文化主题，完成海报主视觉材料集设计及逻辑撰写制作，通过场景构图与视觉表达结合的方式提升作品表现力与展示效果；项目中注重整体设计逻辑，突出主要表达与创意融合，最终在江苏大学创新大赛中获得一等奖。",
                                           "aliases":  "奖项说明,奖项描述",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "award_entry_01",
+                                          "label":  "获奖经历01",
+                                          "value":  "奖项类别：竞赛获奖\n奖项名称：江苏大学创新大赛一等奖\n获奖时间：2022-05-12\n奖项级别：校级\n奖项等级：一等奖\n奖项描述：围绕校园环保与文化主题完成海报主视觉材料集设计及逻辑撰写制作，强化作品表现力与展示效果，最终获江苏大学创新大赛一等奖。",
+                                          "aliases":  "获奖经历01,江苏大学创新大赛一等奖",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "award_entry_02",
+                                          "label":  "获奖经历02",
+                                          "value":  "奖项类别：奖学金\n奖项名称：江苏省海外学习政府奖学金\n获奖时间：2023-09-01\n奖项级别：省级\n奖项描述：该奖学金由江苏大学与政府联合设立，面向赴海外留学的本科学生进行评选，用于支持留学期间的学习与生活。评选基于学业成绩与综合表现，本人在校期间表现优异，顺利获得该项政府奖学金支持。",
+                                          "aliases":  "获奖经历02,江苏省海外学习政府奖学金",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "award_entry_03",
+                                          "label":  "获奖经历03",
+                                          "value":  "奖项类别：竞赛获奖\n奖项名称：法国24小时大赛赛区一等奖\n获奖时间：2021-12-01\n奖项级别：校级\n奖项等级：一等奖\n奖项描述：赛事要求在限定时间内完成从场景到功能部件的创意设计与实现。项目中负责核心功能拆分与实现，积极推进团队协作与快速迭代，最终获得赛区一等奖。",
+                                          "aliases":  "获奖经历03,法国24小时大赛赛区一等奖",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "award_entry_04",
+                                          "label":  "获奖经历04",
+                                          "value":  "奖项类别：竞赛获奖\n奖项名称：江苏大学第四届匠心杯一等奖\n获奖时间：2022-10-07\n奖项级别：校级\n奖项等级：一等奖\n奖项描述：围绕冬奥会主题进行设计与展示，通过视觉策划、结构设计及展示动线制作，融合艺术设计与工程实现，优化设计逻辑与视觉呈现，最终获江苏大学第四届匠心杯一等奖。",
+                                          "aliases":  "获奖经历04,江苏大学第四届匠心杯一等奖",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -401,50 +591,72 @@
                                       {
                                           "id":  "english_level",
                                           "label":  "英语等级",
-                                          "value":  "",
+                                          "value":  "其他",
                                           "aliases":  "英语等级",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "cet4",
                                           "label":  "CET4",
                                           "value":  "",
                                           "aliases":  "四级,CET4",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "cet6",
                                           "label":  "CET6",
                                           "value":  "",
                                           "aliases":  "六级,CET6",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "ielts",
                                           "label":  "IELTS",
                                           "value":  "",
                                           "aliases":  "雅思,IELTS",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "toefl",
                                           "label":  "TOEFL",
                                           "value":  "",
                                           "aliases":  "托福,TOEFL",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "english_desc",
                                           "label":  "英语说明",
-                                          "value":  "",
+                                          "value":  "水平：其他\n掌握程度：良好\n听说能力：良好\n读写能力：良好\n成绩：890/990",
                                           "aliases":  "英语说明,语言能力",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "english_mastery",
+                                          "label":  "掌握程度",
+                                          "value":  "良好",
+                                          "aliases":  "掌握程度,熟练程度",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "listening_speaking",
+                                          "label":  "听说能力",
+                                          "value":  "良好",
+                                          "aliases":  "听说能力,听力口语",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "reading_writing",
+                                          "label":  "读写能力",
+                                          "value":  "良好",
+                                          "aliases":  "读写能力,阅读写作",
+                                          "type":  "text"
+                                      },
+                                      {
+                                          "id":  "english_score",
+                                          "label":  "英语成绩",
+                                          "value":  "890/990",
+                                          "aliases":  "英语成绩,成绩",
+                                          "type":  "text"
                                       }
                                   ]
                      },
@@ -456,34 +668,44 @@
                                       {
                                           "id":  "certificate_name",
                                           "label":  "证书名称",
-                                          "value":  "",
+                                          "value":  "TOEIC",
                                           "aliases":  "证书名称,证书",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "certificate_time",
                                           "label":  "获取时间",
-                                          "value":  "",
+                                          "value":  "2024-09-09",
                                           "aliases":  "获取时间,发证时间",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "certificate_no",
                                           "label":  "证书编号",
                                           "value":  "",
                                           "aliases":  "证书编号",
-                                          "type":  "text",
-                                          "notes":  ""
+                                          "type":  "text"
                                       },
                                       {
                                           "id":  "certificate_desc",
                                           "label":  "证书说明",
-                                          "value":  "",
+                                          "value":  "证书名称：TOEIC\n获得时间：2024-09-09\n证书描述：英语语言证书",
                                           "aliases":  "证书说明",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "certificate_entry_01",
+                                          "label":  "证书信息01",
+                                          "value":  "证书名称：TOEIC\n获得时间：2024-09-09\n证书描述：英语语言证书",
+                                          "aliases":  "证书信息01,TOEIC",
+                                          "type":  "textarea"
+                                      },
+                                      {
+                                          "id":  "certificate_entry_02",
+                                          "label":  "证书信息02",
+                                          "value":  "证书名称：TCF\n获得时间：2025-03-20\n证书描述：法语语言证书",
+                                          "aliases":  "证书信息02,TCF",
+                                          "type":  "textarea"
                                       }
                                   ]
                      },
@@ -495,10 +717,9 @@
                                       {
                                           "id":  "self_intro",
                                           "label":  "自我介绍",
-                                          "value":  "",
+                                          "value":  "• 强组织、管理能力：\n担任班级学习委员管理学情；参与及主导 10 余项项目，协调多方资源，完成需求到落地的全流程工程开发，保障项目交付；负责上海交通大学与上海船舶设备研究所的联合科研团队赴法的学术交流活动，组织能力扎实。\n• 强学习能力：\n3 次获得校级奖学金和境外学习政府奖学金，曾自学游戏建模、虚幻引擎、剪辑、PS 等技能并取得江苏大学第四届匠心杯一等奖、江苏大学创新大赛一等奖。",
                                           "aliases":  "自我介绍,个人总结,个人优势",
-                                          "type":  "textarea",
-                                          "notes":  ""
+                                          "type":  "textarea"
                                       }
                                   ]
                      }

@@ -36,11 +36,12 @@
 - 本地简历文件：`resume_profile.json`
 - 顶层结构：`version` / `updated_at` / `sections`
 - 每个 section：`id` / `title` / `description` / `rows`
-- 每个 row：`id` / `label` / `value` / `aliases` / `type` / `notes`
+- 每个 row：`id` / `label` / `value` / `aliases` / `type`
 
 说明：
 - `aliases` 用于浏览器插件匹配招聘网站上的不同字段叫法。
 - `type` 当前支持：`text` / `textarea` / `date` / `select`
+- Web 编辑表格已移除 `说明/notes` 列，简历数据中不再保存该字段。
 
 ## 接口
 

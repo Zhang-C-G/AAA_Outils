@@ -9,8 +9,7 @@ function normalizeRow(row, index = 0) {
     label: String(row?.label || `字段${index + 1}`).trim() || `字段${index + 1}`,
     value: String(row?.value || ''),
     aliases: String(row?.aliases || ''),
-    type: ['text', 'textarea', 'select', 'date'].includes(type) ? type : 'text',
-    notes: String(row?.notes || '')
+    type: ['text', 'textarea', 'select', 'date'].includes(type) ? type : 'text'
   };
 }
 
@@ -71,8 +70,7 @@ function syncRowFromDom(sectionId, rowIndex, tr) {
     label: tr.querySelector('[data-k="label"]').value,
     value: tr.querySelector('[data-k="value"]').value,
     aliases: tr.querySelector('[data-k="aliases"]').value,
-    type: tr.querySelector('[data-k="type"]').value,
-    notes: tr.querySelector('[data-k="notes"]').value
+    type: tr.querySelector('[data-k="type"]').value
   }, rowIndex);
 }
 
@@ -112,7 +110,6 @@ function renderRows(section) {
           ${['text', 'textarea', 'date', 'select'].map((type) => `<option value="${type}"${type === row.type ? ' selected' : ''}>${type}</option>`).join('')}
         </select>
       </td>
-      <td><input type="text" data-k="notes" value="${escAttr(row.notes)}" /></td>
       <td><button class="btn ghost" type="button" data-k="delete">删除</button></td>
     `;
 
