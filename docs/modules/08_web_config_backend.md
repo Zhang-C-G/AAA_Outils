@@ -1,0 +1,44 @@
+﻿# 模块 08：Web 配置后端
+
+## 模块目标
+
+- 提供本地 HTTP API，支撑 Web 配置页读写。
+- 聚合配置状态、笔记、截图发手机、截图问答四类服务。
+- 保证保存链路可追踪、可回滚、可诊断。
+
+## 主要文件
+
+- `webui/config/server.ps1`
+- `webui/config/server-common.ps1`
+- `webui/config/server-state.ps1`
+- `webui/config/server_state/config.ps1`
+- `webui/config/server_state/capture.ps1`
+- `webui/config/server_state/assistant.ps1`
+- `webui/config/server-notes.ps1`
+- `webui/config/server-capture.ps1`
+- `webui/config/server-assistant.ps1`
+
+## 核心接口
+
+- `GET /api/state`
+- `POST /api/save`
+- `POST /api/app/mode`
+- `POST /api/version/save`
+- `POST /api/version/restore`
+
+## 稳定性机制
+
+- `/api/save` 必填校验：`categories/data/hotkeys`。
+- 保存前后日志：
+  - `config_save_payload`（提交行数）
+  - `config_save_result`（落盘行数）
+- `Read-BodyJson`：优先 UTF-8 读取请求体，失败后回退 `ContentEncoding`。
+- 静态资源禁缓存：`Cache-Control: no-store`。
+- 保存失败回滚：`config.ini.autobak`。
+
+## 改动后必查
+
+1. `config.ps1` 与 `server-common.ps1` 语法可解析。
+2. `/api/state` 返回 `categories/data/hotkeys`。
+3. 保存后日志出现 `payload + result + save` 三连记录。
+4. 刷新后数据与落盘一致，不出现“假成功”。

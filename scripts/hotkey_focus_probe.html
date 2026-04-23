@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotkey / Focus Probe</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --text: #f3f4f6;
+      --muted: #a1a1aa;
+      --line: #2a2f3a;
+      --accent: #66d9ef;
+      --warn: #f59e0b;
+      --ok: #22c55e;
+    }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top right, #1e2430 0%, var(--bg) 55%);
+      color: var(--text);
+      font: 14px/1.4 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px 24px;
+    }
+    .panel {
+      background: linear-gradient(180deg, #1b1f28, var(--panel));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    .hint { color: var(--muted); margin: 0; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    button {
+      background: #212734;
+      border: 1px solid #313949;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    button:hover { border-color: var(--accent); }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 2px 8px;
+      margin-right: 8px;
+      font-size: 12px;
+    }
+    .ok { color: var(--ok); border-color: rgba(34,197,94,.4); }
+    .warn { color: var(--warn); border-color: rgba(245,158,11,.4); }
+    #events {
+      width: 100%;
+      min-height: 420px;
+      background: #0d1016;
+      color: #d7dde8;
+      border: 1px solid #2b313f;
+      border-radius: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+      font: 12px/1.45 Consolas, "Courier New", monospace;
+      white-space: pre-wrap;
+    }
+    .kbd {
+      border: 1px solid #374151;
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      padding: 1px 6px;
+      font-family: Consolas, monospace;
+      background: #111827;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>浏览器焦点/按键探针</h1>
+      <p class="hint">
+        用于验证点击悬浮窗是否导致浏览器失焦，以及 <span class="kbd">F1/F2</span> 等按键是否被浏览器事件层感知。
+      </p>
+      <div class="row">
+        <span id="focusBadge" class="badge warn">Window: unknown</span>
+        <span id="visibilityBadge" class="badge warn">Document: unknown</span>
+      </div>
+      <div class="row">
+        <button id="markBtn">打标记（手动）</button>
+        <button id="clearBtn">清空日志</button>
+        <button id="downloadBtn">下载日志</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="events"></div>
+    </div>
+  </div>
+
+  <script>
+    const eventsEl = document.getElementById('events');
+    const focusBadge = document.getElementById('focusBadge');
+    const visibilityBadge = document.getElementById('visibilityBadge');
+
+    const logs = [];
+    const MAX_LINES = 1200;
+
+    function ts() {
+      const d = new Date();
+      const ms = String(d.getMilliseconds()).padStart(3, '0');
+      return `${d.toLocaleTimeString()}.${ms}`;
+    }
+
+    function setStateBadges() {
+      const focused = document.hasFocus();
+      focusBadge.textContent = `Window: ${focused ? 'focused' : 'blurred'}`;
+      focusBadge.className = `badge ${focused ? 'ok' : 'warn'}`;
+
+      const vis = document.visibilityState;
+      visibilityBadge.textContent = `Document: ${vis}`;
+      visibilityBadge.className = `badge ${vis === 'visible' ? 'ok' : 'warn'}`;
+    }
+
+    function push(line) {
+      logs.push(`[${ts()}] ${line}`);
+      if (logs.length > MAX_LINES) logs.shift();
+      eventsEl.textContent = logs.join('\n');
+      eventsEl.scrollTop = eventsEl.scrollHeight;
+      setStateBadges();
+    }
+
+    function keyLine(prefix, e) {
+      return `${prefix} key="${e.key}" code=${e.code} ctrl=${e.ctrlKey ? 1 : 0} alt=${e.altKey ? 1 : 0} shift=${e.shiftKey ? 1 : 0} meta=${e.metaKey ? 1 : 0} repeat=${e.repeat ? 1 : 0}`;
+    }
+
+    window.addEventListener('focus', () => push('window.focus'));
+    window.addEventListener('blur', () => push('window.blur'));
+    window.addEventListener('keydown', (e) => push(keyLine('keydown', e)), true);
+    window.addEventListener('keyup', (e) => push(keyLine('keyup', e)), true);
+    document.addEventListener('visibilitychange', () => push(`visibilitychange -> ${document.visibilityState}`));
+    document.addEventListener('pointerdown', (e) => push(`pointerdown target=<${(e.target && e.target.tagName) || 'unknown'}>`), true);
+
+    document.getElementById('markBtn').addEventListener('click', () => push('===== manual mark ====='));
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      logs.length = 0;
+      eventsEl.textContent = '';
+      push('logs cleared');
+    });
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      const blob = new Blob([logs.join('\n') + '\n'], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hotkey-focus-probe-${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    push('probe started');
+  </script>
+</body>
+</html>
+

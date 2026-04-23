@@ -1,0 +1,163 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raccourci Web UI</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <h1>Raccourci Control</h1>
+        <p id="subTitle">Web UI Config · 黑白风 · 阴影 · 动效</p>
+      </div>
+      <div class="header-actions">
+        <button id="restoreVersionBtn" class="btn ghost">恢复版本</button>
+        <button id="saveVersionBtn" class="btn ghost">保存版本</button>
+        <button id="reloadBtn" class="btn ghost">刷新</button>
+        <button id="saveBtn" class="btn primary">保存</button>
+      </div>
+    </header>
+
+    <section class="panel mode-panel">
+      <button class="mode-btn" id="modeShortcutsBtn">快捷字段</button>
+      <button class="mode-btn" id="modeNotesBtn">笔记</button>
+      <button class="mode-btn" id="modeCaptureBtn">截图发手机</button>
+      <button class="mode-btn" id="modeAssistantBtn">截图问答</button>
+      <button class="mode-btn" id="modeHotkeysBtn">快捷键</button>
+    </section>
+
+    <section id="shortcutsView" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <div id="tabs" class="tabs"></div>
+          <button id="addTabBtn" class="btn plus" title="新增栏目">+</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>触发词</th><th>内容</th><th>使用</th><th>操作</th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+
+        <div class="row-actions">
+          <button id="addRowBtn" class="btn">新增条目</button>
+          <button id="deleteTabBtn" class="btn danger">删除当前栏目</button>
+        </div>
+      </section>
+
+      <section class="panel side">
+        <div id="strategySection">
+          <h2>自动刷新策略</h2>
+          <div class="mini-actions">
+            <button id="resetStrategyBtn" class="btn ghost">恢复默认策略</button>
+          </div>
+          <div class="grid strategy">
+            <label><span>启用自动刷新</span><input id="autoRefreshEnabled" type="checkbox" /></label>
+            <label><span>每使用 N 次刷新</span><input id="refreshEveryUses" type="number" min="1" max="1000" /></label>
+            <label><span>每 N 分钟刷新</span><input id="refreshEveryMinutes" type="number" min="1" max="1440" /></label>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="hotkeysView" class="view hidden">
+      <section class="panel side hotkeys-panel">
+        <div id="hotkeysSection">
+          <h2>快捷键</h2>
+          <div class="mini-actions">
+            <button id="resetHotkeysBtn" class="btn ghost">恢复默认快捷键</button>
+          </div>
+          <div id="hotkeys" class="grid"></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="notesView" class="view hidden">
+      <section class="panel notes-layout">
+        <div class="notes-left">
+          <div class="notes-actions">
+            <button id="newNoteBtn" class="btn">新建笔记</button>
+            <button id="deleteNoteBtn" class="btn danger">删除笔记</button>
+          </div>
+          <div id="notesList" class="notes-list"></div>
+        </div>
+        <div class="notes-right">
+          <label>标题<input id="noteTitle" type="text" /></label>
+          <label>内容<textarea id="noteContent"></textarea></label>
+          <div class="notes-actions">
+            <button id="saveNoteBtn" class="btn primary">保存笔记</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="captureView" class="view hidden">
+      <section class="panel capture-layout">
+        <div class="capture-grid">
+          <label><span>Bridge Port</span><input id="capPort" type="number" min="1024" max="65535" /></label>
+          <label><span>Upload URL</span><input id="capEndpoint" type="text" /></label>
+          <label class="check"><span>上传后自动打开二维码</span><input id="capOpenQr" type="checkbox" /></label>
+        </div>
+
+        <div class="capture-status">
+          <span id="capPcStatus" class="badge off">PC: DISCONNECTED</span>
+          <span id="capPhoneStatus" class="badge wait">PHONE: WAITING</span>
+          <input id="capBridgeUrl" type="text" readonly />
+        </div>
+
+        <div class="capture-actions">
+          <button id="capSaveSettingsBtn" class="btn">保存设置</button>
+          <button id="capStartBtn" class="btn">Start Link</button>
+          <button id="capStopBtn" class="btn ghost">Stop Link</button>
+          <button id="capCaptureBtn" class="btn">Capture Screen</button>
+          <button id="capUploadBtn" class="btn">Upload To Phone</button>
+          <button id="capOpenPhoneBtn" class="btn ghost">Open Phone</button>
+          <button id="capOpenFolderBtn" class="btn ghost">Open Folder</button>
+        </div>
+
+        <label>Latest Capture<input id="capLatest" type="text" readonly /></label>
+        <label>Phone URL<input id="capPhoneUrl" type="text" readonly /></label>
+      </section>
+    </section>
+
+    <section id="assistantView" class="view hidden">
+      <section class="panel assistant-layout">
+        <div class="assistant-grid">
+          <label class="check"><span>启用助手</span><input id="assistantEnabled" type="checkbox" /></label>
+          <label><span>透明度(35-100)</span><input id="assistantOpacity" type="number" min="35" max="100" /></label>
+          <label><span>模型选择</span><select id="assistantModel"></select></label>
+          <label><span>API Endpoint</span><input id="assistantEndpoint" type="text" /></label>
+          <label><span>API Key</span><input id="assistantApiKey" type="password" /></label>
+          <label class="check"><span>禁止复制悬浮窗答案</span><input id="assistantDisableCopy" type="checkbox" /></label>
+          <label class="check"><span>启用每小时限流</span><input id="assistantRateEnabled" type="checkbox" /></label>
+          <label><span>每小时最多调用次数</span><input id="assistantRatePerHour" type="number" min="1" max="10000" /></label>
+          <label><span>模板选择</span><select id="assistantTemplateSelect"></select></label>
+          <label><span>模板名称</span><input id="assistantTemplateName" type="text" /></label>
+          <div class="assistant-template-actions">
+            <button id="assistantAddTplBtn" class="btn ghost">新增模板</button>
+            <button id="assistantDeleteTplBtn" class="btn danger">删除模板</button>
+          </div>
+          <label><span>Prompt</span><textarea id="assistantPrompt"></textarea></label>
+        </div>
+
+        <div class="assistant-actions">
+          <button id="assistantSaveBtn" class="btn">保存助手设置</button>
+          <button id="assistantShowOverlayBtn" class="btn ghost">启动悬浮窗</button>
+          <button id="assistantRunBtn" class="btn primary">截图并问答（F1）</button>
+        </div>
+        <div id="assistantHotkeyExplain" class="assistant-hotkey-explain"></div>
+      </section>
+    </section>
+
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script type="module" src="/app-main.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+﻿GetModeIdFromChoose(index) {
+    if (index = 2) {
+        return "notes"
+    }
+    if (index = 3) {
+        return "capture"
+    }
+    if (index = 4) {
+        return "assistant"
+    }
+    return "shortcuts"
+}
+
+OnConfigModeChanged(ctrl, *) {
+    global gActiveMode
+    nextMode := GetModeIdFromChoose(ctrl.Value)
+    if (nextMode = gActiveMode) {
+        return
+    }
+    if (gActiveMode = "notes" && nextMode != "notes") {
+        SaveCurrentNoteIfAny()
+    }
+    if (gActiveMode = "capture" && nextMode != "capture") {
+        SaveCaptureSettingsFromGui()
+        SetTimer(UpdateCaptureBridgeStatusUi, 0)
+    }
+    if (gActiveMode = "assistant" && nextMode != "assistant") {
+        SaveAssistantSettingsFromGui()
+    }
+    gActiveMode := nextMode
+    SaveData()
+    WriteLog("mode_switch", "active_mode=" gActiveMode)
+    RebuildConfigWindow()
+}
