@@ -59,7 +59,6 @@ RegisterHotkeys() {
         }
     }
 
-    RegisterPanelQuickInsertHotkeys()
     RegisterAssistantCaptureGuardHotkeys()
     HotIf()
 }
@@ -80,25 +79,6 @@ UnregisterHotkeys() {
     gRegisteredHotkeys := []
 }
 
-RegisterPanelQuickInsertHotkeys() {
-    global gRegisteredHotkeys
-    HotIf(PanelHotkeyCondition)
-    loop 9 {
-        keyName := "" A_Index
-        handler := GetPanelQuickInsertHandler(A_Index)
-        try {
-            Hotkey(keyName, handler, "On")
-            gRegisteredHotkeys.Push(Map("key", keyName, "handler", handler, "scope", "panel"))
-        }
-        npKey := "Numpad" A_Index
-        try {
-            Hotkey(npKey, handler, "On")
-            gRegisteredHotkeys.Push(Map("key", npKey, "handler", handler, "scope", "panel"))
-        }
-    }
-    HotIf()
-}
-
 RegisterAssistantCaptureGuardHotkeys() {
     global gRegisteredHotkeys
     HotIf(AssistantOverlayHotkeyCondition)
@@ -109,30 +89,6 @@ RegisterAssistantCaptureGuardHotkeys() {
         }
     }
     HotIf()
-}
-
-GetPanelQuickInsertHandler(slot) {
-    switch slot {
-        case 1:
-            return PanelQuickInsert1
-        case 2:
-            return PanelQuickInsert2
-        case 3:
-            return PanelQuickInsert3
-        case 4:
-            return PanelQuickInsert4
-        case 5:
-            return PanelQuickInsert5
-        case 6:
-            return PanelQuickInsert6
-        case 7:
-            return PanelQuickInsert7
-        case 8:
-            return PanelQuickInsert8
-        case 9:
-            return PanelQuickInsert9
-    }
-    return ""
 }
 
 GetHotkeyHandler(id) {
@@ -220,40 +176,4 @@ PanelMoveUp(*) {
 
 PanelMoveDown(*) {
     MoveListSelection(1)
-}
-
-PanelQuickInsert1(*) {
-    UseSelectionByIndex(1)
-}
-
-PanelQuickInsert2(*) {
-    UseSelectionByIndex(2)
-}
-
-PanelQuickInsert3(*) {
-    UseSelectionByIndex(3)
-}
-
-PanelQuickInsert4(*) {
-    UseSelectionByIndex(4)
-}
-
-PanelQuickInsert5(*) {
-    UseSelectionByIndex(5)
-}
-
-PanelQuickInsert6(*) {
-    UseSelectionByIndex(6)
-}
-
-PanelQuickInsert7(*) {
-    UseSelectionByIndex(7)
-}
-
-PanelQuickInsert8(*) {
-    UseSelectionByIndex(8)
-}
-
-PanelQuickInsert9(*) {
-    UseSelectionByIndex(9)
 }

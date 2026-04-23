@@ -13,7 +13,7 @@ BuildPanelGui() {
     title := gPanelGui.AddText("xm ym w" panelInnerW " h28 c" gTheme["text_primary"], gAppName)
     title.SetFont("s15 w700", "Segoe UI")
 
-    subTitle := gPanelGui.AddText("xm y+2 w" panelInnerW " h20 c" gTheme["text_muted"], "Alt+Q 呼出 · Enter 插入 · 1-9 秒插 · Esc 关闭")
+    subTitle := gPanelGui.AddText("xm y+2 w" panelInnerW " h20 c" gTheme["text_muted"], "Alt+Q 呼出 · Enter 插入 · Esc 关闭")
     subTitle.SetFont("s9", "Microsoft YaHei UI")
 
     gPanelGui.AddText("xm y+8 w" panelInnerW " h1 0x10 Background" gTheme["line"])
@@ -32,7 +32,7 @@ BuildPanelGui() {
     gMatchList.ModifyCol(2, 236)
     gMatchList.ModifyCol(3, 52)
 
-    gHintText := gPanelGui.AddText("xm y+8 w" panelInnerW " h20 c" gTheme["text_hint"], "Tip: 空搜索默认展示提示词 Top 5，1-9 一键插入，↑/↓ 切换候选")
+    gHintText := gPanelGui.AddText("xm y+8 w" panelInnerW " h20 c" gTheme["text_hint"], "Tip: 空搜索默认展示提示词 Top 5，↑/↓ 切换候选，Enter 插入")
     gHintText.SetFont("s8", "Microsoft YaHei UI")
 
     gPanelGui.OnEvent("Close", (*) => HidePanel())
@@ -157,9 +157,6 @@ RefreshMatches(query) {
             preview := SubStr(preview, 1, 30) "..."
         }
         keyLabel := row["key"]
-        if (idx <= 9) {
-            keyLabel := idx ". " keyLabel
-        }
         heat := GetUsageCountByCategory(row["cat_id"], row["key"])
         gMatchList.Add(, keyLabel, preview, heat)
     }
@@ -235,22 +232,6 @@ UseCurrentSelection() {
     }
 
     UseMatchedRow(gMatches[row])
-}
-
-UseSelectionByIndex(slot) {
-    global gMatches, gMatchList
-    idx := Integer(slot)
-    if (idx < 1 || idx > 9) {
-        return
-    }
-    if (gMatches.Length < idx) {
-        SoundBeep(1000)
-        return
-    }
-    gMatchList.Modify(0, "-Select")
-    gMatchList.Modify(idx, "Select Focus")
-    gMatchList.Modify(idx, "Vis")
-    UseMatchedRow(gMatches[idx])
 }
 
 UseMatchedRow(selected) {

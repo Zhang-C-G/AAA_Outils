@@ -4,13 +4,13 @@
 
 - 全局悬浮面板：`Alt+Q`
 - 主配置窗口：`Alt+Shift+Q`
-- 主界面模式切换：快捷键 / 笔记 / 截图发手机 / 截图问答
+- 主界面模式切换：快捷字段 / 笔记 / 截图发手机 / 截图问答 / 简历自动填写 / 快捷键
 - 动态栏目机制：新增/内联改名/单次确认删除
 - 版本机制：保存版本 / 恢复到最近保存版本
 
 ## 模块口径（当前）
 
-- 业务模块：4 个（快捷字段、笔记、截图发手机、截图问答）。
+- 业务模块：5 个（快捷字段、笔记、截图发手机、截图问答、简历自动填写）。
 - 全局快捷键：归类为 Shared 公用能力，不计入业务模块数量。
 - “快捷键”页面是公用能力管理入口，不单独计入业务模块。
 
@@ -25,6 +25,12 @@
 
 - Windows
 - AutoHotkey v2.x
+
+## 开发态说明
+
+- 运行中的脚本默认启用源码自动刷新。
+- 修改 `main.ahk` 或 `src/*.ahk` 后，脚本会自动检测变更并执行热重载。
+- 因此开发/排障时，如出现“保存文件后程序立刻刷新”，这是预期行为，不是异常。
 
 ## 快速开始
 
@@ -42,7 +48,7 @@
 - 顶部右侧：`保存版本` / `恢复版本`
   - 保存版本：保存当前栏目和栏目内条目
   - 恢复版本：恢复到最近一次保存版本
-- 顶部模式切换：`快捷字段` / `笔记` / `截图发手机` / `截图问答` / `快捷键`
+- 顶部模式切换：`快捷字段` / `笔记` / `截图发手机` / `截图问答` / `简历自动填写` / `快捷键`
 - 快捷字段页：默认自动保存（新增/编辑/删除/排序后自动落盘）
 - 快捷键页：独立全宽主区域展示，支持多列布局
 - 笔记增强：
@@ -65,6 +71,11 @@
     - 优先 `WDA_EXCLUDEFROMCAPTURE`（本地可见、录制/截图不可见）
     - 若系统不支持则自动回退为“风险触发临时隐藏 + 原位恢复”
   - 说明：仅提供正常可见悬浮窗，不提供规避检测能力
+- 简历自动填写：
+  - Web 配置页新增“简历自动填写”模块
+  - 按分区维护简历 Profile（基本信息、求职期望、教育经历、实习经历、项目经历等）
+  - 本地简历资料保存到 `resume_profile.json`
+  - 配套浏览器插件从本地接口读取 Profile，并尝试自动填写当前网页表单
 
 ## 快捷键
 
@@ -123,11 +134,13 @@
 - `webui/config/server-notes.ps1`：笔记接口
 - `webui/config/server-capture.ps1`：截图发手机接口
 - `webui/config/server-assistant.ps1`：截图问答接口
+- `webui/config/server-resume.ps1`：简历 Profile 接口
 - `webui/config/app-main.js`：Web 前端入口
 - `webui/config/app-shortcuts.js`：快捷键模式前端
 - `webui/config/app-notes.js`：笔记模式前端
 - `webui/config/app-capture.js`：截图模式前端
 - `webui/config/app-assistant.js`：截图问答模式前端
+- `webui/config/app-resume.js`：简历自动填写模式前端
 - `src/effects.ahk`：动画与输入法切换
 - `src/helpers.ahk`：通用工具函数
 - `docs/ACTION_LOG.md`：动作日志规范
@@ -136,11 +149,13 @@
 - `docs/components/*.md`：按功能域拆分的组件子文档
 - `docs/modules/README.md`：按小功能拆分的模块文档索引（每模块独立维护）
 - `docs/UPDATE_CHECKLIST.md`：每次改动后的文档更新清单
+- `browser_extension/resume_autofill/`：浏览器插件骨架（读取本地简历并自动填表）
 
 ## 数据文件
 
 - 配置文件：`config.ini`
 - 配置分区：`[Categories]` / `[Fields|Prompts|QuickFields|Category_*]` / `[Hotkeys]` / `[Behavior]` / `[App]` / `[Capture]` / `[Assistant]` / `[AssistantTemplates]`
+- 简历资料：`resume_profile.json`
 - 使用频率：`usage.ini`
 - 版本快照：`config.snapshot.ini`
 - 动作日志：`action.log`

@@ -25,3 +25,8 @@ Track documentation-only updates.
 - Synced assistant model-selection docs: frontend switched from free text to backend-driven dropdown.
 - Added model consistency contract: `/api/assistant/state` exposes `assistant.model_options`, and save path validates model against whitelist with default fallback.
 - Updated module 06 and Web API component docs to include newly supported model `doubao-seed-2-0-pro-260215`.
+- Added `docs/AI_HANDOFF.md` as the canonical AI handoff entry for project status, priorities, risks, and next-step context.
+- Updated `docs/COMPONENTS.md` and `docs/UPDATE_CHECKLIST.md` to require ongoing AI handoff maintenance on future changes.
+- Synced hotkey panel docs after removing `1-9` / `Numpad1-9` quick-insert behavior from the floating panel.
+- Added cross-entry documentation note that AHK source edits trigger automatic hot reload during development, so future AI handoffs and debugging account for it.
+- Documented the first usable resume-autofill module: Web resume editor, local resume API, `resume_profile.json`, and browser extension skeleton.

@@ -12,6 +12,9 @@ function Send-Json {
   param($Res, $Obj)
   $json = $Obj | ConvertTo-Json -Depth 20
   $buf = [Text.Encoding]::UTF8.GetBytes($json)
+  $Res.Headers['Access-Control-Allow-Origin'] = '*'
+  $Res.Headers['Access-Control-Allow-Headers'] = 'Content-Type'
+  $Res.Headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
   $Res.ContentType = 'application/json; charset=utf-8'
   $Res.ContentLength64 = $buf.Length
   $Res.OutputStream.Write($buf, 0, $buf.Length)
@@ -20,6 +23,9 @@ function Send-Json {
 function Send-Text {
   param($Res, [string]$Text, [string]$Type = 'text/plain; charset=utf-8')
   $buf = [Text.Encoding]::UTF8.GetBytes($Text)
+  $Res.Headers['Access-Control-Allow-Origin'] = '*'
+  $Res.Headers['Access-Control-Allow-Headers'] = 'Content-Type'
+  $Res.Headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
   $Res.ContentType = $Type
   $Res.ContentLength64 = $buf.Length
   $Res.OutputStream.Write($buf, 0, $buf.Length)
@@ -148,7 +154,7 @@ function Get-CategorySection {
 function Normalize-Mode {
   param([string]$Mode)
   $m = ($Mode + '').Trim().ToLowerInvariant()
-  if ($m -in @('shortcuts', 'notes', 'capture', 'assistant', 'hotkeys', 'testing')) { return $m }
+  if ($m -in @('shortcuts', 'notes', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')) { return $m }
   return 'shortcuts'
 }
 

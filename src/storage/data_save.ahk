@@ -1,5 +1,5 @@
 SaveData() {
-    global gDataFile, gData, gHotkeys, gHotkeyDefs, gBehavior, gCategories, gActiveMode, gCaptureSettings, gAssistantSettings
+    global gDataFile, gData, gHotkeys, gHotkeyDefs, gBehavior, gCategories, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings
     try ProcessWebConfigActionFile()
 
     EnsureAssistantTemplates(gAssistantSettings)
@@ -63,6 +63,15 @@ SaveData() {
     lines.Push("disable_copy=" (gAssistantSettings.Has("disable_copy") ? gAssistantSettings["disable_copy"] : 1))
     lines.Push("rate_limit_enabled=" gAssistantSettings["rate_limit_enabled"])
     lines.Push("rate_limit_per_hour=" gAssistantSettings["rate_limit_per_hour"])
+
+    lines.Push("")
+    lines.Push("[Resume]")
+    lines.Push("name=" gResumeSettings["name"])
+    lines.Push("phone=" gResumeSettings["phone"])
+    lines.Push("email=" gResumeSettings["email"])
+    lines.Push("education=" gResumeSettings["education"])
+    lines.Push("experience=" gResumeSettings["experience"])
+    lines.Push("skills=" gResumeSettings["skills"])
 
     lines.Push("")
     lines.Push("[AssistantTemplates]")

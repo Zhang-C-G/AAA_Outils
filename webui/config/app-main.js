@@ -3,6 +3,7 @@ import { initShortcutsHandlers, applyShortcutsState, saveShortcuts } from './app
 import { initNotesHandlers, loadNotes, saveCurrentNote } from './app-notes.js';
 import { initCaptureHandlers, refreshCaptureState } from './app-capture.js';
 import { initAssistantHandlers, applyAssistantState, saveAssistantSettings } from './app-assistant.js';
+import { initResumeHandlers, applyResumeState, saveResumeProfile } from './app-resume.js';
 import { initTestingHandlers, runOverlayRecordTest } from './app-testing.js';
 
 let capturePollTimer = 0;
@@ -53,7 +54,7 @@ function tryRestoreShortcutsDraft() {
 }
 
 async function switchMode(mode) {
-  if (!['shortcuts', 'notes', 'capture', 'assistant', 'hotkeys', 'testing'].includes(mode)) {
+  if (!['shortcuts', 'notes', 'capture', 'assistant', 'resume', 'hotkeys', 'testing'].includes(mode)) {
     mode = 'shortcuts';
   }
 
@@ -71,7 +72,8 @@ async function switchMode(mode) {
       (mode === 'hotkeys' ? '保存快捷键' :
       (mode === 'notes' ? '保存笔记' :
       (mode === 'capture' ? '保存截图设置' :
-      (mode === 'assistant' ? '保存助手设置' : '执行测试'))));
+      (mode === 'assistant' ? '保存助手设置' :
+      (mode === 'resume' ? '保存简历资料' : '执行测试')))));
   }
 
   const persistedMode = (mode === 'hotkeys' || mode === 'testing') ? 'shortcuts' : mode;
@@ -97,12 +99,19 @@ async function switchMode(mode) {
   if (mode === 'assistant') {
     applyAssistantState({ assistant: state.assistant });
   }
+  if (mode === 'resume') {
+    applyResumeState({ resume: state.resume });
+  }
 }
 
 async function reloadAll() {
-  const payload = await api('/api/state');
+  const [payload, resumePayload] = await Promise.all([
+    api('/api/state'),
+    api('/api/resume/state')
+  ]);
   applyShortcutsState(payload);
   applyAssistantState(payload);
+  applyResumeState({ resume: resumePayload.state || state.resume });
   await switchMode(payload.app?.active_mode || 'shortcuts');
 }
 
@@ -117,6 +126,8 @@ function bindHeaderActions() {
           await saveCurrentNote();
         } else if (state.app.active_mode === 'capture') {
           byId('capSaveSettingsBtn').click();
+        } else if (state.app.active_mode === 'resume') {
+          await saveResumeProfile();
         } else if (state.app.active_mode === 'testing') {
           await runOverlayRecordTest();
         } else {
@@ -169,6 +180,7 @@ function bindHeaderActions() {
   byId('modeNotesBtn').onclick = () => switchMode('notes').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeCaptureBtn').onclick = () => switchMode('capture').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeAssistantBtn').onclick = () => switchMode('assistant').catch(e => toast(`切换失败: ${e.message}`));
+  byId('modeResumeBtn').onclick = () => switchMode('resume').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeHotkeysBtn').onclick = () => switchMode('hotkeys').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeTestingBtn').onclick = () => switchMode('testing').catch(e => toast(`切换失败: ${e.message}`));
 
@@ -184,6 +196,7 @@ async function bootstrap() {
   initNotesHandlers();
   initCaptureHandlers();
   initAssistantHandlers();
+  initResumeHandlers();
   initTestingHandlers();
   bindHeaderActions();
 

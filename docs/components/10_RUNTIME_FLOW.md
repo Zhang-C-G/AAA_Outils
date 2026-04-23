@@ -58,6 +58,14 @@
 - 悬浮窗滚动：`assistant_overlay_up` / `assistant_overlay_down`（默认 `Alt+Up` / `Alt+Down`）
 - 本地模拟：`api_endpoint=mock://local` 或 `model=mock-local` 时，不调用外部 API，返回本地模拟答案
 
+### 简历自动填写链路（新增）
+
+- 编辑：Web 配置页 `resumeView` -> `app-resume.js`
+- 保存：`POST /api/resume/save` -> `webui/config/server-resume.ps1`
+- 持久化：`resume_profile.json`
+- 插件读取：浏览器插件请求 `GET /api/resume/profile`
+- 自动填写：内容脚本根据 `字段名 / 别名 / name / placeholder / label` 做启发式匹配并回填输入框
+
 ## 排障建议
 
 - 快捷键失效优先检查：`[Hotkeys]` 内容与 `WriteLog("hotkey_register_failed", ...)`

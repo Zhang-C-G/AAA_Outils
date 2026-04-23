@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZCG Resume Autofill</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="app">
+    <h1>ZCG Resume Autofill</h1>
+    <p class="desc">读取本地 `ZCG-Raccourci Control` 的简历 Profile，并尝试填写当前页面。</p>
+    <label>
+      <span>本地接口</span>
+      <input id="apiBase" type="text" value="http://127.0.0.1:8798" />
+    </label>
+    <div class="actions">
+      <button id="loadBtn">读取本地简历</button>
+      <button id="fillBtn" class="primary">自动填写当前页</button>
+    </div>
+    <textarea id="output" readonly></textarea>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

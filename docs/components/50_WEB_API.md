@@ -4,7 +4,7 @@
 
 - Web UI 的所有数据读写通过本地 HTTP API 完成。
 - 服务脚本入口：`webui/config/server.ps1`
-- 服务模块：`server-common.ps1` / `server-state.ps1` / `server-notes.ps1` / `server-capture.ps1` / `server-assistant.ps1`
+- 服务模块：`server-common.ps1` / `server-state.ps1` / `server-notes.ps1` / `server-capture.ps1` / `server-assistant.ps1` / `server-resume.ps1`
 - `server-state.ps1` 现为聚合入口，内部继续拆分到 `webui/config/server_state/*.ps1`（capture/assistant/config）。
 - AHK 桥接：`src/web_config.ahk`
 
@@ -48,6 +48,14 @@
 - `save-settings` 安全规则：明文 key 不回传，后端只持久化 `api_key_protected`
 - `capture-ask` 限流规则：按每小时窗口计数，超限返回错误（`assistant_rate_limited`）
 
+## 简历自动填写接口
+
+- `GET /api/resume/state`：读取简历模块状态，返回 `profile + flat_map`
+- `POST /api/resume/save`：保存分区式简历 Profile
+- `GET /api/resume/profile`：供浏览器插件读取简历 Profile 与平铺键值映射
+- `flat_map` 规则：按 `字段名 / 字段 id / 别名` 展开为统一键值表，供插件按启发式规则匹配网页表单
+- 当前本地简历资料持久化文件为 `resume_profile.json`
+
 ## 前端拆分
 
 - `webui/config/app-common.js`：共享状态、API、通用工具
@@ -55,6 +63,7 @@
 - `webui/config/app-notes.js`：笔记模式逻辑
 - `webui/config/app-capture.js`：截图模式逻辑
 - `webui/config/app-assistant.js`：截图问答模式逻辑
+- `webui/config/app-resume.js`：简历自动填写模式逻辑
 - `webui/config/app-main.js`：入口、模式切换、全局事件
 - `webui/config/app-main.js` 含快捷键页草稿保护：刷新/离开前写入 session 草稿，重载后自动恢复
 

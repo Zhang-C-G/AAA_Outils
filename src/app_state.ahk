@@ -1,4 +1,4 @@
-﻿; State and app bootstrap
+; State and app bootstrap
 
 ; ---------------------------------
 ; Global config / state
@@ -17,6 +17,7 @@ gWebConfigPort := 8798
 gWebConfigServerFile := A_ScriptDir "\\webui\\config\\server.ps1"
 gWebConfigPidFile := A_Temp "\\raccourci_web_config_server.pid"
 gWebConfigActionFile := A_Temp "\\raccourci_web_config_action.json"
+gResumeProfileFile := A_ScriptDir "\\resume_profile.json"
 gAppName := "ZCG-Raccourci Control"
 
 gPanelGui := ""
@@ -38,6 +39,7 @@ gBehavior := Map()
 gAppSettings := Map()
 gCaptureSettings := Map()
 gAssistantSettings := Map()
+gResumeSettings := Map()
 gActiveMode := "shortcuts"
 gCurrentQuery := ""
 gUsesSinceAutoRefresh := 0
@@ -56,7 +58,7 @@ gDevAutoReloadEnabled := true
 gDevReloadSignature := ""
 
 Init() {
-    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings
+    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings
     InitTheme()
     InitHotkeyDefs()
     EnsureDataFile()
@@ -72,6 +74,7 @@ Init() {
     gAppSettings := LoadAppSettings()
     gCaptureSettings := LoadCaptureSettings()
     gAssistantSettings := LoadAssistantSettings()
+    gResumeSettings := LoadResumeSettings()
     gActiveMode := gAppSettings["active_mode"]
 
     BuildPanelGui()

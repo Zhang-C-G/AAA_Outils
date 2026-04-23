@@ -19,7 +19,7 @@ ShowWebConfigWindow() {
 StartWebConfigServer(port := 8798) {
     global gWebConfigPort, gWebConfigPidFile, gWebConfigServerFile
     global gDataFile, gUsageFile, gSnapshotFile, gWebConfigActionFile, gNotesDir, gCaptureDir, gLogFile
-    global gCaptureBridgeScript, gCaptureBridgePidFile, gCaptureBridgeStatusFile
+    global gCaptureBridgeScript, gCaptureBridgePidFile, gCaptureBridgeStatusFile, gResumeProfileFile
 
     gWebConfigPort := port
     if IsWebConfigServerAlive() {
@@ -49,6 +49,7 @@ StartWebConfigServer(port := 8798) {
         . ' -BridgeScript "' gCaptureBridgeScript '"'
         . ' -BridgePidFile "' gCaptureBridgePidFile '"'
         . ' -BridgeStatusFile "' gCaptureBridgeStatusFile '"'
+        . ' -ResumeProfileFile "' gResumeProfileFile '"'
         . ' -LogFile "' gLogFile '"'
 
     try {

@@ -30,7 +30,12 @@
   protectedCategoryIds: new Set(['fields', 'prompts', 'quick_fields']),
   dirty: false,
   notes: { list: [], currentId: '', dirty: false },
-  capture: { phoneUrl: '' }
+  capture: { phoneUrl: '' },
+  resume: {
+    profile: { version: 1, updated_at: '', sections: [] },
+    flat_map: {},
+    selectedSectionId: ''
+  }
 };
 
 export const fallbackHotkeyDefs = [
@@ -133,12 +138,14 @@ export function validateHotkeyText(hk) {
 export function setModeUi(mode) {
   const isShortcuts = mode === 'shortcuts';
   const isHotkeys = mode === 'hotkeys';
+  const isResume = mode === 'resume';
   const isTesting = mode === 'testing';
 
   byId('modeShortcutsBtn').classList.toggle('active', isShortcuts);
   byId('modeNotesBtn').classList.toggle('active', mode === 'notes');
   byId('modeCaptureBtn').classList.toggle('active', mode === 'capture');
   byId('modeAssistantBtn').classList.toggle('active', mode === 'assistant');
+  byId('modeResumeBtn').classList.toggle('active', isResume);
   byId('modeHotkeysBtn').classList.toggle('active', isHotkeys);
   byId('modeTestingBtn').classList.toggle('active', isTesting);
 
@@ -147,5 +154,6 @@ export function setModeUi(mode) {
   byId('notesView').classList.toggle('hidden', mode !== 'notes');
   byId('captureView').classList.toggle('hidden', mode !== 'capture');
   byId('assistantView').classList.toggle('hidden', mode !== 'assistant');
+  byId('resumeView').classList.toggle('hidden', !isResume);
   byId('testingView').classList.toggle('hidden', !isTesting);
 }

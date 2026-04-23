@@ -20,6 +20,7 @@
       <button class="mode-btn" id="modeNotesBtn">笔记</button>
       <button class="mode-btn" id="modeCaptureBtn">截图发手机</button>
       <button class="mode-btn" id="modeAssistantBtn">截图问答</button>
+      <button class="mode-btn" id="modeResumeBtn">简历自动填写</button>
       <button class="mode-btn" id="modeHotkeysBtn">快捷键</button>
       <button class="mode-btn" id="modeTestingBtn">测试</button>
     </section>
@@ -149,6 +150,45 @@
           <button id="assistantRunBtn" class="btn primary">截图并问答（F1）</button>
         </div>
         <div id="assistantHotkeyExplain" class="assistant-hotkey-explain"></div>
+      </section>
+    </section>
+
+    <section id="resumeView" class="view hidden">
+      <section class="panel resume-layout">
+        <aside class="resume-sidebar">
+          <div class="resume-sidebar-head">
+            <h2>简历分区</h2>
+            <p>按模块维护资料，供浏览器插件自动填表。</p>
+          </div>
+          <div id="resumeSections" class="resume-sections"></div>
+        </aside>
+        <div class="resume-main">
+          <div class="resume-main-head">
+            <div>
+              <h2 id="resumeSectionTitle">简历自动填写</h2>
+              <p id="resumeSectionDesc">先选择左侧分区，再编辑字段。</p>
+            </div>
+            <div class="assistant-actions">
+              <button id="resumeSaveBtn" class="btn">保存简历资料</button>
+              <button id="resumeCopyJsonBtn" class="btn ghost">复制 JSON</button>
+            </div>
+          </div>
+
+          <div class="table-wrap resume-table-wrap">
+            <table>
+              <thead>
+                <tr><th>字段名</th><th>值</th><th>匹配别名</th><th>类型</th><th>说明</th><th>操作</th></tr>
+              </thead>
+              <tbody id="resumeRows"></tbody>
+            </table>
+          </div>
+
+          <div class="row-actions">
+            <button id="resumeAddRowBtn" class="btn">新增字段</button>
+          </div>
+
+          <label><span>当前 Profile JSON 预览</span><textarea id="resumeJsonPreview" readonly></textarea></label>
+        </div>
       </section>
     </section>
 

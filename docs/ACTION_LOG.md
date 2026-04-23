@@ -67,7 +67,7 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 
 ### 模式与笔记
 
-- `mode_switch`：模式切换（快捷键/笔记/截图发手机/截图问答）
+- `mode_switch`：模式切换（快捷字段/笔记/截图发手机/截图问答/简历自动填写/快捷键）
 - `notes_select`：切换当前笔记
 - `notes_new`：新建笔记
 - `notes_save`：保存当前笔记
@@ -92,6 +92,10 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `assistant_answer_show` / `assistant_answer_failed`：模型回答展示成功/失败
 - `assistant_rate_consume` / `assistant_rate_limited`：每小时限流计数消耗 / 命中上限
 - `assistant_secret_protect_failed` / `assistant_secret_unprotect_failed`：密钥加解密失败（排障用）
+
+### 简历自动填写
+
+- `resume_profile_save`：保存分区式简历 Profile
 
 ## 动作与模块映射（帮助下一个 AI 快速定位）
 
@@ -151,7 +155,7 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-04-22`：截图问答热键升级：`Alt+Shift+A` 改为“启动问答悬浮窗”，新增 `F1` 为“截图并问答”；Web Assistant 新增“启动悬浮窗”按钮与 `/api/assistant/show-overlay`、`/api/assistant/trigger-capture` 接口。
 - `2026-04-22`：问答悬浮窗启用系统级防截屏标记（`SetWindowDisplayAffinity`：`WDA_EXCLUDEFROMCAPTURE`，失败回退 `WDA_MONITOR`），并新增对应动作日志用于兼容性排查。
 - `2026-04-22`：新增快捷字段示例 `更新`（文档同步 + 大文件拆分目标），写入 `[QuickFields]` 并补充到默认初始化模板。
-- `2026-04-22`：悬浮面板插入效率优化：面板内支持 `1-9`（含小键盘 `Numpad1-9`）一键插入候选，无需手动输入触发词。
+- `2026-04-23`：按交互回退悬浮面板数字秒插能力：移除 `1-9` / `Numpad1-9` 候选直插，仅保留 `↑/↓` 选中与 `Enter` 确认插入。
 - `2026-04-22`：截图问答悬浮窗展示优化：开启自动换行，新增代码段换行格式整理，减少“一行到底”显示问题。
 - `2026-04-22`：修复 `src/assistant_overlay.ahk` 的 `Missing """"`：代码块格式化正则中的三连反引号导致字符串转义冲突，改为 `fence := Chr(96) Chr(96) Chr(96)` 拼接写法。
 - `2026-04-22`：截图问答悬浮窗透明度修复：滑杆按百分比映射到实际 alpha，100% 改为 `WinSetTransparent("Off")`，避免“100% 仍半透明”。
@@ -169,7 +173,7 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-04-22`：新增录屏防护：风险检测引擎增加常见录屏器（OBS/Bandicam/Camtasia/Snagit/Game Bar/ShareX/ffmpeg 等）进程与窗口识别；命中时自动临时隐藏问答悬浮窗，解除后原位恢复。
 - `2026-04-22`：策略升级为“可见且不可录/不可截”优先：默认启用 `WDA_EXCLUDEFROMCAPTURE` 并记录激活状态；当 `WDA` 生效时不再执行临时隐藏（保持悬浮窗可见），仅在 `WDA` 失效时回退到截图/录屏风险隐藏策略。
 - `2026-04-22`：文档整治：重写乱码文档（模块索引/运行态/共享契约/模板/总图）并与当前实现对齐（原位更新、防截图、防录屏、WDA 优先回退策略）。
-- `2026-04-22`：文档口径澄清：业务模块固定为 4 个（快捷字段/笔记/截图发手机/截图问答）；全局快捷键归类 Shared 公用能力，不计入业务模块数量。
+- `2026-04-22`：文档口径澄清：业务模块固定为 5 个（快捷字段/笔记/截图发手机/截图问答/简历自动填写）；全局快捷键归类 Shared 公用能力，不计入业务模块数量。
 - `2026-04-22`：截图问答限额调整：默认 `rate_limit_per_hour` 从 30 提升为 100，并同步更新当前 `config.ini` 生效值。
 - `2026-04-23`：截图问答模型扩展：新增 `doubao-seed-2-0-pro-260215`，并将主界面模型输入改为后端驱动下拉选择（`assistant.model_options`）。
 - `2026-04-23`：模型一致性加固：后端保存路径对模型做白名单校验，非法模型自动回退默认 `doubao-seed-2-0-lite-260215`，避免“前端显示可选但后端不可用”。
@@ -195,6 +199,9 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-04-23`：版本验收归档：当前版本悬浮窗安全功能已完成并作为稳定基线提交。
 - `2026-04-23`：按最终需求修正 F1 分析阶段可见性：WDA 生效时 `EnterAssistantSensitivePhase` 不再隐藏悬浮窗（录屏期间保持可见）。
 - `2026-04-23`：截图问答悬浮窗新增“截图问答”按钮（无需快捷键），点击与 F1 共用同一安全链路并记录 `assistant_capture_btn_click`。
+- `2026-04-23`：新增 AI 交接总文档 `docs/AI_HANDOFF.md`，并将其纳入组件总览与文档更新清单，要求后续改动同步维护当前状态、优先级与风险。
+- `2026-04-23`：补充文档治理提醒：明确 AHK 开发态默认启用源码自动热重载，要求后续 AI 在交接与排障时显式考虑该行为。
+- `2026-04-23`：简历自动填写推进为第一版可用模块：新增 `resume_profile.json` 本地简历存储、`server-resume.ps1` 接口、Web 分区式编辑页，以及浏览器插件骨架 `browser_extension/resume_autofill/`。
 
 ## 维护约定
 

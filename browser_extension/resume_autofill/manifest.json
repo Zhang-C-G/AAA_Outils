@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ZCG Resume Autofill",
+  "version": "0.1.0",
+  "description": "从本地 ZCG-Raccourci Control 读取简历资料并尝试自动填写当前网页表单。",
+  "permissions": ["activeTab", "storage", "scripting", "tabs"],
+  "host_permissions": [
+    "http://127.0.0.1:8798/*",
+    "http://localhost:8798/*",
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ZCG Resume Autofill"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

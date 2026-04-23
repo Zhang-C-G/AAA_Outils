@@ -33,7 +33,7 @@ BuildConfigGui() {
     sub.SetFont("s9", "Microsoft YaHei UI")
 
     gConfigGui.AddText("x600 y30 w56 h22 c" gTheme["text_primary"], "Mode")
-    gConfigModeDDL := gConfigGui.AddDropDownList("x650 y26 w180 Choose" GetModeChooseIndex(gActiveMode) " c" gTheme["text_on_light"] " Background" gTheme["bg_header"], ["Hotkeys", "Notes", "Capture", "Assistant"])
+    gConfigModeDDL := gConfigGui.AddDropDownList("x650 y26 w180 Choose" GetModeChooseIndex(gActiveMode) " c" gTheme["text_on_light"] " Background" gTheme["bg_header"], ["Hotkeys", "Notes", "Capture", "Assistant", "Resume"])
     gConfigModeDDL.OnEvent("Change", OnConfigModeChanged)
 
     restoreBtn := gConfigGui.AddButton("x820 y18 w64 h30 Background" gTheme["bg_surface_alt"] " c" gTheme["text_primary"], "Restore")
@@ -53,6 +53,8 @@ BuildConfigGui() {
             BuildCaptureModeBody()
         case "assistant":
             BuildAssistantModeBody()
+        case "resume":
+            BuildResumeModeBody()
         default:
             BuildShortcutsModeBody()
     }
@@ -166,6 +168,8 @@ ShowConfigWindow() {
         ReloadCapturePanel()
     } else if (gActiveMode = "assistant") {
         ReloadAssistantPanel()
+    } else if (gActiveMode = "resume") {
+        ReloadResumePanel()
     }
 
     gConfigGui.Show("w980 h770")
@@ -219,6 +223,9 @@ GetModeChooseIndex(modeId) {
     if (modeId = "assistant") {
         return 4
     }
+    if (modeId = "resume") {
+        return 5
+    }
     return 1
 }
 
@@ -232,6 +239,9 @@ OnConfigGuiClose(*) {
         SetTimer(UpdateCaptureBridgeStatusUi, 0)
     } else if (gActiveMode = "assistant") {
         SaveAssistantSettingsFromGui()
+        SaveData()
+    } else if (gActiveMode = "resume") {
+        SaveResumeSettingsFromGui()
         SaveData()
     }
     gConfigGui.Hide()

@@ -11,6 +11,7 @@
   [string]$BridgeScript,
   [string]$BridgePidFile,
   [string]$BridgeStatusFile,
+  [string]$ResumeProfileFile,
   [string]$LogFile
 )
 
@@ -23,6 +24,7 @@ $moduleRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $moduleRoot 'server-notes.ps1')
 . (Join-Path $moduleRoot 'server-capture.ps1')
 . (Join-Path $moduleRoot 'server-assistant.ps1')
+. (Join-Path $moduleRoot 'server-resume.ps1')
 . (Join-Path $moduleRoot 'server-testing.ps1')
 
 $listener = New-Object System.Net.HttpListener
@@ -38,7 +40,11 @@ while ($true) {
   $method = $req.HttpMethod.ToUpperInvariant()
 
   try {
-    if ($path -eq '/api/ping' -and $method -eq 'GET') {
+    if ($method -eq 'OPTIONS') {
+      $res.StatusCode = 204
+      Send-Text $res ''
+    }
+    elseif ($path -eq '/api/ping' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true })
     }
     elseif ($path -eq '/api/state' -and $method -eq 'GET') {
@@ -201,6 +207,22 @@ while ($true) {
     elseif ($path -eq '/api/assistant/trigger-capture' -and $method -eq 'POST') {
       $result = Request-AssistantCaptureRun
       Send-Json $res $result
+    }
+    elseif ($path -eq '/api/resume/state' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{ ok=$true; state=(Get-ResumeState) })
+    }
+    elseif ($path -eq '/api/resume/save' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $stateOut = Save-ResumeProfile -Payload $payload
+      Send-Json $res ([ordered]@{ ok=$true; state=$stateOut })
+    }
+    elseif ($path -eq '/api/resume/profile' -and $method -eq 'GET') {
+      $profile = Get-ResumeProfile
+      Send-Json $res ([ordered]@{
+        ok = $true
+        profile = $profile
+        flat_map = (Get-ResumeFlatMap -Profile $profile)
+      })
     }
     elseif ($path -eq '/api/testing/open-hotkey-probe' -and $method -eq 'POST') {
       $result = Open-TestingHotkeyProbe

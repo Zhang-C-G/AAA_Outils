@@ -1,4 +1,4 @@
-﻿; Data and usage persistence
+; Data and usage persistence
 
 EnsureDataFile() {
     global gDataFile
@@ -222,6 +222,9 @@ NormalizeModeId(mode) {
     if (m = "assistant") {
         return "assistant"
     }
+    if (m = "resume") {
+        return "resume"
+    }
     return "shortcuts"
 }
 
@@ -251,6 +254,28 @@ LoadCaptureSettings() {
                         settings["bridge_port"] := p
                     }
                 }
+        }
+    }
+    return settings
+}
+
+LoadResumeSettings() {
+    global gDataFile
+    settings := Map(
+        "name", "",
+        "phone", "",
+        "email", "",
+        "education", "",
+        "experience", "",
+        "skills", ""
+    )
+
+    raw := LoadSection(gDataFile, "Resume")
+    for row in raw {
+        key := row["key"]
+        value := Trim(row["value"])
+        if settings.Has(key) {
+            settings[key] := value
         }
     }
     return settings

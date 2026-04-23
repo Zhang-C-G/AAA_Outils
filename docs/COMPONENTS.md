@@ -2,7 +2,7 @@
 
 项目：`Raccourci`
 入口：`main.ahk`
-最近同步：`2026-04-21`
+最近同步：`2026-04-23`
 
 ## 产品核心定位（必须保持）
 
@@ -25,6 +25,7 @@
 ## 快速入口
 
 - 使用说明：`README.md`
+- AI 交接入口：`docs/AI_HANDOFF.md`
 - 动作日志说明：`docs/ACTION_LOG.md`
 - 主题文字/颜色 token：`docs/UI_STYLE_TOKENS.md`
 - 组件拆分文档目录：`docs/components/`
@@ -37,7 +38,7 @@
 ## 目录结构（代码）
 
 - `main.ahk`：轻量入口，仅负责 `#Include` 与 `Init()`
-- `src/app_state.ahk`：全局状态定义与启动流程
+- `src/app_state.ahk`：全局状态定义、启动流程、开发态源码自动重载
 - `src/theme.ahk`：主题颜色 Token 定义
 - `src/storage.ahk`：存储模块聚合入口（只做 include）
 - `src/storage/data_load.ahk`：配置读取与默认数据
@@ -58,6 +59,7 @@
 - `webui/config/server-notes.ps1`：笔记接口实现
 - `webui/config/server-capture.ps1`：截图发手机接口实现
 - `webui/config/server-assistant.ps1`：截图问答接口实现
+- `webui/config/server-resume.ps1`：简历 Profile 接口实现
 - `src/hotkeys.ahk`：热键定义、动态注册、作用域控制
 - `src/strategy.ahk`：默认展示自动更新策略与定时器
 - `src/panel_ui.ahk`：悬浮面板 UI、搜索匹配、插入流程
@@ -86,12 +88,16 @@
 - `webui/config/app-notes.js`：笔记模式
 - `webui/config/app-capture.js`：截图模式
 - `webui/config/app-assistant.js`：截图问答模式
+- `webui/config/app-resume.js`：简历自动填写模式
 - `webui/config/app-main.js`：入口与模式切换
-- Web 顶部按钮现为：`快捷字段/笔记/截图发手机/截图问答/快捷键`，其中“快捷键”为专用视图入口（后端仍映射 `shortcuts` 模式）
+- `browser_extension/resume_autofill/*`：简历自动填写浏览器插件骨架
+- Web 顶部按钮现为：`快捷字段/笔记/截图发手机/截图问答/简历自动填写/快捷键/测试`，其中“快捷键”为专用视图入口（后端仍映射 `shortcuts` 模式）
 - `scripts/test_assistant_mock.ps1`：截图问答本地模拟链路测试脚本（不调用外部 API）
 
 ## 维护要求
 
+- 开发时默认存在 AHK 自动热重载：修改 `main.ahk` 或 `src/*.ahk` 后，运行中的脚本会自动刷新；后续 AI 排障时必须先考虑这一行为。
+- 每次重要改动后，必须检查并更新 `docs/AI_HANDOFF.md`，保证下一个 AI 能快速接手当前状态与下一步工作。
 - 修改系统行为时，必须同步更新 `docs/ACTION_LOG.md` 与对应 `docs/components/*.md`。
 - 修改具体功能模块时，必须同步更新对应 `docs/modules/*.md`。
 - 新功能优先写入已有功能域文件；若超过合理体量，再按功能域继续拆分，不做杂糅拆分。

@@ -1,4 +1,4 @@
-﻿# 模块化文档索引（Modules Index）
+# 模块化文档索引（Modules Index）
 
 最近同步：`2026-04-22`
 
@@ -6,12 +6,13 @@
 
 把软件拆成可独立维护的小模块；跨模块复用能力放在 `docs/shared/`。
 
-## 业务模块（4 个）
+## 业务模块（5 个）
 
 1. `02_field_prompt_quickfield.md`：快捷字段（字段/提示词/快捷字段）
 2. `04_notes.md`：笔记
 3. `05_capture_to_phone.md`：截图发手机
 4. `06_assistant_capture_qa.md`：截图问答助手
+5. `11_resume_autofill.md`：简历自动填充
 
 说明：
 `全局快捷键` 不计入业务模块，归类在 `docs/shared/01_global_hotkeys.md`。
