@@ -4,6 +4,19 @@ const API_KEY_MASK = '****************';
 let assistantAutoSaveTimer = 0;
 let assistantAutoSaveInFlight = false;
 let assistantAutoSaveQueued = false;
+let assistantAdvancedVisible = false;
+
+function setAssistantAdvancedVisible(visible) {
+  assistantAdvancedVisible = !!visible;
+  const body = byId('assistantAdvancedBody');
+  const btn = byId('assistantAdvancedToggleBtn');
+  if (body) {
+    body.classList.toggle('hidden', !assistantAdvancedVisible);
+  }
+  if (btn) {
+    btn.textContent = assistantAdvancedVisible ? '收起高级设置' : '开启高级设置';
+  }
+}
 
 function hotkeyToFriendly(hk) {
   const raw = String(hk || '').trim();
@@ -36,10 +49,10 @@ function hotkeyToFriendly(hk) {
 function renderHotkeyExplain() {
   const el = byId('assistantHotkeyExplain');
   if (!el) return;
-  const hkOpen = hotkeyToFriendly(state.hotkeys?.assistant_capture || '');
-  const hkRun = hotkeyToFriendly(state.hotkeys?.assistant_capture_now || '');
-  const hkUp = hotkeyToFriendly(state.hotkeys?.assistant_overlay_up || '');
-  const hkDown = hotkeyToFriendly(state.hotkeys?.assistant_overlay_down || '');
+  const hkOpen = hotkeyToFriendly(state.hotkeys?.assistant_capture || 'F2');
+  const hkRun = hotkeyToFriendly(state.hotkeys?.assistant_capture_now || 'F1');
+  const hkUp = hotkeyToFriendly(state.hotkeys?.assistant_overlay_up || '!Up');
+  const hkDown = hotkeyToFriendly(state.hotkeys?.assistant_overlay_down || '!Down');
   el.textContent = `快捷键说明（自动同步配置）：启动悬浮窗 ${hkOpen}；截图并问答 ${hkRun}；答案上滚 ${hkUp}；答案下滚 ${hkDown}。`;
 }
 
@@ -58,11 +71,12 @@ async function runAssistantAutoSave() {
     assistantAutoSaveQueued = true;
     return;
   }
+
   assistantAutoSaveInFlight = true;
   try {
     await saveAssistantSettings({ silent: true });
   } catch {
-    // 自动保存失败时保持可编辑，用户仍可手动保存查看错误。
+    // 自动保存失败时不打断用户编辑，保留手动保存入口。
   } finally {
     assistantAutoSaveInFlight = false;
     if (assistantAutoSaveQueued) {
@@ -83,16 +97,16 @@ function defaults() {
       { id: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite (Vision)', enabled: 1 },
       { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 }
     ],
-    prompt: '编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。',
+    prompt: '编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。',
     active_template: 'default_template',
     templates: [{
       name: 'default_template',
-      prompt: '编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。'
+      prompt: '编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。'
     }],
     overlay_opacity: 92,
     disable_copy: 1,
     rate_limit_enabled: 1,
-    rate_limit_per_hour: 30
+    rate_limit_per_hour: 100
   };
 }
 
@@ -139,8 +153,8 @@ function renderModelOptions(selectedModel) {
 function isBrokenPrompt(text) {
   const t = String(text || '').trim();
   if (!t) return true;
-  if (/^[?？]+$/.test(t)) return true;
-  if (t.includes('???') || t.includes('？？？')) return true;
+  if (/^\?+$/.test(t)) return true;
+  if (t.includes('???')) return true;
   return false;
 }
 
@@ -252,9 +266,10 @@ export function applyAssistantState(payload) {
     ? '已保存密钥（星号表示保持不变）'
     : '请输入 API Key';
   byId('assistantRateEnabled').checked = Number(state.assistant.rate_limit_enabled || 0) !== 0;
-  byId('assistantRatePerHour').value = toInt(state.assistant.rate_limit_per_hour, 30, 1, 10000);
+  byId('assistantRatePerHour').value = toInt(state.assistant.rate_limit_per_hour, 100, 1, 10000);
   renderTemplateControls();
   renderHotkeyExplain();
+  setAssistantAdvancedVisible(false);
 }
 
 function readAssistantFromUi() {
@@ -266,7 +281,7 @@ function readAssistantFromUi() {
   state.assistant.api_endpoint = (byId('assistantEndpoint').value || '').trim() || 'https://ark.cn-beijing.volces.com/api/v3/responses';
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
-  state.assistant.rate_limit_per_hour = toInt(byId('assistantRatePerHour').value, 30, 1, 10000);
+  state.assistant.rate_limit_per_hour = toInt(byId('assistantRatePerHour').value, 100, 1, 10000);
 
   const inputKey = String(byId('assistantApiKey').value || '').trim();
   if (inputKey && inputKey !== API_KEY_MASK) {
@@ -300,6 +315,10 @@ export async function saveAssistantSettings(options = {}) {
 }
 
 export function initAssistantHandlers() {
+  byId('assistantAdvancedToggleBtn').onclick = () => {
+    setAssistantAdvancedVisible(!assistantAdvancedVisible);
+  };
+
   byId('assistantTemplateSelect').onchange = () => {
     syncCurrentTemplateFromUi();
     state.assistant.active_template = byId('assistantTemplateSelect').value;

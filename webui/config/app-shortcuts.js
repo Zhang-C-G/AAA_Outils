@@ -345,9 +345,9 @@ export function applyShortcutsState(payload) {
     state.selectedCategoryId = state.categories[0]?.id || null;
   }
 
-  byId('autoRefreshEnabled').checked = isTruthy(state.behavior.auto_refresh_enabled);
-  byId('refreshEveryUses').value = toInt(state.behavior.refresh_every_uses, 3, 1, 1000);
-  byId('refreshEveryMinutes').value = toInt(state.behavior.refresh_every_minutes, 5, 1, 1440);
+  state.behavior.auto_refresh_enabled = isTruthy(state.behavior.auto_refresh_enabled) ? 1 : 0;
+  state.behavior.refresh_every_uses = toInt(state.behavior.refresh_every_uses, 3, 1, 1000);
+  state.behavior.refresh_every_minutes = toInt(state.behavior.refresh_every_minutes, 5, 1, 1440);
 
   renderTabs();
   renderRows();
@@ -394,9 +394,9 @@ function validateBeforeSave() {
     state.hotkeys[def.id] = ahk;
   }
 
-  state.behavior.auto_refresh_enabled = byId('autoRefreshEnabled').checked ? 1 : 0;
-  state.behavior.refresh_every_uses = toInt(byId('refreshEveryUses').value, 3, 1, 1000);
-  state.behavior.refresh_every_minutes = toInt(byId('refreshEveryMinutes').value, 5, 1, 1440);
+  state.behavior.auto_refresh_enabled = isTruthy(state.behavior.auto_refresh_enabled) ? 1 : 0;
+  state.behavior.refresh_every_uses = toInt(state.behavior.refresh_every_uses, 3, 1, 1000);
+  state.behavior.refresh_every_minutes = toInt(state.behavior.refresh_every_minutes, 5, 1, 1440);
 }
 
 export async function saveShortcuts(options = {}) {
@@ -476,26 +476,5 @@ export function initShortcutsHandlers() {
     scheduleAutoSave();
   };
 
-  byId('resetStrategyBtn').onclick = () => {
-    byId('autoRefreshEnabled').checked = true;
-    byId('refreshEveryUses').value = 3;
-    byId('refreshEveryMinutes').value = 5;
-    setDirty(true, 'shortcuts');
-    toast('已恢复默认策略');
-    scheduleAutoSave();
-  };
-
-  byId('autoRefreshEnabled').onchange = () => {
-    setDirty(true, 'shortcuts');
-    scheduleAutoSave();
-  };
-  byId('refreshEveryUses').oninput = () => {
-    setDirty(true, 'shortcuts');
-    scheduleAutoSave();
-  };
-  byId('refreshEveryMinutes').oninput = () => {
-    setDirty(true, 'shortcuts');
-    scheduleAutoSave();
-  };
 }
 

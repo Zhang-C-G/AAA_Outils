@@ -23,6 +23,7 @@ $moduleRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $moduleRoot 'server-notes.ps1')
 . (Join-Path $moduleRoot 'server-capture.ps1')
 . (Join-Path $moduleRoot 'server-assistant.ps1')
+. (Join-Path $moduleRoot 'server-testing.ps1')
 
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://127.0.0.1:$Port/")
@@ -199,6 +200,15 @@ while ($true) {
     }
     elseif ($path -eq '/api/assistant/trigger-capture' -and $method -eq 'POST') {
       $result = Request-AssistantCaptureRun
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/testing/open-hotkey-probe' -and $method -eq 'POST') {
+      $result = Open-TestingHotkeyProbe
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/testing/run-overlay-record-capture' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $result = Run-TestingOverlayRecordCapture -DurationSec ([int](Get-Prop $payload 'duration_sec' 6)) -Fps ([int](Get-Prop $payload 'fps' 10))
       Send-Json $res $result
     }
     else {

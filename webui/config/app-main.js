@@ -3,6 +3,7 @@ import { initShortcutsHandlers, applyShortcutsState, saveShortcuts } from './app
 import { initNotesHandlers, loadNotes, saveCurrentNote } from './app-notes.js';
 import { initCaptureHandlers, refreshCaptureState } from './app-capture.js';
 import { initAssistantHandlers, applyAssistantState, saveAssistantSettings } from './app-assistant.js';
+import { initTestingHandlers, runOverlayRecordTest } from './app-testing.js';
 
 let capturePollTimer = 0;
 const SHORTCUTS_DRAFT_KEY = 'raccourci.shortcutsDraft';
@@ -52,7 +53,7 @@ function tryRestoreShortcutsDraft() {
 }
 
 async function switchMode(mode) {
-  if (!['shortcuts', 'notes', 'capture', 'assistant', 'hotkeys'].includes(mode)) {
+  if (!['shortcuts', 'notes', 'capture', 'assistant', 'hotkeys', 'testing'].includes(mode)) {
     mode = 'shortcuts';
   }
 
@@ -63,13 +64,17 @@ async function switchMode(mode) {
   state.app.active_mode = mode;
   setModeUi(mode);
 
-  byId('saveBtn').textContent =
-    mode === 'shortcuts' ? '保存' :
-    (mode === 'hotkeys' ? '保存快捷键' :
-    (mode === 'notes' ? '保存笔记' :
-    (mode === 'capture' ? '保存截图设置' : '保存助手设置')));
+  const saveBtn = byId('saveBtn');
+  if (saveBtn) {
+    saveBtn.textContent =
+      mode === 'shortcuts' ? '保存' :
+      (mode === 'hotkeys' ? '保存快捷键' :
+      (mode === 'notes' ? '保存笔记' :
+      (mode === 'capture' ? '保存截图设置' :
+      (mode === 'assistant' ? '保存助手设置' : '执行测试'))));
+  }
 
-  const persistedMode = mode === 'hotkeys' ? 'shortcuts' : mode;
+  const persistedMode = (mode === 'hotkeys' || mode === 'testing') ? 'shortcuts' : mode;
   await api('/api/app/mode', {
     method: 'POST',
     body: JSON.stringify({ active_mode: persistedMode })
@@ -102,55 +107,70 @@ async function reloadAll() {
 }
 
 function bindHeaderActions() {
-  byId('saveBtn').onclick = async () => {
-    try {
-      if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
-        await saveShortcuts();
-      } else if (state.app.active_mode === 'notes') {
-        await saveCurrentNote();
-      } else if (state.app.active_mode === 'capture') {
-        byId('capSaveSettingsBtn').click();
-      } else {
-        await saveAssistantSettings();
+  const saveBtn = byId('saveBtn');
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      try {
+        if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
+          await saveShortcuts();
+        } else if (state.app.active_mode === 'notes') {
+          await saveCurrentNote();
+        } else if (state.app.active_mode === 'capture') {
+          byId('capSaveSettingsBtn').click();
+        } else if (state.app.active_mode === 'testing') {
+          await runOverlayRecordTest();
+        } else {
+          await saveAssistantSettings();
+        }
+      } catch (e) {
+        toast(`保存失败: ${e.message}`);
       }
-    } catch (e) {
-      toast(`保存失败: ${e.message}`);
-    }
-  };
+    };
+  }
 
-  byId('reloadBtn').onclick = async () => {
-    try {
-      if ((state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') && state.dirty) {
-        saveShortcutsDraft();
-        try { sessionStorage.setItem(SHORTCUTS_DRAFT_RESTORE_KEY, '1'); } catch {}
+  const reloadBtn = byId('reloadBtn');
+  if (reloadBtn) {
+    reloadBtn.onclick = async () => {
+      try {
+        if ((state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') && state.dirty) {
+          saveShortcutsDraft();
+          try { sessionStorage.setItem(SHORTCUTS_DRAFT_RESTORE_KEY, '1'); } catch {}
+        }
+        await reloadAll();
+        if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
+          tryRestoreShortcutsDraft();
+        }
+      } catch (e) {
+        toast(`刷新失败: ${e.message}`);
       }
+    };
+  }
+
+  const saveVersionBtn = byId('saveVersionBtn');
+  if (saveVersionBtn) {
+    saveVersionBtn.onclick = async () => {
+      const payload = await api('/api/version/save', { method: 'POST', body: '{}' });
+      if (!payload.ok) throw new Error(payload.error || 'save version failed');
+      toast('版本已保存');
+    };
+  }
+
+  const restoreVersionBtn = byId('restoreVersionBtn');
+  if (restoreVersionBtn) {
+    restoreVersionBtn.onclick = async () => {
+      const payload = await api('/api/version/restore', { method: 'POST', body: '{}' });
+      if (!payload.ok) throw new Error(payload.error || 'restore failed');
       await reloadAll();
-      if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
-        tryRestoreShortcutsDraft();
-      }
-    } catch (e) {
-      toast(`刷新失败: ${e.message}`);
-    }
-  };
-
-  byId('saveVersionBtn').onclick = async () => {
-    const payload = await api('/api/version/save', { method: 'POST', body: '{}' });
-    if (!payload.ok) throw new Error(payload.error || 'save version failed');
-    toast('版本已保存');
-  };
-
-  byId('restoreVersionBtn').onclick = async () => {
-    const payload = await api('/api/version/restore', { method: 'POST', body: '{}' });
-    if (!payload.ok) throw new Error(payload.error || 'restore failed');
-    await reloadAll();
-    toast('已恢复到保存版本');
-  };
+      toast('已恢复到保存版本');
+    };
+  }
 
   byId('modeShortcutsBtn').onclick = () => switchMode('shortcuts').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeNotesBtn').onclick = () => switchMode('notes').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeCaptureBtn').onclick = () => switchMode('capture').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeAssistantBtn').onclick = () => switchMode('assistant').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeHotkeysBtn').onclick = () => switchMode('hotkeys').catch(e => toast(`切换失败: ${e.message}`));
+  byId('modeTestingBtn').onclick = () => switchMode('testing').catch(e => toast(`切换失败: ${e.message}`));
 
   window.addEventListener('beforeunload', (e) => {
     if (!state.notes.dirty) return;
@@ -164,6 +184,7 @@ async function bootstrap() {
   initNotesHandlers();
   initCaptureHandlers();
   initAssistantHandlers();
+  initTestingHandlers();
   bindHeaderActions();
 
   await reloadAll();

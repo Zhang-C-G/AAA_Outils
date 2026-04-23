@@ -24,7 +24,7 @@
     overlay_opacity: 92,
     disable_copy: 1,
     rate_limit_enabled: 1,
-    rate_limit_per_hour: 30
+    rate_limit_per_hour: 100
   },
   selectedCategoryId: null,
   protectedCategoryIds: new Set(['fields', 'prompts', 'quick_fields']),
@@ -133,14 +133,19 @@ export function validateHotkeyText(hk) {
 export function setModeUi(mode) {
   const isShortcuts = mode === 'shortcuts';
   const isHotkeys = mode === 'hotkeys';
+  const isTesting = mode === 'testing';
+
   byId('modeShortcutsBtn').classList.toggle('active', isShortcuts);
   byId('modeNotesBtn').classList.toggle('active', mode === 'notes');
   byId('modeCaptureBtn').classList.toggle('active', mode === 'capture');
   byId('modeAssistantBtn').classList.toggle('active', mode === 'assistant');
   byId('modeHotkeysBtn').classList.toggle('active', isHotkeys);
+  byId('modeTestingBtn').classList.toggle('active', isTesting);
+
   byId('shortcutsView').classList.toggle('hidden', !isShortcuts);
   byId('hotkeysView').classList.toggle('hidden', !isHotkeys);
   byId('notesView').classList.toggle('hidden', mode !== 'notes');
   byId('captureView').classList.toggle('hidden', mode !== 'capture');
   byId('assistantView').classList.toggle('hidden', mode !== 'assistant');
+  byId('testingView').classList.toggle('hidden', !isTesting);
 }

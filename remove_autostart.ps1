@@ -1,5 +1,5 @@
 ﻿$startupDir = [Environment]::GetFolderPath('Startup')
-$linkNames = @('Raccourci_Hotkey.lnk', 'GlobalQuickFill_MVP.lnk')
+$linkNames = @('ZCG-Raccourci Control.lnk', 'Raccourci_Hotkey.lnk', 'GlobalQuickFill_MVP.lnk')
 $removed = $false
 
 foreach ($name in $linkNames) {

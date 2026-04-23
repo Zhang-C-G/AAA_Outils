@@ -24,6 +24,8 @@ gAssistantOverlayPlaced := false
 ; Default ON: prioritize anti-capture / anti-recording.
 gAssistantOverlayAffinityEnabled := true
 gAssistantOverlayAffinityActive := false
+; Security-first fallback: even if WDA is active, still hide on detected capture/record risk.
+gAssistantOverlaySecurityFirst := true
 gAssistantOverlayTempRestoreStatus := "状态：悬浮窗已恢复"
 
 GetAssistantCurrentModelLabel() {
@@ -215,7 +217,8 @@ EnsureAssistantOverlayGui() {
     title.SetFont("s12 w700", "Segoe UI")
 
     gAssistantOverlayOpacityLabel := gAssistantOverlayGui.AddText("x330 y16 w160 h20 c" gTheme["text_hint"], "透明度")
-    gAssistantOverlayOpacitySlider := gAssistantOverlayGui.AddSlider("x330 y38 w170 h24 Range35-100 ToolTip", ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
+    ; Remove slider tooltip bubble to avoid showing numeric popup on hover/drag.
+    gAssistantOverlayOpacitySlider := gAssistantOverlayGui.AddSlider("x330 y38 w170 h24 Range35-100", ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
     gAssistantOverlayOpacitySlider.OnEvent("Change", OnAssistantOverlayOpacityChanged)
 
     gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" gTheme["text_hint"], "状态：待命")
@@ -428,8 +431,9 @@ AssistantOverlayScrollDown(*) {
 
 TemporarilyHideAssistantOverlay(durationMs := 1200) {
     global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayTempHidden, gAssistantOverlayTempRestoreText
-    global gAssistantLastResult, gAssistantOverlayLastStatus, gAssistantOverlayRiskRestoreStatus, gAssistantOverlayText, gAssistantOverlayTempRestoreStatus, gAssistantOverlayAffinityActive
-    if gAssistantOverlayAffinityActive {
+    global gAssistantLastResult, gAssistantOverlayLastStatus, gAssistantOverlayRiskRestoreStatus, gAssistantOverlayText, gAssistantOverlayTempRestoreStatus
+    global gAssistantOverlayAffinityActive, gAssistantOverlaySecurityFirst
+    if (gAssistantOverlayAffinityActive && !gAssistantOverlaySecurityFirst) {
         return
     }
     if !gAssistantOverlayVisible || !IsObject(gAssistantOverlayGui) {
@@ -555,16 +559,11 @@ AssistantThinkingTick(*) {
 
 CheckAssistantCaptureRisk(*) {
     global gAssistantOverlayVisible, gAssistantOverlayGui, gAssistantOverlayRiskHidden, gAssistantOverlayRiskRestoreText, gAssistantOverlayRiskRestoreStatus
-    global gAssistantOverlayText, gAssistantOverlayLastStatus, gAssistantOverlayInSensitivePhase, gAssistantOverlayTempHidden, gAssistantOverlayAffinityActive
+    global gAssistantOverlayText, gAssistantOverlayLastStatus, gAssistantOverlayInSensitivePhase, gAssistantOverlayTempHidden, gAssistantOverlayAffinityActive, gAssistantOverlayAffinityEnabled
 
-    if gAssistantOverlayAffinityActive {
-        if (gAssistantOverlayRiskHidden && !gAssistantOverlayTempHidden) {
-            gAssistantOverlayRiskHidden := false
-            ShowAssistantOverlay(gAssistantOverlayRiskRestoreText)
-            UpdateAssistantOverlayStatus(gAssistantOverlayRiskRestoreStatus)
-            WriteLog("assistant_overlay_risk_restore", "risk=0 mode=affinity")
-        }
-        return
+    ; Keep re-applying WDA while visible to reduce edge cases where protection gets dropped.
+    if (gAssistantOverlayVisible && gAssistantOverlayAffinityEnabled) {
+        ApplyAssistantOverlayCaptureProtection()
     }
 
     risk := IsAssistantCaptureRiskActive()
@@ -585,7 +584,7 @@ CheckAssistantCaptureRisk(*) {
         gAssistantOverlayRiskHidden := false
         ShowAssistantOverlay(gAssistantOverlayRiskRestoreText)
         UpdateAssistantOverlayStatus(gAssistantOverlayRiskRestoreStatus)
-        WriteLog("assistant_overlay_risk_restore", "risk=0")
+        WriteLog("assistant_overlay_risk_restore", "risk=0 mode=" (gAssistantOverlayAffinityActive ? "affinity" : "temp_hide"))
     }
 }
 
@@ -613,7 +612,10 @@ IsAssistantCaptureRiskActive() {
 }
 
 ShouldAssistantTempHideForCapture() {
-    global gAssistantOverlayAffinityActive
+    global gAssistantOverlayAffinityActive, gAssistantOverlaySecurityFirst
+    if gAssistantOverlaySecurityFirst {
+        return true
+    }
     return !gAssistantOverlayAffinityActive
 }
 
@@ -628,7 +630,8 @@ IsAssistantRecordingRiskActive() {
         "sharex.exe", "ffmpeg.exe",
         "NVIDIA Share.exe", "Action_x64.exe", "XSplit.Core.exe",
         "XboxGameBar.exe", "GameBar.exe", "GameBarFTServer.exe",
-        "Captura.exe", "Loom.exe"
+        "Captura.exe", "Loom.exe",
+        "Zoom.exe", "ms-teams.exe", "Teams.exe", "TencentMeeting.exe", "WeMeetApp.exe", "Lark.exe", "DingTalk.exe"
     ]
 
     for procName in recorderProcesses {
@@ -638,7 +641,7 @@ IsAssistantRecordingRiskActive() {
     }
 
     ; Window title based fallback for recorder apps.
-    for key in ["OBS", "Bandicam", "Snagit", "Camtasia", "Game Bar", "Xbox Game Bar", "正在录制", "录制中"] {
+    for key in ["OBS", "Bandicam", "Snagit", "Camtasia", "Game Bar", "Xbox Game Bar", "正在录制", "录制中", "正在共享", "共享屏幕", "Screen sharing", "You are sharing"] {
         if WinExist(key) {
             return true
         }

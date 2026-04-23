@@ -6,7 +6,16 @@
   --muted: #9a9a9a;
   --shadow: 0 10px 40px rgba(0,0,0,.45);
 }
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
 body {
   margin: 0;
   font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
@@ -51,7 +60,7 @@ p { margin: 5px 0 0; color: var(--muted); }
 .view { display: grid; gap: 14px; }
 .hidden { display: none; }
 .panel { padding: 14px; }
-#shortcutsView { grid-template-columns: 1fr 360px; }
+#shortcutsView { grid-template-columns: 1fr; }
 #hotkeysView { grid-template-columns: 1fr; }
 .hotkeys-panel { width: 100%; max-width: none; }
 #hotkeys {
@@ -135,20 +144,47 @@ label span { color: #d2d2d2; font-size: 14px; }
 .badge.off { background: #c92a2a; color: #fff; }
 .badge.wait { background: #b0851d; color: #fff; }
 .capture-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.assistant-sections { display: grid; gap: 12px; }
+.assistant-block {
+  border: 1px solid #2b2b2b;
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(255,255,255,.015);
+}
+.assistant-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.assistant-block-head h2 {
+  margin: 0;
+  font-size: 17px;
+}
 .assistant-grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 10px; }
-.assistant-grid label:last-child { grid-column: 1 / -1; }
+.assistant-grid-basic label:last-child { grid-column: 1 / -1; }
 .assistant-grid textarea { min-height: 120px; }
 .assistant-template-actions { display: flex; gap: 8px; align-items: end; }
 .assistant-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 .assistant-hotkey-explain {
   margin-top: 6px;
-  color: #cfcfcf;
+  color: #e8e8e8;
   font-size: 13px;
   line-height: 1.5;
-  padding: 8px 10px;
-  border: 1px solid #2b2b2b;
+  padding: 10px 12px;
+  border: 1px solid #3b3b3b;
   border-radius: 8px;
-  background: rgba(255,255,255,.02);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255,255,255,0.06) 0px,
+      rgba(255,255,255,0.06) 8px,
+      rgba(255,255,255,0.02) 8px,
+      rgba(255,255,255,0.02) 16px
+    ),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
 }
 .toast {
   position: fixed;

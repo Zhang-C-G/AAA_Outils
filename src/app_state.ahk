@@ -17,7 +17,7 @@ gWebConfigPort := 8798
 gWebConfigServerFile := A_ScriptDir "\\webui\\config\\server.ps1"
 gWebConfigPidFile := A_Temp "\\raccourci_web_config_server.pid"
 gWebConfigActionFile := A_Temp "\\raccourci_web_config_action.json"
-gAppName := "Raccourci"
+gAppName := "ZCG-Raccourci Control"
 
 gPanelGui := ""
 gConfigGui := ""

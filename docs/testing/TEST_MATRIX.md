@@ -1,6 +1,6 @@
 ﻿# Test Matrix
 
-Last updated: 2026-04-21
+Last updated: 2026-04-23
 
 ## Shortcuts/Quick Fields
 - Open panel (`Alt+Q`), match, insert, usage increment.
@@ -26,6 +26,7 @@ Last updated: 2026-04-21
 - Verify hourly rate limit.
 
 ## Browser Detection Probe (F1/F2 / Focus)
+- 可在主界面 `测试` 栏目点击“打开按键焦点探针”直接触发。
 - Run `powershell -ExecutionPolicy Bypass -File .\scripts\run_hotkey_focus_probe.ps1`.
 - Keep probe page focused, then:
 - Click assistant overlay area and observe whether probe logs `window.blur` / `visibilitychange`.
@@ -36,6 +37,7 @@ Last updated: 2026-04-21
 - Detailed guide: `docs/testing/HOTKEY_FOCUS_PROBE.md`
 
 ## Overlay Recording Capture Check
+- 可在主界面 `测试` 栏目点击“执行录屏捕获检测”直接触发。
 - Run `powershell -ExecutionPolicy Bypass -File .\scripts\test_overlay_record_capture.ps1`.
 - Keep assistant overlay visible before running.
 - Ensure `ffmpeg` is installed and available in PATH.

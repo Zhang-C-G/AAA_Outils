@@ -3,7 +3,7 @@
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $mainScript = Join-Path $scriptDir 'main.ahk'
 $startupDir = [Environment]::GetFolderPath('Startup')
-$linkPath = Join-Path $startupDir 'Raccourci_Hotkey.lnk'
+$linkPath = Join-Path $startupDir 'ZCG-Raccourci Control.lnk'
 
 if (!(Test-Path $mainScript)) {
   throw "未找到 main.ahk: $mainScript"
@@ -30,7 +30,7 @@ $link = $wsh.CreateShortcut($linkPath)
 $link.TargetPath = $ahkExe
 $link.Arguments = '"' + $mainScript + '"'
 $link.WorkingDirectory = $scriptDir
-$link.Description = 'Raccourci Hotkey Autostart'
+$link.Description = 'ZCG-Raccourci Control Autostart'
 $link.WindowStyle = 1
 $link.Save()
 

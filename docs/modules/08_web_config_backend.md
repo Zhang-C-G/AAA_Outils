@@ -17,6 +17,7 @@
 - `webui/config/server-notes.ps1`
 - `webui/config/server-capture.ps1`
 - `webui/config/server-assistant.ps1`
+- `webui/config/server-testing.ps1`
 
 ## 核心接口
 
@@ -25,6 +26,8 @@
 - `POST /api/app/mode`
 - `POST /api/version/save`
 - `POST /api/version/restore`
+- `POST /api/testing/open-hotkey-probe`
+- `POST /api/testing/run-overlay-record-capture`
 
 ## 稳定性机制
 
@@ -42,3 +45,4 @@
 2. `/api/state` 返回 `categories/data/hotkeys`。
 3. 保存后日志出现 `payload + result + save` 三连记录。
 4. 刷新后数据与落盘一致，不出现“假成功”。
+5. 测试接口可正常返回执行结果（包含 `summary` 与 `output`）。

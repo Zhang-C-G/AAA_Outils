@@ -1,4 +1,4 @@
-﻿# Raccourci（热键）- AutoHotkey MVP
+﻿# ZCG-Raccourci Control（热键）- AutoHotkey MVP
 
 这是一个可运行的 Windows MVP，覆盖你提出的核心能力：
 

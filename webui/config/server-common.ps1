@@ -148,7 +148,7 @@ function Get-CategorySection {
 function Normalize-Mode {
   param([string]$Mode)
   $m = ($Mode + '').Trim().ToLowerInvariant()
-  if ($m -in @('shortcuts', 'notes', 'capture', 'assistant')) { return $m }
+  if ($m -in @('shortcuts', 'notes', 'capture', 'assistant', 'hotkeys', 'testing')) { return $m }
   return 'shortcuts'
 }
 
