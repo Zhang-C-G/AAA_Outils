@@ -88,6 +88,7 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 
 - `assistant_settings_save`：保存问答助手配置（含激活模板）
 - `assistant_capture` / `assistant_capture_failed`：截图问答链路中的截图成功/失败
+- `assistant_capture_btn_click`：点击悬浮窗内“截图问答”按钮触发问答
 - `assistant_answer_show` / `assistant_answer_failed`：模型回答展示成功/失败
 - `assistant_rate_consume` / `assistant_rate_limited`：每小时限流计数消耗 / 命中上限
 - `assistant_secret_protect_failed` / `assistant_secret_unprotect_failed`：密钥加解密失败（排障用）
@@ -192,6 +193,8 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-04-23`：截图问答防捕捉链路加固为“双保险”：WDA 持续重试 + 风险触发强制隐藏（即使 WDA 已启用也执行），并扩展录屏/共享进程与窗口关键词识别。
 - `2026-04-23`：截图问答悬浮窗透明度滑条移除鼠标悬浮/拖动数字气泡提示（禁用 slider tooltip）。
 - `2026-04-23`：版本验收归档：当前版本悬浮窗安全功能已完成并作为稳定基线提交。
+- `2026-04-23`：按最终需求修正 F1 分析阶段可见性：WDA 生效时 `EnterAssistantSensitivePhase` 不再隐藏悬浮窗（录屏期间保持可见）。
+- `2026-04-23`：截图问答悬浮窗新增“截图问答”按钮（无需快捷键），点击与 F1 共用同一安全链路并记录 `assistant_capture_btn_click`。
 
 ## 维护约定
 

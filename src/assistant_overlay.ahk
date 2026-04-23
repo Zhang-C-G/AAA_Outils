@@ -5,6 +5,8 @@ gAssistantOverlayText := ""
 gAssistantOverlayOpacitySlider := ""
 gAssistantOverlayOpacityLabel := ""
 gAssistantOverlayStatusText := ""
+gAssistantOverlayCaptureBtn := ""
+gAssistantOverlayCaptureBusy := false
 gAssistantOverlayVisible := false
 gAssistantOverlayTempHidden := false
 gAssistantOverlayTempRestoreText := ""
@@ -24,8 +26,8 @@ gAssistantOverlayPlaced := false
 ; Default ON: prioritize anti-capture / anti-recording.
 gAssistantOverlayAffinityEnabled := true
 gAssistantOverlayAffinityActive := false
-; Security-first fallback: even if WDA is active, still hide on detected capture/record risk.
-gAssistantOverlaySecurityFirst := true
+; UX-first final mode: keep overlay visible while WDA works; only fallback-hide when WDA is unavailable.
+gAssistantOverlaySecurityFirst := false
 gAssistantOverlayTempRestoreStatus := "状态：悬浮窗已恢复"
 
 GetAssistantCurrentModelLabel() {
@@ -202,6 +204,7 @@ CaptureAssistantScreenSafely(path) {
 
 EnsureAssistantOverlayGui() {
     global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayOpacitySlider, gAssistantOverlayOpacityLabel, gAssistantOverlayStatusText
+    global gAssistantOverlayCaptureBtn
     global gAppName, gTheme, gAssistantSettings
 
     if IsObject(gAssistantOverlayGui) {
@@ -220,10 +223,12 @@ EnsureAssistantOverlayGui() {
     ; Remove slider tooltip bubble to avoid showing numeric popup on hover/drag.
     gAssistantOverlayOpacitySlider := gAssistantOverlayGui.AddSlider("x330 y38 w170 h24 Range35-100", ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
     gAssistantOverlayOpacitySlider.OnEvent("Change", OnAssistantOverlayOpacityChanged)
+    gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x330 y68 w170 h28", "截图问答")
+    gAssistantOverlayCaptureBtn.OnEvent("Click", OnAssistantOverlayCaptureButton)
 
     gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" gTheme["text_hint"], "状态：待命")
 
-    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y76 w486 h370 +Multi ReadOnly +Wrap c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
+    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y104 w486 h342 +Multi ReadOnly +Wrap c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
     gAssistantOverlayText.SetFont("s10", "Consolas")
 
     gAssistantOverlayGui.OnEvent("Close", OnAssistantOverlayClose)
@@ -364,6 +369,22 @@ OnAssistantOverlayOpacityChanged(ctrl, *) {
     SetAssistantOverlayOpacity(val)
 }
 
+OnAssistantOverlayCaptureButton(*) {
+    global gAssistantOverlayCaptureBusy
+    if gAssistantOverlayCaptureBusy {
+        return
+    }
+
+    gAssistantOverlayCaptureBusy := true
+    WriteLog("assistant_capture_btn_click", "source=overlay_button")
+    try {
+        ; Use same secure capture pipeline as F1, but no modal popups.
+        StartAssistantCaptureFlow(false)
+    } finally {
+        gAssistantOverlayCaptureBusy := false
+    }
+}
+
 AssistantOverlayOnCopyMessage(wParam, lParam, msg, hwnd) {
     global gAssistantOverlayText, gAssistantOverlayGui, gAssistantOverlayVisible
     if !IsAssistantOverlayCopyBlocked() {
@@ -479,9 +500,16 @@ EnterAssistantSensitivePhase(statusText := "") {
     global gAssistantOverlayInSensitivePhase, gAssistantOverlaySensitiveHidden
     global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayText
     global gAssistantOverlaySensitiveRestoreText, gAssistantOverlaySensitiveRestoreStatus, gAssistantOverlayLastStatus
+    global gAssistantOverlayAffinityActive
     gAssistantOverlayInSensitivePhase := true
     if (statusText != "") {
         UpdateAssistantOverlayStatus(statusText)
+    }
+
+    ; Final requirement: while WDA is active, keep overlay visible during F1 thinking/analysis.
+    if gAssistantOverlayAffinityActive {
+        gAssistantOverlaySensitiveHidden := false
+        return
     }
 
     gAssistantOverlaySensitiveHidden := false
@@ -564,6 +592,18 @@ CheckAssistantCaptureRisk(*) {
     ; Keep re-applying WDA while visible to reduce edge cases where protection gets dropped.
     if (gAssistantOverlayVisible && gAssistantOverlayAffinityEnabled) {
         ApplyAssistantOverlayCaptureProtection()
+    }
+
+    ; Final requirement: when WDA is active, overlay should stay visible during recording.
+    ; In this state we skip risk-hide and trust WDA exclusion.
+    if gAssistantOverlayAffinityActive {
+        if (gAssistantOverlayRiskHidden && !gAssistantOverlayTempHidden) {
+            gAssistantOverlayRiskHidden := false
+            ShowAssistantOverlay(gAssistantOverlayRiskRestoreText)
+            UpdateAssistantOverlayStatus(gAssistantOverlayRiskRestoreStatus)
+            WriteLog("assistant_overlay_risk_restore", "risk=0 mode=affinity_keep_visible")
+        }
+        return
     }
 
     risk := IsAssistantCaptureRiskActive()
