@@ -1301,3 +1301,384 @@
 2026-04-23 14:52:12 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
 2026-04-23 14:52:12 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
 2026-04-23 14:52:12 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:22:56 | web_config_start | port=8798
+2026-04-23 19:22:56 | web_config_start | port=8798
+2026-04-23 19:22:56 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 19:22:57 | mode_switch | active_mode=shortcuts
+2026-04-23 19:22:57 | web_config_reload | applied from web ui
+2026-04-23 19:22:59 | mode_switch | active_mode=capture
+2026-04-23 19:22:59 | mode_switch | active_mode=assistant
+2026-04-23 19:23:00 | web_config_reload | applied from web ui
+2026-04-23 19:23:00 | mode_switch | active_mode=shortcuts
+2026-04-23 19:23:01 | web_config_reload | applied from web ui
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_open | source=manual
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_open | source=manual
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:02 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:03 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:04 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:05 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:06 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:06 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:06 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:06 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:06 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:06 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:06 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:07 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:08 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:09 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:10 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:10 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:10 | assistant_overlay_open | source=manual
+2026-04-23 19:23:11 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:11 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:11 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:11 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:11 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:11 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:12 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:12 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:12 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_open | source=manual
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_open | source=manual
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:13 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:14 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:15 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:16 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:17 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:18 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:19 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:20 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:21 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:21 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:21 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:21 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:23:22 | mode_switch | active_mode=shortcuts
+2026-04-23 19:23:23 | web_config_reload | applied from web ui
+2026-04-23 19:23:23 | mode_switch | active_mode=shortcuts
+2026-04-23 19:23:25 | web_config_reload | applied from web ui
+2026-04-23 19:32:23 | panel_open | target_hwnd=593238
+2026-04-23 19:32:25 | selection_confirm | key=笔记制作 type=提示词
+2026-04-23 19:32:25 | usage_update | key=笔记制作 type=提示词 count=3
+2026-04-23 19:32:25 | panel_close | hidden
+2026-04-23 19:32:25 | insert_success | chars=262
+2026-04-23 19:33:12 | panel_open | target_hwnd=593238
+2026-04-23 19:33:15 | selection_confirm | key=笔记制作 type=提示词
+2026-04-23 19:33:15 | usage_update | key=笔记制作 type=提示词 count=4
+2026-04-23 19:33:15 | panel_close | hidden
+2026-04-23 19:33:16 | insert_success | chars=262
+2026-04-23 19:36:30 | web_config_stop | pid=15932
+2026-04-23 19:36:31 | startup | script initialized
+2026-04-23 19:36:33 | panel_open | target_hwnd=66012
+2026-04-23 19:36:33 | selection_confirm | key=笔记制作 type=提示词
+2026-04-23 19:36:33 | usage_update | key=笔记制作 type=提示词 count=5
+2026-04-23 19:36:33 | selection_confirm | key=yhwa type=提示词
+2026-04-23 19:36:33 | usage_update | key=yhwa type=提示词 count=2
+2026-04-23 19:36:34 | panel_close | hidden
+2026-04-23 19:36:34 | insert_success | chars=4
+2026-04-23 19:37:20 | dev_auto_reload | source_changed -> reload
+2026-04-23 19:37:34 | dev_auto_reload | source_changed -> reload
+2026-04-23 19:37:47 | dev_auto_reload | source_changed -> reload
+2026-04-23 19:37:48 | startup | script initialized
+2026-04-23 19:39:15 | startup | script initialized
+2026-04-23 19:39:24 | startup | script initialized
+2026-04-23 19:39:27 | panel_open | target_hwnd=853892
+2026-04-23 19:39:27 | selection_confirm | key=笔记制作 type=提示词
+2026-04-23 19:39:27 | usage_update | key=笔记制作 type=提示词 count=6
+2026-04-23 19:39:28 | panel_close | hidden
+2026-04-23 19:39:28 | insert_success | chars=262
+2026-04-23 19:39:30 | web_config_start | port=8798
+2026-04-23 19:39:30 | web_config_start | port=8798
+2026-04-23 19:39:31 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 19:39:31 | mode_switch | active_mode=shortcuts
+2026-04-23 19:39:32 | web_config_reload | applied from web ui
+2026-04-23 19:39:33 | mode_switch | active_mode=shortcuts
+2026-04-23 19:39:34 | mode_switch | active_mode=shortcuts
+2026-04-23 19:39:34 | web_config_reload | applied from web ui
+2026-04-23 19:39:34 | mode_switch | active_mode=shortcuts
+2026-04-23 19:39:35 | web_config_reload | applied from web ui
+2026-04-23 19:39:35 | mode_switch | active_mode=assistant
+2026-04-23 19:39:36 | web_config_reload | applied from web ui
+2026-04-23 19:39:37 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:37 | assistant_overlay_open | source=manual
+2026-04-23 19:39:37 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:38 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:40 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:40 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:40 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 19:39:45 | panel_open | target_hwnd=263802
+2026-04-23 19:39:46 | selection_confirm | key=yhwa type=提示词
+2026-04-23 19:39:46 | usage_update | key=yhwa type=提示词 count=3
+2026-04-23 19:39:46 | panel_close | hidden
+2026-04-23 19:39:47 | insert_success | chars=4
+2026-04-23 19:39:48 | panel_open | target_hwnd=263802
+2026-04-23 19:40:00 | panel_close | hidden
+2026-04-23 19:45:28 | panel_open | target_hwnd=199968
+2026-04-23 19:45:30 | panel_close | hidden
+2026-04-23 19:52:26 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 19:52:26 | mode_switch | active_mode=assistant
+2026-04-23 19:52:28 | web_config_reload | applied from web ui
+2026-04-23 19:52:29 | mode_switch | active_mode=shortcuts
+2026-04-23 19:52:30 | mode_switch | active_mode=shortcuts
+2026-04-23 19:52:30 | web_config_reload | applied from web ui
+2026-04-23 19:52:30 | mode_switch | active_mode=assistant
+2026-04-23 19:52:31 | web_config_reload | applied from web ui
+2026-04-23 19:53:14 | web_config_stop | pid=5620
+2026-04-23 19:53:15 | startup | script initialized
+2026-04-23 19:53:35 | web_config_start | port=8798
+2026-04-23 19:53:35 | web_config_start | port=8798
+2026-04-23 19:53:35 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 19:53:36 | mode_switch | active_mode=assistant
+2026-04-23 19:53:36 | mode_switch | active_mode=assistant
+2026-04-23 19:53:36 | web_config_reload | applied from web ui
+2026-04-23 19:53:37 | web_config_reload | applied from web ui
+2026-04-23 19:53:49 | web_config_stop | pid=26004
+2026-04-23 19:53:49 | startup | script initialized
+2026-04-23 19:58:49 | web_config_start | port=8798
+2026-04-23 19:58:49 | web_config_start | port=8798
+2026-04-23 19:58:49 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 19:58:50 | mode_switch | active_mode=assistant
+2026-04-23 19:58:51 | web_config_reload | applied from web ui
+2026-04-23 19:59:32 | panel_open | target_hwnd=853892
+2026-04-23 19:59:35 | panel_close | hidden
+2026-04-23 20:21:14 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 20:21:14 | mode_switch | active_mode=assistant
+2026-04-23 20:21:15 | web_config_reload | applied from web ui
+2026-04-23 20:21:19 | mode_switch | active_mode=shortcuts
+2026-04-23 20:21:20 | mode_switch | active_mode=assistant
+2026-04-23 20:21:20 | web_config_reload | applied from web ui
+2026-04-23 20:21:21 | web_config_reload | applied from web ui
+2026-04-23 20:21:24 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-23 20:21:24 | assistant_overlay_open_req | source=web
+2026-04-23 20:21:25 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:25 | assistant_overlay_open | source=manual
+2026-04-23 20:21:25 | assistant_overlay_open | source=web_action
+2026-04-23 20:21:25 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:25 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:25 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:25 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:25 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:25 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:26 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:26 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:26 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:26 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:26 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:26 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:26 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:27 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:28 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:28 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:28 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:28 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:28 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:28 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:29 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:29 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 20:21:29 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-23 21:20:57 | startup | script initialized
+2026-04-23 21:23:44 | panel_open | target_hwnd=199968
+2026-04-23 21:23:50 | selection_confirm | key=笔记制作 type=提示词
+2026-04-23 21:23:50 | usage_update | key=笔记制作 type=提示词 count=7
+2026-04-23 21:23:50 | panel_close | hidden
+2026-04-23 21:23:51 | insert_success | chars=262
+2026-04-23 21:24:20 | panel_open | target_hwnd=199968
+2026-04-23 21:24:24 | selection_confirm | key=笔记制作 type=提示词
+2026-04-23 21:24:24 | usage_update | key=笔记制作 type=提示词 count=8
+2026-04-23 21:24:24 | panel_close | hidden
+2026-04-23 21:24:24 | insert_success | chars=262
+2026-04-23 21:24:31 | panel_open | target_hwnd=2361580
+2026-04-23 21:24:36 | default_refresh | source=usage
+2026-04-23 21:24:36 | selection_confirm | key=笔记制作 type=提示词
+2026-04-23 21:24:36 | usage_update | key=笔记制作 type=提示词 count=9
+2026-04-23 21:24:36 | panel_close | hidden
+2026-04-23 21:24:36 | insert_success | chars=262
+2026-04-23 21:26:48 | web_config_start | port=8798
+2026-04-23 21:26:48 | web_config_start | port=8798
+2026-04-23 21:26:49 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 21:26:50 | mode_switch | active_mode=assistant
+2026-04-23 21:26:51 | web_config_reload | applied from web ui
+2026-04-23 21:30:56 | dev_auto_reload | source_changed -> reload
+2026-04-23 21:30:57 | web_config_stop | pid=21044
+2026-04-23 21:30:58 | startup | script initialized
+2026-04-23 21:31:43 | dev_auto_reload | source_changed -> reload
+2026-04-23 21:31:44 | startup | script initialized
+2026-04-23 21:43:44 | web_config_start | port=8798
+2026-04-23 21:43:44 | web_config_start | port=8798
+2026-04-23 21:43:44 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 21:43:45 | mode_switch | active_mode=assistant
+2026-04-23 21:43:46 | web_config_reload | applied from web ui
+2026-04-23 21:57:13 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 21:57:14 | mode_switch | active_mode=assistant
+2026-04-23 21:57:14 | web_config_reload | applied from web ui
+2026-04-23 21:57:16 | mode_switch | active_mode=shortcuts
+2026-04-23 21:57:18 | web_config_reload | applied from web ui
+2026-04-23 21:57:21 | mode_switch | active_mode=notes
+2026-04-23 21:57:21 | notes_select | id=20260420172621
+2026-04-23 21:57:23 | web_config_reload | applied from web ui
+2026-04-23 21:57:23 | notes_select | id=20260420172755
+2026-04-23 21:57:24 | notes_select | id=20260420172621
+2026-04-23 21:57:25 | notes_select | id=20260420172755
+2026-04-23 21:58:23 | notes_save | id=20260420172755
+2026-04-23 21:58:23 | notes_select | id=20260420172755
+2026-04-23 21:58:23 | notes_select | id=20260420172534
+2026-04-23 21:58:23 | notes_select | id=20260420172755
+2026-04-23 21:58:32 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 21:58:33 | mode_switch | active_mode=notes
+2026-04-23 21:58:33 | notes_select | id=20260420172621
+2026-04-23 21:58:33 | web_config_reload | applied from web ui
+2026-04-23 21:58:35 | notes_select | id=20260420172755
+2026-04-23 21:58:36 | notes_select | id=20260420172621
+2026-04-23 21:58:37 | notes_select | id=20260420172755
+2026-04-23 22:15:12 | dev_auto_reload | source_changed -> reload
+2026-04-23 22:15:12 | web_config_stop | pid=29116
+2026-04-23 22:15:13 | startup | script initialized
+2026-04-23 22:21:26 | web_config_start | port=8798
+2026-04-23 22:21:26 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 22:21:35 | web_config_start | port=8798
+2026-04-23 22:21:35 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 22:47:47 | panel_open | target_hwnd=199968
+2026-04-23 22:47:48 | panel_close | hidden
+2026-04-23 22:47:49 | panel_open | target_hwnd=199968
+2026-04-23 22:48:02 | web_config_start | port=8798
+2026-04-23 22:48:02 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 22:48:04 | panel_close | hidden
+2026-04-23 22:48:25 | web_config_stop | pid=26588
+2026-04-23 22:48:26 | startup | script initialized
+2026-04-23 22:48:28 | web_config_start | port=8798
+2026-04-23 22:48:29 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 22:58:49 | web_config_start | port=8798
+2026-04-23 23:04:03 | config_open | web url=http://127.0.0.1:8798/
+2026-04-23 23:04:04 | mode_switch | active_mode=notes
+2026-04-23 23:04:04 | notes_select | id=20260420172621
+2026-04-23 23:04:05 | web_config_reload | applied from web ui
+2026-04-23 23:04:06 | mode_switch | active_mode=resume
+2026-04-23 23:04:07 | web_config_reload | applied from web ui
