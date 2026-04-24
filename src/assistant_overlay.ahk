@@ -271,10 +271,9 @@ IsAssistantEnhancedCaptureModeReady() {
 }
 
 CanAssistantKeepVisibleDuringCapture() {
-    ; Core rule: any real screenshot action must not capture the overlay.
-    ; Even in enhanced mode, local visibility during recording must not be
-    ; implemented by keeping the overlay visible inside screenshot results.
-    return false
+    ; Only the internal F1 capture flow is allowed to attempt "locally visible,
+    ; capture result hidden". External screenshot hotkeys must still temp-hide.
+    return IsAssistantEnhancedCaptureModeEnabled()
 }
 
 EnsureAssistantOverlayReadonlyMousePolicy() {
@@ -434,7 +433,7 @@ StartAssistantCaptureFlow(showNotice := true) {
         UpdateAssistantOverlayStatus("状态：正在截图 | 模型：" modelLabel)
     }
     path := GenerateCapturePath()
-    ok := CaptureAssistantScreenSafely(path)
+    ok := CaptureAssistantScreenSafely(path, wasOverlayVisible)
     if !ok {
         WriteLog("assistant_capture_failed", "capture path=" path)
         if wasOverlayVisible {
@@ -506,6 +505,14 @@ CaptureAssistantScreenSafely(path, restoreAfterCapture := false) {
     }
 
     mode := GetAssistantCaptureMode()
+    if (mode = "enhanced" && CanAssistantKeepVisibleDuringCapture()) {
+        visibleReady := ApplyAssistantOverlayCaptureProtection(true, "internal_capture_visible")
+        if visibleReady {
+            WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=enhanced_visible")
+            return CaptureFullScreen(path)
+        }
+        WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=enhanced_visible_failed_rearm")
+    }
     if (mode = "enhanced") {
         WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=enhanced_fallback_hide")
     } else {
