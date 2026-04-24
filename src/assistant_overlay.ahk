@@ -9,6 +9,9 @@ gAssistantOverlayCaptureBusy := false
 gAssistantOverlayVisible := false
 gAssistantOverlayTempHidden := false
 gAssistantOverlayTempRestoreText := ""
+gAssistantOverlayProtectionGapHidden := false
+gAssistantOverlayProtectionGapRestoreText := ""
+gAssistantOverlayProtectionGapRestoreStatus := "状态：悬浮窗已恢复"
 gAssistantOverlayRiskHidden := false
 gAssistantOverlayRiskRestoreText := ""
 gAssistantOverlayRiskRestoreStatus := "状态：悬浮窗已恢复"
@@ -43,6 +46,7 @@ gAssistantOverlayOpenGraceUntilTick := 0
 gAssistantOverlayAffinityRepairFailures := 0
 gAssistantOverlayAffinityRepairCooldownUntilTick := 0
 gAssistantOverlayCaptureRiskLastSeenTick := 0
+gAssistantOverlayEnhancedProtectGapSinceTick := 0
 
 ResetAssistantOverlayProtectionStability() {
     global gAssistantOverlayAffinityRepairFailures, gAssistantOverlayAffinityRepairCooldownUntilTick
@@ -53,6 +57,9 @@ ResetAssistantOverlayProtectionStability() {
 BeginAssistantOverlayOpenGrace(durationMs := 1200) {
     global gAssistantOverlayOpenGraceUntilTick
     duration := Max(0, Abs(Integer(durationMs)))
+    if (GetAssistantCaptureMode() = "enhanced") {
+        duration := Max(duration, 1800)
+    }
     gAssistantOverlayOpenGraceUntilTick := A_TickCount + duration
 }
 
@@ -72,8 +79,11 @@ GetAssistantOverlayRearmDelayMs(baseDelay := 220) {
 
 CanAssistantOverlayAttemptProtectionRepair() {
     global gAssistantOverlayAffinityRepairCooldownUntilTick
-    if IsAssistantOverlayInOpenGrace() {
+    if (GetAssistantCaptureMode() != "enhanced" && IsAssistantOverlayInOpenGrace()) {
         return false
+    }
+    if (GetAssistantCaptureMode() = "enhanced") {
+        return true
     }
     if (A_TickCount < gAssistantOverlayAffinityRepairCooldownUntilTick) {
         return false
@@ -83,16 +93,28 @@ CanAssistantOverlayAttemptProtectionRepair() {
 
 NoteAssistantOverlayProtectionRepairResult(success, reason := "") {
     global gAssistantOverlayAffinityRepairFailures, gAssistantOverlayAffinityRepairCooldownUntilTick
+    global gAssistantOverlayEnhancedProtectGapSinceTick
     if success {
         if (gAssistantOverlayAffinityRepairFailures > 0 || gAssistantOverlayAffinityRepairCooldownUntilTick > 0) {
             WriteLog("assistant_overlay_protect_repair_recovered", "reason=" reason)
         }
         gAssistantOverlayAffinityRepairFailures := 0
         gAssistantOverlayAffinityRepairCooldownUntilTick := 0
+        gAssistantOverlayEnhancedProtectGapSinceTick := 0
         return
     }
 
     gAssistantOverlayAffinityRepairFailures += 1
+    if (GetAssistantCaptureMode() = "enhanced") {
+        if (gAssistantOverlayAffinityRepairFailures >= 3) {
+            WriteLog(
+                "assistant_overlay_protect_repair_retrying",
+                "mode=enhanced reason=" reason " failures=" gAssistantOverlayAffinityRepairFailures
+            )
+            gAssistantOverlayAffinityRepairFailures := 0
+        }
+        return
+    }
     if (gAssistantOverlayAffinityRepairFailures < 3) {
         return
     }
@@ -242,11 +264,17 @@ IsAssistantEnhancedCaptureModeReady() {
     if (GetAssistantCaptureMode() != "enhanced") {
         return false
     }
-    return gAssistantOverlayAffinityActive ? true : false
+    if !gAssistantOverlayAffinityActive {
+        return false
+    }
+    return GetAssistantOverlayCurrentDisplayAffinity() = 0x11
 }
 
 CanAssistantKeepVisibleDuringCapture() {
-    return IsAssistantEnhancedCaptureModeReady()
+    ; Core rule: any real screenshot action must not capture the overlay.
+    ; Even in enhanced mode, local visibility during recording must not be
+    ; implemented by keeping the overlay visible inside screenshot results.
+    return false
 }
 
 EnsureAssistantOverlayReadonlyMousePolicy() {
@@ -478,10 +506,6 @@ CaptureAssistantScreenSafely(path, restoreAfterCapture := false) {
     }
 
     mode := GetAssistantCaptureMode()
-    if (mode = "enhanced" && CanAssistantKeepVisibleDuringCapture()) {
-        WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=enhanced_visible")
-        return CaptureFullScreen(path)
-    }
     if (mode = "enhanced") {
         WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=enhanced_fallback_hide")
     } else {
@@ -844,7 +868,7 @@ AssistantOverlayOnMouseDown(wParam, lParam, msg, hwnd) {
 OnAssistantOverlayClose(*) {
     global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayRiskHidden, gAssistantOverlayInSensitivePhase
     global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason, gAssistantOverlayRecordingProtectionActive
-    global gAssistantOverlayOpenGraceUntilTick
+    global gAssistantOverlayOpenGraceUntilTick, gAssistantOverlayProtectionGapHidden, gAssistantOverlayEnhancedProtectGapSinceTick
     if IsObject(gAssistantOverlayGui) {
         gAssistantOverlayGui.Hide()
     }
@@ -852,6 +876,8 @@ OnAssistantOverlayClose(*) {
     gAssistantOverlayRiskHidden := false
     gAssistantOverlayInSensitivePhase := false
     gAssistantOverlayRecordingProtectionActive := false
+    gAssistantOverlayProtectionGapHidden := false
+    gAssistantOverlayEnhancedProtectGapSinceTick := 0
     gAssistantOverlayProtectionRearmPending := false
     gAssistantOverlayProtectionRearmReason := ""
     gAssistantOverlayOpenGraceUntilTick := 0
@@ -1040,6 +1066,8 @@ CheckAssistantCaptureRisk(*) {
     global gAssistantOverlayRecordingProtectionActive
     global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick, gAssistantSettings
     global gAssistantOverlayCaptureRiskLastSeenTick
+    global gAssistantOverlayProtectionGapHidden, gAssistantOverlayProtectionGapRestoreText, gAssistantOverlayProtectionGapRestoreStatus
+    global gAssistantOverlayEnhancedProtectGapSinceTick
 
     ; Recorder protection is the top priority: when active, keep re-checking WDA
     ; and repair it immediately if Windows drops the capture exclusion.
@@ -1049,7 +1077,41 @@ CheckAssistantCaptureRisk(*) {
         needsRepair := drifted || !gAssistantOverlayAffinityActive
         if needsRepair {
             reason := drifted ? "capture_affinity_drift_" actualAffinity : "capture_affinity_inactive"
+            if (GetAssistantCaptureMode() = "enhanced" && IsObject(gAssistantOverlayGui)) {
+                captureRiskActive := IsAssistantCaptureRiskActive()
+                if captureRiskActive {
+                    if (gAssistantOverlayEnhancedProtectGapSinceTick <= 0) {
+                        gAssistantOverlayEnhancedProtectGapSinceTick := A_TickCount
+                    }
+                    gAssistantOverlayProtectionGapRestoreText := GetAssistantOverlayCurrentText()
+                    gAssistantOverlayProtectionGapRestoreStatus := gAssistantOverlayLastStatus
+                    gapElapsed := A_TickCount - gAssistantOverlayEnhancedProtectGapSinceTick
+                    shouldGapHide := (!IsAssistantOverlayInOpenGrace() && gapElapsed >= 450)
+                    if (shouldGapHide && gAssistantOverlayVisible) {
+                        try gAssistantOverlayGui.Hide()
+                        gAssistantOverlayVisible := false
+                        gAssistantOverlayProtectionGapHidden := true
+                        WriteLog("assistant_overlay_protect_gap_hide", "reason=" reason " risk=1")
+                    }
+                } else {
+                    gAssistantOverlayEnhancedProtectGapSinceTick := 0
+                    if (gAssistantOverlayProtectionGapHidden && !gAssistantOverlayTempHidden && !gAssistantOverlayRiskHidden) {
+                        gAssistantOverlayProtectionGapHidden := false
+                        ShowAssistantOverlay(gAssistantOverlayProtectionGapRestoreText)
+                        UpdateAssistantOverlayStatus(gAssistantOverlayProtectionGapRestoreStatus)
+                        WriteLog("assistant_overlay_protect_gap_restore", "mode=enhanced risk=0")
+                    }
+                }
+            }
             QueueAssistantOverlayProtectionRearm(reason)
+        } else if (GetAssistantCaptureMode() = "enhanced" && gAssistantOverlayProtectionGapHidden && !gAssistantOverlayTempHidden && !gAssistantOverlayRiskHidden) {
+            gAssistantOverlayEnhancedProtectGapSinceTick := 0
+            gAssistantOverlayProtectionGapHidden := false
+            ShowAssistantOverlay(gAssistantOverlayProtectionGapRestoreText)
+            UpdateAssistantOverlayStatus(gAssistantOverlayProtectionGapRestoreStatus)
+            WriteLog("assistant_overlay_protect_gap_restore", "mode=enhanced")
+        } else if (GetAssistantCaptureMode() = "enhanced") {
+            gAssistantOverlayEnhancedProtectGapSinceTick := 0
         }
     }
 
@@ -1209,18 +1271,9 @@ GetAssistantOverlayCharUnits(ch) {
 }
 
 ShouldAssistantTempHideForCapture() {
-    global gAssistantOverlayAffinityActive, gAssistantOverlaySecurityFirst
-    mode := GetAssistantCaptureMode()
-    if (mode = "enhanced" && CanAssistantKeepVisibleDuringCapture()) {
-        return false
-    }
-    if (mode = "enhanced") {
-        return true
-    }
-    if gAssistantOverlaySecurityFirst {
-        return true
-    }
-    return !gAssistantOverlayAffinityActive
+    ; Screenshot rule is unconditional: once a screenshot action starts,
+    ; the overlay must hide before pixels are captured.
+    return true
 }
 
 IsAssistantRecordingRiskActive() {
