@@ -22,7 +22,9 @@ gAssistantOverlayInSensitivePhase := false
 gAssistantThinkingActive := false
 gAssistantThinkingStartTick := 0
 gAssistantOverlayPlaced := false
-; Default ON: prioritize screenshot protection and keep recorder exclusion enabled.
+; Core-first baseline: keep generic capture exclusion enabled whenever the
+; assistant overlay is visible. Secondary effects such as custom opacity must
+; yield to the primary goal: local-visible while absent from recordings.
 gAssistantOverlayAffinityEnabled := true
 gAssistantOverlayAffinityActive := false
 ; Keep WDA on for recorder exclusion, but only auto-hide on real screenshot actions.
@@ -36,6 +38,167 @@ gAssistantOverlayFullText := ""
 gAssistantOverlayRenderedLines := []
 gAssistantOverlayScrollOffset := 1
 gAssistantOverlayLastAppliedOpacity := -1
+gAssistantOverlayRecordingProtectionActive := false
+gAssistantOverlayOpenGraceUntilTick := 0
+gAssistantOverlayAffinityRepairFailures := 0
+gAssistantOverlayAffinityRepairCooldownUntilTick := 0
+
+ResetAssistantOverlayProtectionStability() {
+    global gAssistantOverlayAffinityRepairFailures, gAssistantOverlayAffinityRepairCooldownUntilTick
+    gAssistantOverlayAffinityRepairFailures := 0
+    gAssistantOverlayAffinityRepairCooldownUntilTick := 0
+}
+
+BeginAssistantOverlayOpenGrace(durationMs := 1200) {
+    global gAssistantOverlayOpenGraceUntilTick
+    duration := Max(0, Abs(Integer(durationMs)))
+    gAssistantOverlayOpenGraceUntilTick := A_TickCount + duration
+}
+
+IsAssistantOverlayInOpenGrace() {
+    global gAssistantOverlayOpenGraceUntilTick
+    return (A_TickCount < gAssistantOverlayOpenGraceUntilTick)
+}
+
+GetAssistantOverlayRearmDelayMs(baseDelay := 220) {
+    global gAssistantOverlayOpenGraceUntilTick
+    delay := Max(60, Abs(Integer(baseDelay)))
+    if IsAssistantOverlayInOpenGrace() {
+        delay := Max(delay, (gAssistantOverlayOpenGraceUntilTick - A_TickCount) + 80)
+    }
+    return delay
+}
+
+CanAssistantOverlayAttemptProtectionRepair() {
+    global gAssistantOverlayAffinityRepairCooldownUntilTick
+    if IsAssistantOverlayInOpenGrace() {
+        return false
+    }
+    if (A_TickCount < gAssistantOverlayAffinityRepairCooldownUntilTick) {
+        return false
+    }
+    return true
+}
+
+NoteAssistantOverlayProtectionRepairResult(success, reason := "") {
+    global gAssistantOverlayAffinityRepairFailures, gAssistantOverlayAffinityRepairCooldownUntilTick
+    if success {
+        if (gAssistantOverlayAffinityRepairFailures > 0 || gAssistantOverlayAffinityRepairCooldownUntilTick > 0) {
+            WriteLog("assistant_overlay_protect_repair_recovered", "reason=" reason)
+        }
+        gAssistantOverlayAffinityRepairFailures := 0
+        gAssistantOverlayAffinityRepairCooldownUntilTick := 0
+        return
+    }
+
+    gAssistantOverlayAffinityRepairFailures += 1
+    if (gAssistantOverlayAffinityRepairFailures < 3) {
+        return
+    }
+
+    gAssistantOverlayAffinityRepairCooldownUntilTick := A_TickCount + 5000
+    WriteLog(
+        "assistant_overlay_protect_repair_paused",
+        "reason=" reason " failures=" gAssistantOverlayAffinityRepairFailures " cooldown_ms=5000"
+    )
+    gAssistantOverlayAffinityRepairFailures := 0
+}
+
+IsAssistantOverlayProtectionMode() {
+    global gAssistantOverlayAffinityEnabled, gAssistantOverlayRecordingProtectionActive
+    return gAssistantOverlayAffinityEnabled || gAssistantOverlayRecordingProtectionActive
+}
+
+GetAssistantOverlayTargetOpacity() {
+    global gAssistantSettings
+    opacity := 100
+    try opacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
+    return opacity
+}
+
+GetAssistantOverlayEffectiveOpacity() {
+    if IsAssistantOverlayProtectionMode() {
+        return 100
+    }
+    return GetAssistantOverlayTargetOpacity()
+}
+
+ShouldAssistantOverlayProtectionBeActive() {
+    if IsAssistantOverlayProtectionMode() {
+        return true
+    }
+    return ShouldAssistantOverlayRearmProtection()
+}
+
+ShouldAssistantOverlayRearmProtection() {
+    return GetAssistantOverlayTargetOpacity() >= 100
+}
+
+SyncAssistantOverlayAfterSettingsChange() {
+    global gAssistantOverlayVisible, gAssistantOverlayRecordingProtectionActive, gAssistantOverlayAffinityEnabled
+    if !gAssistantOverlayVisible {
+        return
+    }
+
+    opacity := GetAssistantOverlayTargetOpacity()
+    if (!gAssistantOverlayAffinityEnabled && !gAssistantOverlayRecordingProtectionActive && opacity < 100) {
+        DisableAssistantOverlayCaptureProtection("semi_transparent_settings")
+    }
+    SetAssistantOverlayOpacity(GetAssistantOverlayEffectiveOpacity())
+    if (ShouldAssistantOverlayProtectionBeActive()) {
+        QueueAssistantOverlayProtectionRearm("settings_reload")
+    }
+}
+
+DisableAssistantOverlayCaptureProtection(reason := "") {
+    global gAssistantOverlayGui, gAssistantOverlayAffinityActive, gAssistantOverlayProtectionRearmPending
+    global gAssistantOverlayRecordingProtectionActive, gAssistantOverlayLastAppliedOpacity
+    wasRecordingProtected := gAssistantOverlayRecordingProtectionActive
+    gAssistantOverlayRecordingProtectionActive := false
+    if !IsObject(gAssistantOverlayGui) {
+        gAssistantOverlayAffinityActive := false
+        gAssistantOverlayProtectionRearmPending := false
+        return
+    }
+
+    gAssistantOverlayProtectionRearmPending := false
+    try DllCall("user32\SetWindowDisplayAffinity", "Ptr", gAssistantOverlayGui.Hwnd, "UInt", 0, "Int")
+    gAssistantOverlayAffinityActive := false
+    try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
+    gAssistantOverlayLastAppliedOpacity := 100
+    SetAssistantOverlayOpacity(GetAssistantOverlayTargetOpacity())
+    if (reason != "") {
+        WriteLog("assistant_overlay_protect_disabled", "reason=" reason)
+    }
+    if (wasRecordingProtected) {
+        WriteLog("assistant_overlay_recording_protect_off", "reason=" reason)
+    }
+}
+
+EnableAssistantOverlayRecordingProtection(reason := "") {
+    global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayAffinityActive
+    global gAssistantOverlayRecordingProtectionActive, gAssistantOverlayLastAppliedOpacity
+    if !gAssistantOverlayVisible || !IsObject(gAssistantOverlayGui) {
+        return false
+    }
+    if gAssistantOverlayRecordingProtectionActive {
+        return gAssistantOverlayAffinityActive
+    }
+
+    hwnd := gAssistantOverlayGui.Hwnd
+    gAssistantOverlayRecordingProtectionActive := true
+    gAssistantOverlayLastAppliedOpacity := -1
+    try WinSetTransparent("Off", "ahk_id " hwnd)
+    ok := DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0x11, "Int")
+    gAssistantOverlayAffinityActive := (ok != 0)
+    SetAssistantOverlayOpacity(100)
+    if gAssistantOverlayAffinityActive {
+        WriteLog("assistant_overlay_recording_protect_on", "reason=" reason)
+    } else {
+        WriteLog("assistant_overlay_recording_protect_failed", "reason=" reason " last_error=" A_LastError)
+    }
+    return gAssistantOverlayAffinityActive
+}
 
 GetAssistantCurrentModelLabel() {
     global gAssistantSettings
@@ -60,6 +223,7 @@ IsAssistantOverlayCopyBlocked() {
 
 EnsureAssistantOverlayReadonlyMousePolicy() {
     ; 回答区永久禁止鼠标选中与 I-beam 光标，保持纯展示区域体验。
+    OnMessage(0x21, AssistantOverlayOnMouseActivate)     ; WM_MOUSEACTIVATE
     OnMessage(0x20, AssistantOverlayOnSetCursor)         ; WM_SETCURSOR
     OnMessage(0x201, AssistantOverlayOnMouseDown)        ; WM_LBUTTONDOWN
     OnMessage(0x202, AssistantOverlayOnMouseDown)        ; WM_LBUTTONUP
@@ -85,13 +249,30 @@ NormalizeAssistantOverlayWindowStyles() {
     GWL_EXSTYLE := -20
     WS_EX_APPWINDOW := 0x00040000
     WS_EX_TOOLWINDOW := 0x00000080
+    WS_EX_NOACTIVATE := 0x08000000
     exStyle := DllCall("user32\GetWindowLongPtr", "Ptr", hwnd, "Int", GWL_EXSTYLE, "Ptr")
     if (exStyle = 0) {
         return
     }
-    nextStyle := (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW
+    nextStyle := ((exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE) & ~WS_EX_APPWINDOW)
     if (nextStyle != exStyle) {
         DllCall("user32\SetWindowLongPtr", "Ptr", hwnd, "Int", GWL_EXSTYLE, "Ptr", nextStyle, "Ptr")
+        SWP_NOSIZE := 0x0001
+        SWP_NOMOVE := 0x0002
+        SWP_NOZORDER := 0x0004
+        SWP_NOACTIVATE := 0x0010
+        SWP_FRAMECHANGED := 0x0020
+        DllCall(
+            "user32\SetWindowPos",
+            "Ptr", hwnd,
+            "Ptr", 0,
+            "Int", 0,
+            "Int", 0,
+            "Int", 0,
+            "Int", 0,
+            "UInt", SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+            "Int"
+        )
     }
 }
 
@@ -285,11 +466,13 @@ EnsureAssistantOverlayGui() {
 
 ShowAssistantOverlay(answerText) {
     global gAssistantOverlayGui, gAssistantOverlayText
-    global gAssistantOverlayVisible, gAssistantSettings, gAssistantOverlayRiskHidden, gAssistantOverlayPlaced
+    global gAssistantOverlayVisible, gAssistantSettings, gAssistantOverlayRiskHidden, gAssistantOverlayPlaced, gAssistantOverlayRecordingProtectionActive, gAssistantOverlayAffinityEnabled
 
     EnsureAssistantOverlayGui()
+    ResetAssistantOverlayProtectionStability()
+    BeginAssistantOverlayOpenGrace()
 
-    opacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
+    opacity := GetAssistantOverlayEffectiveOpacity()
     SetAssistantOverlayText(answerText)
 
     if gAssistantOverlayVisible {
@@ -306,8 +489,13 @@ ShowAssistantOverlay(answerText) {
     gAssistantOverlayRiskHidden := false
     NormalizeAssistantOverlayWindowStyles()
     RefreshAssistantOverlayWindow()
+    if (!gAssistantOverlayAffinityEnabled && !gAssistantOverlayRecordingProtectionActive && opacity < 100) {
+        DisableAssistantOverlayCaptureProtection("semi_transparent_show")
+    }
     SetAssistantOverlayOpacity(opacity)
-    QueueAssistantOverlayProtectionRearm("show")
+    if (ShouldAssistantOverlayProtectionBeActive()) {
+        QueueAssistantOverlayProtectionRearm("show")
+    }
     StartAssistantOverlayCaptureGuard()
 }
 
@@ -376,6 +564,13 @@ SetAssistantOverlayOpacity(opacity) {
     }
 
     val := ClampAssistantOpacity(opacity)
+    if IsAssistantOverlayProtectionMode() {
+        if (gAssistantOverlayLastAppliedOpacity != 100) {
+            try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
+            gAssistantOverlayLastAppliedOpacity := 100
+        }
+        return
+    }
     if (val = gAssistantOverlayLastAppliedOpacity) {
         return
     }
@@ -434,25 +629,25 @@ ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
     if (!forceReset && actualAffinity = 0x11) {
         gAssistantOverlayAffinityActive := true
         gAssistantOverlayLastProtectionEnsureTick := A_TickCount
-        SetAssistantOverlayOpacity(ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
+        SetAssistantOverlayOpacity(GetAssistantOverlayEffectiveOpacity())
         return true
     }
 
-    ; Reset layered transparency before applying WDA. This keeps the overlay locally visible
-    ; while avoiding a fragile layered-window + affinity combination.
+    ; Protection mode always uses a plain, non-layered window. Avoid repeated
+    ; transparency toggles and frame redraws here because they are the main
+    ; source of flicker on some Windows setups.
     gAssistantOverlayLastAppliedOpacity := -1
     try WinSetTransparent("Off", "ahk_id " hwnd)
     if forceReset {
         try DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0, "Int")
-        Sleep(20)
     }
 
-    ; WDA_EXCLUDEFROMCAPTURE (0x11): Windows 10 2004+ best effort.
     wasActive := gAssistantOverlayAffinityActive
     ok := DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0x11, "Int")
     if (ok != 0) {
         gAssistantOverlayAffinityActive := true
         gAssistantOverlayLastProtectionEnsureTick := A_TickCount
+        NoteAssistantOverlayProtectionRepairResult(true, reason)
         if forceReset {
             gAssistantOverlayLastProtectionRearmTick := A_TickCount
             WriteLog("assistant_overlay_protect_rearm", "mode=WDA_EXCLUDEFROMCAPTURE reason=" reason)
@@ -460,22 +655,20 @@ ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
         if !wasActive {
             WriteLog("assistant_overlay_protect_enabled", "mode=WDA_EXCLUDEFROMCAPTURE")
         }
-        SetAssistantOverlayOpacity(ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
-        RefreshAssistantOverlayWindow(false)
+        SetAssistantOverlayOpacity(100)
         return true
     }
 
-    ; Do NOT fallback to WDA_MONITOR to avoid visible black block in captures.
     try DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0, "Int")
     gAssistantOverlayAffinityActive := false
+    NoteAssistantOverlayProtectionRepairResult(false, reason != "" ? reason : "apply_failed")
     if forceReset {
         gAssistantOverlayLastProtectionRearmTick := A_TickCount
     }
     if (wasActive || forceReset) {
         WriteLog("assistant_overlay_protect_failed", "mode=WDA_EXCLUDEFROMCAPTURE last_error=" A_LastError)
     }
-    SetAssistantOverlayOpacity(ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
-    RefreshAssistantOverlayWindow(false)
+    SetAssistantOverlayOpacity(GetAssistantOverlayEffectiveOpacity())
     return false
 }
 
@@ -509,6 +702,27 @@ AssistantOverlayOnCopyMessage(wParam, lParam, msg, hwnd) {
     }
 }
 
+IsAssistantOverlayMessageTarget(hwnd) {
+    global gAssistantOverlayGui
+    if !IsObject(gAssistantOverlayGui) || !hwnd {
+        return false
+    }
+    root := DllCall("user32\GetAncestor", "Ptr", hwnd, "UInt", 2, "Ptr") ; GA_ROOT
+    if !root {
+        root := hwnd
+    }
+    return (root = gAssistantOverlayGui.Hwnd)
+}
+
+AssistantOverlayOnMouseActivate(wParam, lParam, msg, hwnd) {
+    ; Keep the underlying app focused even when the user clicks overlay controls.
+    ; This avoids triggering blur/focus-loss handlers in the target window.
+    if !IsAssistantOverlayMessageTarget(hwnd) {
+        return
+    }
+    return 3 ; MA_NOACTIVATE
+}
+
 AssistantOverlayOnSetCursor(wParam, lParam, msg, hwnd) {
     global gAssistantOverlayText, gAssistantOverlayVisible
     if !gAssistantOverlayVisible || !IsObject(gAssistantOverlayText) {
@@ -533,15 +747,19 @@ AssistantOverlayOnMouseDown(wParam, lParam, msg, hwnd) {
 
 OnAssistantOverlayClose(*) {
     global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayRiskHidden, gAssistantOverlayInSensitivePhase
-    global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason
+    global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason, gAssistantOverlayRecordingProtectionActive
+    global gAssistantOverlayOpenGraceUntilTick
     if IsObject(gAssistantOverlayGui) {
         gAssistantOverlayGui.Hide()
     }
     gAssistantOverlayVisible := false
     gAssistantOverlayRiskHidden := false
     gAssistantOverlayInSensitivePhase := false
+    gAssistantOverlayRecordingProtectionActive := false
     gAssistantOverlayProtectionRearmPending := false
     gAssistantOverlayProtectionRearmReason := ""
+    gAssistantOverlayOpenGraceUntilTick := 0
+    ResetAssistantOverlayProtectionStability()
     StopAssistantOverlayCaptureGuard()
     StopAssistantThinkingTicker()
     try SaveData()
@@ -552,24 +770,29 @@ AssistantOverlayOnDisplayChange(wParam := 0, lParam := 0, msg := 0, hwnd := 0) {
 }
 
 QueueAssistantOverlayProtectionRearm(reason := "manual") {
-    global gAssistantOverlayVisible, gAssistantOverlayAffinityEnabled
+    global gAssistantOverlayVisible, gAssistantOverlayAffinityEnabled, gAssistantOverlayRecordingProtectionActive
     global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason
-    if !gAssistantOverlayVisible || !gAssistantOverlayAffinityEnabled {
+    if !gAssistantOverlayVisible || !(gAssistantOverlayAffinityEnabled || gAssistantOverlayRecordingProtectionActive) || !ShouldAssistantOverlayProtectionBeActive() {
         return
     }
     gAssistantOverlayProtectionRearmPending := true
     gAssistantOverlayProtectionRearmReason := reason
-    SetTimer(AssistantOverlayPerformProtectionRearm, -120)
+    SetTimer(AssistantOverlayPerformProtectionRearm, -GetAssistantOverlayRearmDelayMs(220))
 }
 
 AssistantOverlayPerformProtectionRearm(*) {
-    global gAssistantOverlayVisible, gAssistantOverlayAffinityEnabled
+    global gAssistantOverlayVisible, gAssistantOverlayAffinityEnabled, gAssistantOverlayRecordingProtectionActive
     global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason
     if !gAssistantOverlayProtectionRearmPending {
         return
     }
     gAssistantOverlayProtectionRearmPending := false
-    if !gAssistantOverlayVisible || !gAssistantOverlayAffinityEnabled {
+    if !gAssistantOverlayVisible || !(gAssistantOverlayAffinityEnabled || gAssistantOverlayRecordingProtectionActive) || !ShouldAssistantOverlayProtectionBeActive() {
+        return
+    }
+    if !CanAssistantOverlayAttemptProtectionRepair() {
+        gAssistantOverlayProtectionRearmPending := true
+        SetTimer(AssistantOverlayPerformProtectionRearm, -GetAssistantOverlayRearmDelayMs(320))
         return
     }
     ApplyAssistantOverlayCaptureProtection(true, gAssistantOverlayProtectionRearmReason)
@@ -718,28 +941,23 @@ AssistantThinkingTick(*) {
 CheckAssistantCaptureRisk(*) {
     global gAssistantOverlayVisible, gAssistantOverlayGui, gAssistantOverlayRiskHidden, gAssistantOverlayRiskRestoreText, gAssistantOverlayRiskRestoreStatus
     global gAssistantOverlayText, gAssistantOverlayLastStatus, gAssistantOverlayInSensitivePhase, gAssistantOverlayTempHidden, gAssistantOverlayAffinityActive, gAssistantOverlayAffinityEnabled
+    global gAssistantOverlayRecordingProtectionActive
     global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick, gAssistantSettings
 
-    ; Probe actual affinity state instead of blindly spamming SetWindowDisplayAffinity.
-    if (gAssistantOverlayVisible && gAssistantOverlayAffinityEnabled) {
-        currentOpacity := 100
-        try currentOpacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
-
-        ; Layered transparency + WDA is unstable on some Windows setups.
-        ; When using semi-transparent overlay, keep the current protection state and
-        ; stop aggressive re-arm loops, otherwise the window may keep flashing.
-        if (currentOpacity >= 100) {
-            actualAffinity := GetAssistantOverlayCurrentDisplayAffinity()
-            drifted := (actualAffinity != 0x11)
-            needsRearm := drifted || (A_TickCount - gAssistantOverlayLastProtectionRearmTick) >= 2500
-            needsEnsure := drifted || !gAssistantOverlayAffinityActive || (A_TickCount - gAssistantOverlayLastProtectionEnsureTick) >= 900
-            if needsRearm {
-                reason := drifted ? "affinity_drift_" actualAffinity : "periodic_rearm"
-                ApplyAssistantOverlayCaptureProtection(true, reason)
-            } else if needsEnsure {
-                ApplyAssistantOverlayCaptureProtection(false, "")
-            }
+    ; Recorder protection is the top priority: when active, keep re-checking WDA
+    ; and repair it immediately if Windows drops the capture exclusion.
+    if (gAssistantOverlayVisible && (gAssistantOverlayAffinityEnabled || gAssistantOverlayRecordingProtectionActive) && CanAssistantOverlayAttemptProtectionRepair()) {
+        actualAffinity := GetAssistantOverlayCurrentDisplayAffinity()
+        drifted := (actualAffinity != 0x11)
+        needsRepair := drifted || !gAssistantOverlayAffinityActive
+        if needsRepair {
+            reason := drifted ? "capture_affinity_drift_" actualAffinity : "capture_affinity_inactive"
+            QueueAssistantOverlayProtectionRearm(reason)
         }
+    }
+
+    if IsAssistantOverlayInOpenGrace() {
+        return
     }
 
     risk := IsAssistantCaptureRiskActive()
