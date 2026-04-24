@@ -111,7 +111,7 @@ ProcessWebConfigActionFile(*) {
 }
 
 ReloadAppStateFromDisk() {
-    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings
+    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings, gCaptureDir
 
     gCategories := LoadCategories()
     gData := LoadDataByCategories(gCategories)
@@ -119,6 +119,9 @@ ReloadAppStateFromDisk() {
     gHotkeys := LoadHotkeys()
     gBehavior := LoadBehavior()
     gAppSettings := LoadAppSettings()
+    if (gAppSettings.Has("capture_dir") && Trim(gAppSettings["capture_dir"]) != "") {
+        gCaptureDir := gAppSettings["capture_dir"]
+    }
     gCaptureSettings := LoadCaptureSettings()
     gAssistantSettings := LoadAssistantSettings()
     gActiveMode := gAppSettings["active_mode"]

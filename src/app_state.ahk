@@ -58,20 +58,23 @@ gDevAutoReloadEnabled := true
 gDevReloadSignature := ""
 
 Init() {
-    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings
+    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings, gCaptureDir
     InitTheme()
     InitHotkeyDefs()
     EnsureDataFile()
     EnsureUsageFile()
     EnsureAssistantRateFile()
     EnsureNotesStore()
+    gAppSettings := LoadAppSettings()
+    if (gAppSettings.Has("capture_dir") && Trim(gAppSettings["capture_dir"]) != "") {
+        gCaptureDir := gAppSettings["capture_dir"]
+    }
     EnsureCaptureStore()
     gCategories := LoadCategories()
     gData := LoadDataByCategories(gCategories)
     gUsage := LoadUsageCounts()
     gHotkeys := LoadHotkeys()
     gBehavior := LoadBehavior()
-    gAppSettings := LoadAppSettings()
     gCaptureSettings := LoadCaptureSettings()
     gAssistantSettings := LoadAssistantSettings()
     gResumeSettings := LoadResumeSettings()

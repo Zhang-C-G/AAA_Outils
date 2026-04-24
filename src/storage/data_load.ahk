@@ -33,6 +33,7 @@ EnsureDataFile() {
         . "move_down=Down`n"
         . "`n[App]`n"
         . "active_mode=shortcuts`n"
+        . "capture_dir=" A_ScriptDir "\\captures`n"
         . "`n[Capture]`n"
         . "upload_endpoint=https://0x0.st`n"
         . "open_qr_after_upload=1`n"
@@ -201,11 +202,16 @@ LoadBehavior() {
 
 LoadAppSettings() {
     global gDataFile
-    settings := Map("active_mode", "shortcuts")
+    settings := Map("active_mode", "shortcuts", "capture_dir", A_ScriptDir "\\captures")
     raw := LoadSection(gDataFile, "App")
     for row in raw {
         if (row["key"] = "active_mode") {
             settings["active_mode"] := NormalizeModeId(row["value"])
+        } else if (row["key"] = "capture_dir") {
+            dir := Trim(row["value"])
+            if (dir != "") {
+                settings["capture_dir"] := dir
+            }
         }
     }
     return settings

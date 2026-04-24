@@ -77,7 +77,7 @@ function Clamp-AssistantOpacity {
   param($Opacity)
   $v = 100
   [int]::TryParse([string]$Opacity, [ref]$v) | Out-Null
-  $allowed = @(0, 50, 75, 100)
+  $allowed = @(20, 50, 75, 100)
   $best = $allowed[0]
   $bestDiff = [Math]::Abs($v - $best)
   foreach ($candidate in $allowed) {
@@ -210,7 +210,7 @@ function Convert-ToAssistantSettings {
   if ($null -eq $Fallback) { $Fallback = Get-AssistantDefaults }
 
   $settings = [ordered]@{}
-  $settings.enabled = if ([string](Get-Prop $PayloadAssistant 'enabled' (Get-Prop $Fallback 'enabled' 1)) -eq '0') { 0 } else { 1 }
+  $settings.enabled = 1
 
   $endpoint = ([string](Get-Prop $PayloadAssistant 'api_endpoint' (Get-Prop $Fallback 'api_endpoint' 'https://ark.cn-beijing.volces.com/api/v3/responses'))).Trim()
   if ($endpoint -eq '') { $endpoint = 'https://ark.cn-beijing.volces.com/api/v3/responses' }
@@ -271,7 +271,7 @@ function Get-AssistantSettings {
 
   if ($ini.Contains('Assistant')) {
     $sec = $ini['Assistant']
-    if ($sec.Contains('enabled')) { $settings.enabled = if ([string]$sec['enabled'] -eq '0') { 0 } else { 1 } }
+    if ($sec.Contains('enabled')) { $settings.enabled = 1 }
     if ($sec.Contains('api_endpoint')) {
       $tmp = ([string]$sec['api_endpoint']).Trim()
       if ($tmp) { $settings.api_endpoint = $tmp }

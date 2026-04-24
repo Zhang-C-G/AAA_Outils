@@ -22,7 +22,7 @@ IsAssistantPromptBroken(text) {
 }
 
 ClampAssistantOpacity(opacity) {
-    allowed := [0, 50, 75, 100]
+    allowed := [20, 50, 75, 100]
     value := 100
     try value := Integer(opacity)
     best := allowed[1]
@@ -180,7 +180,7 @@ LoadAssistantSettings() {
         value := Trim(row["value"])
         switch key {
             case "enabled":
-                settings["enabled"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
+                settings["enabled"] := 1
             case "api_endpoint":
                 if (value != "") {
                     settings["api_endpoint"] := value
@@ -245,6 +245,7 @@ LoadAssistantSettings() {
     }
 
     settings["overlay_opacity"] := ClampAssistantOpacity(settings["overlay_opacity"])
+    settings["enabled"] := 1
     settings["disable_copy"] := settings.Has("disable_copy") ? (settings["disable_copy"] ? 1 : 0) : 1
     settings["rate_limit_per_hour"] := ClampAssistantRatePerHour(settings["rate_limit_per_hour"])
     EnsureAssistantTemplates(settings)

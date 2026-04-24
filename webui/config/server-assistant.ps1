@@ -236,6 +236,57 @@ function Open-AssistantCaptureFolder {
   }
 }
 
+function Set-AssistantCaptureFolder {
+  param([string]$SelectedPath)
+
+  $target = ([string]$SelectedPath).Trim()
+  if ($target -eq '') {
+    return [ordered]@{ ok = $false; error = 'empty folder path' }
+  }
+
+  try {
+    Ensure-Dir $target
+    $ini = Read-Ini $DataFile
+    if (!$ini.Contains('App')) { $ini['App'] = [ordered]@{} }
+    $ini['App']['capture_dir'] = $target
+    Write-Ini $ini
+    $script:CaptureDir = $target
+    Ensure-CaptureStore
+    [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
+    Write-AppLog 'assistant_capture_dir_change' ('path=' + $target)
+    return [ordered]@{
+      ok = $true
+      path = $target
+      settings = (Get-AssistantPublicSettings -Settings (Get-AssistantSettings))
+    }
+  } catch {
+    Write-AppLog 'assistant_capture_dir_change_failed' $_.Exception.Message
+    return [ordered]@{ ok = $false; error = $_.Exception.Message }
+  }
+}
+
+function Select-AssistantCaptureFolder {
+  try {
+    Add-Type -AssemblyName System.Windows.Forms | Out-Null
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = '选择截图保存目录'
+    $dialog.ShowNewFolderButton = $true
+    if (![string]::IsNullOrWhiteSpace([string]$CaptureDir) -and (Test-Path $CaptureDir)) {
+      $dialog.SelectedPath = [string]$CaptureDir
+    }
+
+    $result = $dialog.ShowDialog()
+    if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
+      return [ordered]@{ ok = $false; cancelled = $true; path = [string]$CaptureDir }
+    }
+
+    return Set-AssistantCaptureFolder -SelectedPath ([string]$dialog.SelectedPath)
+  } catch {
+    Write-AppLog 'assistant_capture_dir_pick_failed' $_.Exception.Message
+    return [ordered]@{ ok = $false; error = $_.Exception.Message }
+  }
+}
+
 function Run-AssistantCaptureAsk {
   $settings = Get-AssistantSettings
   if ([string](Get-Prop $settings 'enabled' '1') -eq '0') {

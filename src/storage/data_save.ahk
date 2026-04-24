@@ -1,5 +1,5 @@
 SaveData() {
-    global gDataFile, gData, gHotkeys, gHotkeyDefs, gBehavior, gCategories, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings
+    global gDataFile, gData, gHotkeys, gHotkeyDefs, gBehavior, gCategories, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings, gCaptureDir
     try ProcessWebConfigActionFile()
 
     EnsureAssistantTemplates(gAssistantSettings)
@@ -43,6 +43,7 @@ SaveData() {
     lines.Push("")
     lines.Push("[App]")
     lines.Push("active_mode=" NormalizeModeId(gActiveMode))
+    lines.Push("capture_dir=" gCaptureDir)
 
     lines.Push("")
     lines.Push("[Capture]")

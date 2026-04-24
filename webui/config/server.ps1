@@ -212,6 +212,10 @@ while ($true) {
       $result = Open-AssistantCaptureFolder
       Send-Json $res $result
     }
+    elseif ($path -eq '/api/assistant/pick-folder' -and $method -eq 'POST') {
+      $result = Select-AssistantCaptureFolder
+      Send-Json $res $result
+    }
     elseif ($path -eq '/api/resume/state' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; state=(Get-ResumeState) })
     }

@@ -3,8 +3,6 @@
 gAssistantOverlayGui := ""
 gAssistantOverlayText := ""
 gAssistantOverlayTextHint := ""
-gAssistantOverlayOpacityButtons := []
-gAssistantOverlayOpacityLabel := ""
 gAssistantOverlayStatusText := ""
 gAssistantOverlayCaptureBtn := ""
 gAssistantOverlayCaptureBusy := false
@@ -37,6 +35,7 @@ gAssistantOverlayProtectionRearmReason := ""
 gAssistantOverlayFullText := ""
 gAssistantOverlayRenderedLines := []
 gAssistantOverlayScrollOffset := 1
+gAssistantOverlayLastAppliedOpacity := -1
 
 GetAssistantCurrentModelLabel() {
     global gAssistantSettings
@@ -74,6 +73,42 @@ EnsureAssistantOverlayProtectionMessageHooks() {
     OnMessage(0x007E, AssistantOverlayOnDisplayChange)   ; WM_DISPLAYCHANGE
     OnMessage(0x031E, AssistantOverlayOnDisplayChange)   ; WM_DWMCOMPOSITIONCHANGED
     OnMessage(0x001C, AssistantOverlayOnDisplayChange)   ; WM_ACTIVATEAPP
+}
+
+NormalizeAssistantOverlayWindowStyles() {
+    global gAssistantOverlayGui
+    if !IsObject(gAssistantOverlayGui) {
+        return
+    }
+
+    hwnd := gAssistantOverlayGui.Hwnd
+    GWL_EXSTYLE := -20
+    WS_EX_APPWINDOW := 0x00040000
+    WS_EX_TOOLWINDOW := 0x00000080
+    exStyle := DllCall("user32\GetWindowLongPtr", "Ptr", hwnd, "Int", GWL_EXSTYLE, "Ptr")
+    if (exStyle = 0) {
+        return
+    }
+    nextStyle := (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW
+    if (nextStyle != exStyle) {
+        DllCall("user32\SetWindowLongPtr", "Ptr", hwnd, "Int", GWL_EXSTYLE, "Ptr", nextStyle, "Ptr")
+    }
+}
+
+RefreshAssistantOverlayWindow(redrawFrame := true) {
+    global gAssistantOverlayGui
+    if !IsObject(gAssistantOverlayGui) {
+        return
+    }
+
+    hwnd := gAssistantOverlayGui.Hwnd
+    flags := 0x0001 | 0x0004 | 0x0080 | 0x0400
+    if redrawFrame {
+        flags |= 0x0400
+    }
+    try DllCall("user32\RedrawWindow", "Ptr", hwnd, "Ptr", 0, "Ptr", 0, "UInt", flags, "Int")
+    try DllCall("user32\UpdateWindow", "Ptr", hwnd, "Int")
+    try DllCall("dwmapi\DwmFlush")
 }
 
 StartAssistantOverlayOnly(showNotice := true) {
@@ -216,7 +251,7 @@ CaptureAssistantScreenSafely(path) {
 }
 
 EnsureAssistantOverlayGui() {
-    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayOpacityButtons, gAssistantOverlayOpacityLabel, gAssistantOverlayStatusText
+    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayStatusText
     global gAssistantOverlayCaptureBtn
     global gAppName, gTheme, gAssistantSettings
 
@@ -224,47 +259,38 @@ EnsureAssistantOverlayGui() {
         return
     }
 
-    ; Keep the overlay as a plain top-level window and rely on Show("NA") for non-activation.
-    ; This avoids stacking too many special window styles on top of WDA.
-    gAssistantOverlayGui := Gui("+AlwaysOnTop", gAppName " - Assistant")
+    ; Keep the overlay non-activating and out of taskbar / Alt-Tab surfaces.
+    gAssistantOverlayGui := Gui("+AlwaysOnTop +ToolWindow", gAppName " - Assistant")
     gAssistantOverlayGui.BackColor := gTheme["bg_app"]
     gAssistantOverlayGui.SetFont("s10", "Microsoft YaHei UI")
 
     title := gAssistantOverlayGui.AddText("x16 y12 w300 h24 c" gTheme["text_primary"], "截图问答助手")
     title.SetFont("s12 w700", "Segoe UI")
 
-    gAssistantOverlayOpacityLabel := gAssistantOverlayGui.AddText("x330 y16 w160 h20 c" gTheme["text_hint"], "透明度")
-    gAssistantOverlayOpacityButtons := []
-    for item in [[0, "0%"], [50, "50%"], [75, "75%"], [100, "100%"]] {
-        x := 330 + ((A_Index - 1) * 44)
-        btn := gAssistantOverlayGui.AddButton("x" x " y38 w40 h24", item[2])
-        btn.OnEvent("Click", OnAssistantOverlayOpacityPresetClick)
-        gAssistantOverlayOpacityButtons.Push(Map("value", item[1], "ctrl", btn))
-    }
-    gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x330 y68 w170 h28", "截图问答")
+    gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x332 y18 w170 h28", "截图问答")
     gAssistantOverlayCaptureBtn.OnEvent("Click", OnAssistantOverlayCaptureButton)
 
     gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" gTheme["text_hint"], "状态：待命")
 
     gAssistantOverlayTextHint := gAssistantOverlayGui.AddText("x330 y88 w172 h14 Right c" gTheme["text_hint"], "Alt+Up / Alt+Down 滚动")
-    gAssistantOverlayText := gAssistantOverlayGui.AddText("x16 y104 w486 h342 +0x200 Border c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
+    gAssistantOverlayText := gAssistantOverlayGui.AddText("x16 y104 w486 h342 Border c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
     gAssistantOverlayText.SetFont("s10", "Consolas")
 
     gAssistantOverlayGui.OnEvent("Close", OnAssistantOverlayClose)
     EnsureAssistantOverlayReadonlyMousePolicy()
     EnsureAssistantOverlayProtectionMessageHooks()
     OnMessage(0x0301, AssistantOverlayOnCopyMessage)
+    NormalizeAssistantOverlayWindowStyles()
 }
 
 ShowAssistantOverlay(answerText) {
-    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayOpacityLabel
+    global gAssistantOverlayGui, gAssistantOverlayText
     global gAssistantOverlayVisible, gAssistantSettings, gAssistantOverlayRiskHidden, gAssistantOverlayPlaced
 
     EnsureAssistantOverlayGui()
 
     opacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
     SetAssistantOverlayText(answerText)
-    UpdateAssistantOverlayOpacityUi(opacity)
 
     if gAssistantOverlayVisible {
         gAssistantOverlayGui.Show("NA w520 h462")
@@ -278,8 +304,10 @@ ShowAssistantOverlay(answerText) {
     }
     gAssistantOverlayVisible := true
     gAssistantOverlayRiskHidden := false
+    NormalizeAssistantOverlayWindowStyles()
+    RefreshAssistantOverlayWindow()
     SetAssistantOverlayOpacity(opacity)
-    ApplyAssistantOverlayCaptureProtection()
+    QueueAssistantOverlayProtectionRearm("show")
     StartAssistantOverlayCaptureGuard()
 }
 
@@ -342,27 +370,35 @@ FormatAssistantOverlayText(answerText) {
 }
 
 SetAssistantOverlayOpacity(opacity) {
-    global gAssistantOverlayGui, gAssistantOverlayAffinityEnabled, gAssistantOverlayAffinityActive
+    global gAssistantOverlayGui, gAssistantOverlayLastAppliedOpacity, gAssistantOverlayVisible
     if !IsObject(gAssistantOverlayGui) {
         return
     }
 
-    ; Keep the protected overlay as a normal opaque window.
-    ; Layered transparency is one of the most fragile combinations for WDA capture exclusion.
-    if (gAssistantOverlayAffinityEnabled || gAssistantOverlayAffinityActive) {
-        try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
+    val := ClampAssistantOpacity(opacity)
+    if (val = gAssistantOverlayLastAppliedOpacity) {
         return
     }
-
-    val := ClampAssistantOpacity(opacity)
     if (val >= 100) {
         try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
+        gAssistantOverlayLastAppliedOpacity := val
+        if gAssistantOverlayVisible {
+            RefreshAssistantOverlayWindow(false)
+        }
         return
     }
 
     alpha := Round(val * 255 / 100)
     alpha := Min(255, Max(1, alpha))
     try WinSetTransparent(alpha, "ahk_id " gAssistantOverlayGui.Hwnd)
+    gAssistantOverlayLastAppliedOpacity := val
+    if gAssistantOverlayVisible {
+        SetTimer(AssistantOverlayRefreshAfterOpacityChange, -20)
+    }
+}
+
+AssistantOverlayRefreshAfterOpacityChange(*) {
+    RefreshAssistantOverlayWindow(false)
 }
 
 GetAssistantOverlayCurrentDisplayAffinity() {
@@ -379,7 +415,7 @@ GetAssistantOverlayCurrentDisplayAffinity() {
 }
 
 ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
-    global gAssistantOverlayGui, gAssistantOverlayAffinityEnabled, gAssistantOverlayAffinityActive, gAssistantSettings
+    global gAssistantOverlayGui, gAssistantOverlayAffinityEnabled, gAssistantOverlayAffinityActive, gAssistantSettings, gAssistantOverlayLastAppliedOpacity
     global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick
     if !IsObject(gAssistantOverlayGui) {
         gAssistantOverlayAffinityActive := false
@@ -394,8 +430,17 @@ ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
         return true
     }
 
+    actualAffinity := GetAssistantOverlayCurrentDisplayAffinity()
+    if (!forceReset && actualAffinity = 0x11) {
+        gAssistantOverlayAffinityActive := true
+        gAssistantOverlayLastProtectionEnsureTick := A_TickCount
+        SetAssistantOverlayOpacity(ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
+        return true
+    }
+
     ; Reset layered transparency before applying WDA. This keeps the overlay locally visible
     ; while avoiding a fragile layered-window + affinity combination.
+    gAssistantOverlayLastAppliedOpacity := -1
     try WinSetTransparent("Off", "ahk_id " hwnd)
     if forceReset {
         try DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0, "Int")
@@ -415,6 +460,8 @@ ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
         if !wasActive {
             WriteLog("assistant_overlay_protect_enabled", "mode=WDA_EXCLUDEFROMCAPTURE")
         }
+        SetAssistantOverlayOpacity(ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
+        RefreshAssistantOverlayWindow(false)
         return true
     }
 
@@ -427,39 +474,9 @@ ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
     if (wasActive || forceReset) {
         WriteLog("assistant_overlay_protect_failed", "mode=WDA_EXCLUDEFROMCAPTURE last_error=" A_LastError)
     }
+    SetAssistantOverlayOpacity(ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
+    RefreshAssistantOverlayWindow(false)
     return false
-}
-
-UpdateAssistantOverlayOpacityUi(val) {
-    global gAssistantOverlayOpacityButtons, gAssistantOverlayOpacityLabel, gAssistantOverlayAffinityEnabled, gAssistantSettings
-    val := ClampAssistantOpacity(val)
-    if IsObject(gAssistantOverlayOpacityButtons) {
-        for item in gAssistantOverlayOpacityButtons {
-            ctrl := item["ctrl"]
-            label := item["value"] = val ? "[" item["value"] "%]" : item["value"] "%"
-            try ctrl.Text := label
-        }
-    }
-    gAssistantSettings["overlay_opacity"] := val
-    if gAssistantOverlayAffinityEnabled {
-        gAssistantOverlayOpacityLabel.Text := "透明度 " val "%（防录屏开启时本地强制不透明）"
-    } else {
-        gAssistantOverlayOpacityLabel.Text := "透明度 " val "%"
-    }
-    SetAssistantOverlayOpacity(val)
-}
-
-OnAssistantOverlayOpacityPresetClick(ctrl, *) {
-    global gAssistantOverlayOpacityButtons
-    if !IsObject(gAssistantOverlayOpacityButtons) {
-        return
-    }
-    for item in gAssistantOverlayOpacityButtons {
-        if (item["ctrl"] = ctrl) {
-            UpdateAssistantOverlayOpacityUi(item["value"])
-            return
-        }
-    }
 }
 
 OnAssistantOverlayCaptureButton(*) {
@@ -701,19 +718,27 @@ AssistantThinkingTick(*) {
 CheckAssistantCaptureRisk(*) {
     global gAssistantOverlayVisible, gAssistantOverlayGui, gAssistantOverlayRiskHidden, gAssistantOverlayRiskRestoreText, gAssistantOverlayRiskRestoreStatus
     global gAssistantOverlayText, gAssistantOverlayLastStatus, gAssistantOverlayInSensitivePhase, gAssistantOverlayTempHidden, gAssistantOverlayAffinityActive, gAssistantOverlayAffinityEnabled
-    global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick
+    global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick, gAssistantSettings
 
     ; Probe actual affinity state instead of blindly spamming SetWindowDisplayAffinity.
     if (gAssistantOverlayVisible && gAssistantOverlayAffinityEnabled) {
-        actualAffinity := GetAssistantOverlayCurrentDisplayAffinity()
-        drifted := (actualAffinity != 0x11)
-        needsRearm := drifted || (A_TickCount - gAssistantOverlayLastProtectionRearmTick) >= 2500
-        needsEnsure := drifted || !gAssistantOverlayAffinityActive || (A_TickCount - gAssistantOverlayLastProtectionEnsureTick) >= 900
-        if needsRearm {
-            reason := drifted ? "affinity_drift_" actualAffinity : "periodic_rearm"
-            ApplyAssistantOverlayCaptureProtection(true, reason)
-        } else if needsEnsure {
-            ApplyAssistantOverlayCaptureProtection(false, "")
+        currentOpacity := 100
+        try currentOpacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
+
+        ; Layered transparency + WDA is unstable on some Windows setups.
+        ; When using semi-transparent overlay, keep the current protection state and
+        ; stop aggressive re-arm loops, otherwise the window may keep flashing.
+        if (currentOpacity >= 100) {
+            actualAffinity := GetAssistantOverlayCurrentDisplayAffinity()
+            drifted := (actualAffinity != 0x11)
+            needsRearm := drifted || (A_TickCount - gAssistantOverlayLastProtectionRearmTick) >= 2500
+            needsEnsure := drifted || !gAssistantOverlayAffinityActive || (A_TickCount - gAssistantOverlayLastProtectionEnsureTick) >= 900
+            if needsRearm {
+                reason := drifted ? "affinity_drift_" actualAffinity : "periodic_rearm"
+                ApplyAssistantOverlayCaptureProtection(true, reason)
+            } else if needsEnsure {
+                ApplyAssistantOverlayCaptureProtection(false, "")
+            }
         }
     }
 

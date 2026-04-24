@@ -35,12 +35,13 @@
 
 - 本地简历文件：`resume_profile.json`
 - 顶层结构：`version` / `updated_at` / `sections`
-- 每个 section：`id` / `title` / `description` / `rows`
+- 每个 section：`id` / `title` / `rows`
 - 每个 row：`id` / `label` / `value` / `aliases` / `type`
 
 说明：
 
 - 前端主 UI 现在只编辑 `字段名(label)` 与 `值(value)`。
+- 分区说明小字已从前端主 UI 移除，页面只保留分区标题与字段表。
 - `aliases` 不再放在前端主 UI 中维护，而是优先走后端默认字段表。
 - `type` 不再放在前端主 UI 中维护，但后端结构仍保留该字段，供插件和默认表使用。
 

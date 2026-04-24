@@ -139,11 +139,10 @@
               <h2>高级设置</h2>
             </div>
             <div id="assistantAdvancedBody" class="assistant-grid assistant-grid-advanced hidden">
-              <label class="check"><span>启用助手</span><input id="assistantEnabled" type="checkbox" /></label>
               <div class="assistant-opacity-group">
                 <span>透明度档位</span>
                 <div id="assistantOpacityChoices" class="assistant-opacity-choices">
-                  <button class="assistant-opacity-choice" type="button" data-value="0">0%</button>
+                  <button class="assistant-opacity-choice" type="button" data-value="20">20%</button>
                   <button class="assistant-opacity-choice" type="button" data-value="50">50%</button>
                   <button class="assistant-opacity-choice" type="button" data-value="75">75%</button>
                   <button class="assistant-opacity-choice" type="button" data-value="100">100%</button>
@@ -157,17 +156,11 @@
           </section>
         </div>
 
-        <div class="assistant-actions">
-          <button id="assistantSaveBtn" class="btn">保存助手设置</button>
-          <button id="assistantShowOverlayBtn" class="btn ghost">启动悬浮窗</button>
-          <button id="assistantRunBtn" class="btn primary">截图并问答（F1）</button>
-          <button id="assistantOpenFolderBtn" class="btn ghost">打开截图文件夹</button>
-        </div>
         <div class="assistant-folder-row">
-          <label><span>截图保存目录（固定，不可修改）</span><input id="assistantCaptureDir" type="text" readonly /></label>
+          <label><span>截图保存目录</span><input id="assistantCaptureDir" type="text" readonly /></label>
+          <button id="assistantPickFolderBtn" class="btn" type="button">修改目录</button>
           <button id="assistantOpenFolderInlineBtn" class="btn ghost" type="button">打开目录</button>
         </div>
-        <label><span>最新截图文件</span><input id="assistantLatestCapture" type="text" readonly /></label>
       </section>
     </section>
 
@@ -176,7 +169,6 @@
         <aside class="resume-sidebar">
           <div class="resume-sidebar-head">
             <h2>简历分区</h2>
-            <p>按模块维护资料，供浏览器插件自动填表。</p>
           </div>
           <div id="resumeSections" class="resume-sections"></div>
         </aside>
@@ -184,7 +176,6 @@
           <div class="resume-main-head">
             <div>
               <h2 id="resumeSectionTitle">简历自动填写</h2>
-              <p id="resumeSectionDesc">先选择左侧分区，再编辑字段。</p>
             </div>
             <div class="assistant-actions">
               <button id="resumeSaveBtn" class="btn">保存简历资料</button>

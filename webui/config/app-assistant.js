@@ -2,7 +2,7 @@ import { state, byId, api, toast } from './app-common.js';
 
 const API_KEY_MASK = '****************';
 const DEFAULT_PROMPT = '\u7f16\u7a0b\u9898\uff1a\u76f4\u63a5\u7ed9\u5b8c\u6574\u53ef\u8fd0\u884c\u4ee3\u7801\uff0c\u5e76\u5728\u4ee3\u7801\u6846\u4e2d\u8f93\u51fa\uff1b\u968f\u540e\u5bf9\u6838\u5fc3\u601d\u8def\u505a\u7b80\u77ed\u8bf4\u660e\u3002\u9009\u62e9\u9898\uff1a\u5148\u519915\u5b57\u4ee5\u5185\u9898\u76ee\u603b\u7ed3\uff0c\u518d\u76f4\u63a5\u7ed9\u7b54\u6848\u3002';
-const OPACITY_LEVELS = [0, 50, 75, 100];
+const OPACITY_LEVELS = [20, 50, 75, 100];
 
 let assistantAutoSaveTimer = 0;
 let assistantAutoSaveInFlight = false;
@@ -42,8 +42,7 @@ function defaults() {
     disable_copy: 1,
     rate_limit_enabled: 1,
     rate_limit_per_hour: 100,
-    capture_dir: '',
-    latest_capture: ''
+    capture_dir: ''
   };
 }
 
@@ -290,9 +289,9 @@ export function applyAssistantState(payload) {
 
   state.assistant.templates = normalizeTemplates(incoming.templates || state.assistant.templates, fallback.prompt);
   state.assistant.overlay_opacity = normalizeOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
+  state.assistant.enabled = 1;
   ensureActiveTemplate();
 
-  byId('assistantEnabled').checked = Number(state.assistant.enabled || 0) !== 0;
   renderModelOptions(state.assistant.model || 'doubao-seed-2-0-lite-260215');
   byId('assistantApiKey').value = Number(state.assistant.has_api_key || 0) !== 0 ? API_KEY_MASK : '';
   byId('assistantDisableCopy').checked = Number(state.assistant.disable_copy ?? 1) !== 0;
@@ -302,7 +301,6 @@ export function applyAssistantState(payload) {
   byId('assistantRateEnabled').checked = Number(state.assistant.rate_limit_enabled || 0) !== 0;
   byId('assistantRatePerHour').value = Math.max(1, Number(state.assistant.rate_limit_per_hour || 100));
   byId('assistantCaptureDir').value = state.assistant.capture_dir || '';
-  byId('assistantLatestCapture').value = state.assistant.latest_capture || '';
 
   renderTemplateControls();
   renderHotkeyExplain();
@@ -313,7 +311,7 @@ export function applyAssistantState(payload) {
 function readAssistantFromUi() {
   syncCurrentTemplateFromUi();
 
-  state.assistant.enabled = byId('assistantEnabled').checked ? 1 : 0;
+  state.assistant.enabled = 1;
   state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 100);
   state.assistant.model = (byId('assistantModel').value || '').trim() || 'doubao-seed-2-0-lite-260215';
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
@@ -357,57 +355,94 @@ async function openAssistantFolder() {
   if (!payload.ok) throw new Error(payload.error || 'open folder failed');
 }
 
+async function pickAssistantFolder() {
+  const payload = await api('/api/assistant/pick-folder', { method: 'POST', body: '{}' });
+  if (payload.cancelled) return;
+  if (!payload.ok) throw new Error(payload.error || 'pick folder failed');
+
+  const settings = payload.settings || payload.state?.settings || null;
+  if (settings) {
+    state.assistant = { ...state.assistant, ...settings };
+    applyAssistantState({ assistant: state.assistant });
+  } else if (payload.path) {
+    state.assistant.capture_dir = String(payload.path || '');
+    byId('assistantCaptureDir').value = state.assistant.capture_dir;
+  }
+
+  if (payload.path) {
+    toast(`截图目录已更新: ${payload.path}`);
+  }
+}
+
 export function initAssistantHandlers() {
-  byId('assistantAdvancedToggleBtn').onclick = () => {
-    setAssistantAdvancedVisible(!assistantAdvancedVisible);
-  };
+  const advancedToggleBtn = byId('assistantAdvancedToggleBtn');
+  if (advancedToggleBtn) {
+    advancedToggleBtn.onclick = () => {
+      setAssistantAdvancedVisible(!assistantAdvancedVisible);
+    };
+  }
 
-  byId('assistantTemplateSelect').onchange = () => {
-    syncCurrentTemplateFromUi();
-    state.assistant.active_template = byId('assistantTemplateSelect').value;
-    renderTemplateControls();
-    scheduleAssistantAutoSave();
-  };
+  const templateSelect = byId('assistantTemplateSelect');
+  if (templateSelect) {
+    templateSelect.onchange = () => {
+      syncCurrentTemplateFromUi();
+      state.assistant.active_template = byId('assistantTemplateSelect').value;
+      renderTemplateControls();
+      scheduleAssistantAutoSave();
+    };
+  }
 
-  byId('assistantTemplateName').onchange = () => {
-    syncCurrentTemplateFromUi();
-    renderTemplateControls();
-    scheduleAssistantAutoSave();
-  };
+  const templateName = byId('assistantTemplateName');
+  if (templateName) {
+    templateName.onchange = () => {
+      syncCurrentTemplateFromUi();
+      renderTemplateControls();
+      scheduleAssistantAutoSave();
+    };
+  }
 
-  byId('assistantPrompt').oninput = () => {
-    syncCurrentTemplateFromUi();
-    scheduleAssistantAutoSave();
-  };
+  const prompt = byId('assistantPrompt');
+  if (prompt) {
+    prompt.oninput = () => {
+      syncCurrentTemplateFromUi();
+      scheduleAssistantAutoSave();
+    };
+  }
 
-  byId('assistantAddTplBtn').onclick = () => {
-    syncCurrentTemplateFromUi();
-    const names = new Set(state.assistant.templates.map((t) => t.name.toLowerCase()));
-    let i = 1;
-    let name = `template_${i}`;
-    while (names.has(name.toLowerCase())) {
-      i += 1;
-      name = `template_${i}`;
-    }
-    state.assistant.templates.push({ name, prompt: defaults().prompt });
-    state.assistant.active_template = name;
-    renderTemplateControls();
-    scheduleAssistantAutoSave(true);
-  };
+  const addTplBtn = byId('assistantAddTplBtn');
+  if (addTplBtn) {
+    addTplBtn.onclick = () => {
+      syncCurrentTemplateFromUi();
+      const names = new Set(state.assistant.templates.map((t) => t.name.toLowerCase()));
+      let i = 1;
+      let name = `template_${i}`;
+      while (names.has(name.toLowerCase())) {
+        i += 1;
+        name = `template_${i}`;
+      }
+      state.assistant.templates.push({ name, prompt: defaults().prompt });
+      state.assistant.active_template = name;
+      renderTemplateControls();
+      scheduleAssistantAutoSave(true);
+    };
+  }
 
-  byId('assistantDeleteTplBtn').onclick = () => {
-    syncCurrentTemplateFromUi();
-    if (state.assistant.templates.length <= 1) {
-      toast('\u81f3\u5c11\u4fdd\u7559\u4e00\u4e2a\u6a21\u677f');
-      return;
-    }
-    const name = state.assistant.active_template;
-    if (!confirm(`\u786e\u8ba4\u5220\u9664\u6a21\u677f\u3010${name}\u3011\u5417\uff1f`)) return;
-    state.assistant.templates = state.assistant.templates.filter((t) => t.name !== name);
-    state.assistant.active_template = state.assistant.templates[0].name;
-    renderTemplateControls();
-    scheduleAssistantAutoSave(true);
-  };
+  const deleteTplBtn = byId('assistantDeleteTplBtn');
+  if (deleteTplBtn) {
+    deleteTplBtn.onclick = () => {
+      syncCurrentTemplateFromUi();
+      if (state.assistant.templates.length <= 1) {
+        toast('\u81f3\u5c11\u4fdd\u7559\u4e00\u4e2a\u6a21\u677f');
+        return;
+      }
+      const name = state.assistant.active_template;
+      if (!confirm(`\u786e\u8ba4\u5220\u9664\u6a21\u677f\u3010${name}\u3011\u5417\uff1f`)) return;
+      state.assistant.templates = state.assistant.templates.filter((t) => t.name !== name);
+      state.assistant.active_template = state.assistant.templates[0].name;
+      renderTemplateControls();
+      scheduleAssistantAutoSave(true);
+    };
+  }
 
   document.querySelectorAll('.assistant-opacity-choice').forEach((btn) => {
     btn.onclick = () => {
@@ -416,49 +451,79 @@ export function initAssistantHandlers() {
     };
   });
 
-  byId('assistantSaveBtn').onclick = () => saveAssistantSettings().catch((e) => toast(`\u4fdd\u5b58\u5931\u8d25: ${e.message}`));
-  byId('assistantEnabled').onchange = () => scheduleAssistantAutoSave(true);
-  byId('assistantModel').onchange = () => scheduleAssistantAutoSave(true);
-  byId('assistantDisableCopy').onchange = () => scheduleAssistantAutoSave(true);
-  byId('assistantApiKey').onchange = () => scheduleAssistantAutoSave(true);
-  byId('assistantRateEnabled').onchange = () => scheduleAssistantAutoSave(true);
-  byId('assistantRatePerHour').oninput = () => scheduleAssistantAutoSave();
+  const saveBtn = byId('assistantSaveBtn');
+  if (saveBtn) {
+    saveBtn.onclick = () => saveAssistantSettings().catch((e) => toast(`\u4fdd\u5b58\u5931\u8d25: ${e.message}`));
+  }
+  const model = byId('assistantModel');
+  if (model) model.onchange = () => scheduleAssistantAutoSave(true);
+  const disableCopy = byId('assistantDisableCopy');
+  if (disableCopy) disableCopy.onchange = () => scheduleAssistantAutoSave(true);
+  const apiKey = byId('assistantApiKey');
+  if (apiKey) apiKey.onchange = () => scheduleAssistantAutoSave(true);
+  const rateEnabled = byId('assistantRateEnabled');
+  if (rateEnabled) rateEnabled.onchange = () => scheduleAssistantAutoSave(true);
+  const ratePerHour = byId('assistantRatePerHour');
+  if (ratePerHour) ratePerHour.oninput = () => scheduleAssistantAutoSave();
 
-  byId('assistantShowOverlayBtn').onclick = async () => {
-    try {
-      await saveAssistantSettings();
-      const payload = await api('/api/assistant/show-overlay', { method: 'POST', body: '{}' });
-      if (!payload.ok) throw new Error(payload.error || 'show overlay failed');
-      toast('\u60ac\u6d6e\u7a97\u542f\u52a8\u6307\u4ee4\u5df2\u53d1\u9001');
-    } catch (e) {
-      toast(`\u542f\u52a8\u5931\u8d25: ${e.message}`);
-    }
-  };
+  const showOverlayBtn = byId('assistantShowOverlayBtn');
+  if (showOverlayBtn) {
+    showOverlayBtn.onclick = async () => {
+      try {
+        await saveAssistantSettings();
+        const payload = await api('/api/assistant/show-overlay', { method: 'POST', body: '{}' });
+        if (!payload.ok) throw new Error(payload.error || 'show overlay failed');
+        toast('\u60ac\u6d6e\u7a97\u542f\u52a8\u6307\u4ee4\u5df2\u53d1\u9001');
+      } catch (e) {
+        toast(`\u542f\u52a8\u5931\u8d25: ${e.message}`);
+      }
+    };
+  }
 
-  byId('assistantRunBtn').onclick = async () => {
-    try {
-      await saveAssistantSettings();
-      const payload = await api('/api/assistant/trigger-capture', { method: 'POST', body: '{}' });
-      if (!payload.ok) throw new Error(payload.error || 'assistant run failed');
-      toast('\u622a\u56fe\u95ee\u7b54\u5df2\u89e6\u53d1\uff0c\u8bf7\u67e5\u770b\u60ac\u6d6e\u7a97');
-    } catch (e) {
-      toast(`\u6267\u884c\u5931\u8d25: ${e.message}`);
-    }
-  };
+  const runBtn = byId('assistantRunBtn');
+  if (runBtn) {
+    runBtn.onclick = async () => {
+      try {
+        await saveAssistantSettings();
+        const payload = await api('/api/assistant/trigger-capture', { method: 'POST', body: '{}' });
+        if (!payload.ok) throw new Error(payload.error || 'assistant run failed');
+        toast('\u622a\u56fe\u95ee\u7b54\u5df2\u89e6\u53d1\uff0c\u8bf7\u67e5\u770b\u60ac\u6d6e\u7a97');
+      } catch (e) {
+        toast(`\u6267\u884c\u5931\u8d25: ${e.message}`);
+      }
+    };
+  }
 
-  byId('assistantOpenFolderBtn').onclick = async () => {
-    try {
-      await openAssistantFolder();
-    } catch (e) {
-      toast(`\u6253\u5f00\u5931\u8d25: ${e.message}`);
-    }
-  };
+  const openFolderBtn = byId('assistantOpenFolderBtn');
+  if (openFolderBtn) {
+    openFolderBtn.onclick = async () => {
+      try {
+        await openAssistantFolder();
+      } catch (e) {
+        toast(`\u6253\u5f00\u5931\u8d25: ${e.message}`);
+      }
+    };
+  }
 
-  byId('assistantOpenFolderInlineBtn').onclick = async () => {
-    try {
-      await openAssistantFolder();
-    } catch (e) {
-      toast(`\u6253\u5f00\u5931\u8d25: ${e.message}`);
-    }
-  };
+  const openFolderInlineBtn = byId('assistantOpenFolderInlineBtn');
+  if (openFolderInlineBtn) {
+    openFolderInlineBtn.onclick = async () => {
+      try {
+        await openAssistantFolder();
+      } catch (e) {
+        toast(`\u6253\u5f00\u5931\u8d25: ${e.message}`);
+      }
+    };
+  }
+
+  const pickFolderBtn = byId('assistantPickFolderBtn');
+  if (pickFolderBtn) {
+    pickFolderBtn.onclick = async () => {
+      try {
+        await pickAssistantFolder();
+      } catch (e) {
+        toast(`修改目录失败: ${e.message}`);
+      }
+    };
+  }
 }

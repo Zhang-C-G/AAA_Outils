@@ -17,7 +17,6 @@ function normalizeSection(section, index = 0) {
   return {
     id: String(section?.id || `section_${index + 1}`).trim() || `section_${index + 1}`,
     title: String(section?.title || `\u5206\u533a${index + 1}`).trim() || `\u5206\u533a${index + 1}`,
-    description: String(section?.description || ''),
     rows: Array.isArray(section?.rows) ? section.rows.map((row, i) => normalizeRow(row, i)) : []
   };
 }
@@ -54,6 +53,12 @@ function escText(text) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function autoResizeResumeTextarea(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${Math.max(el.scrollHeight, 38)}px`;
 }
 
 function syncRowFromDom(sectionId, rowIndex, tr) {
@@ -97,8 +102,13 @@ function renderRows(section) {
       <td><button class="btn ghost" type="button" data-k="delete">\u5220\u9664</button></td>
     `;
 
+    autoResizeResumeTextarea(tr.querySelector('[data-k="value"]'));
+
     tr.querySelectorAll('input, textarea').forEach((el) => {
       el.addEventListener('input', () => {
+        if (el.tagName === 'TEXTAREA') {
+          autoResizeResumeTextarea(el);
+        }
         syncRowFromDom(section.id, index, tr);
         scheduleAutoSave();
       });
@@ -119,16 +129,13 @@ function renderResumeEditor() {
   renderSectionList();
 
   const title = byId('resumeSectionTitle');
-  const desc = byId('resumeSectionDesc');
   if (!section) {
     title.textContent = '\u7b80\u5386\u81ea\u52a8\u586b\u5199';
-    desc.textContent = '\u5f53\u524d\u6ca1\u6709\u53ef\u7f16\u8f91\u5206\u533a\u3002';
     byId('resumeRows').innerHTML = '';
     return;
   }
 
   title.textContent = section.title;
-  desc.textContent = section.description || '\u7ef4\u62a4\u5f53\u524d\u5206\u533a\u7684\u5b57\u6bb5\u540d\u548c\u503c\uff0c\u522b\u540d\u4e0e\u5339\u914d\u89c4\u5219\u7531\u540e\u7aef\u8868\u7ef4\u62a4\u3002';
   renderRows(section);
 }
 
