@@ -67,6 +67,7 @@ function Get-AssistantDefaults {
     active_template = 'default_template'
     templates = @([ordered]@{ name = 'default_template'; prompt = $prompt })
     overlay_opacity = 100
+    enhanced_capture_mode = 0
     disable_copy = 1
     rate_limit_enabled = 1
     rate_limit_per_hour = 100
@@ -227,6 +228,7 @@ function Convert-ToAssistantSettings {
   if ($settings.active_template -eq '') { $settings.active_template = 'default_template' }
 
   $settings.overlay_opacity = Clamp-AssistantOpacity (Get-Prop $PayloadAssistant 'overlay_opacity' (Get-Prop $Fallback 'overlay_opacity' 100))
+  $settings.enhanced_capture_mode = if ([string](Get-Prop $PayloadAssistant 'enhanced_capture_mode' (Get-Prop $Fallback 'enhanced_capture_mode' 0)) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $PayloadAssistant 'disable_copy' (Get-Prop $Fallback 'disable_copy' 1)) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_enabled = if ([string](Get-Prop $PayloadAssistant 'rate_limit_enabled' (Get-Prop $Fallback 'rate_limit_enabled' 1)) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 100))
@@ -294,6 +296,9 @@ function Get-AssistantSettings {
     if ($sec.Contains('overlay_opacity')) {
       $settings.overlay_opacity = Clamp-AssistantOpacity $sec['overlay_opacity']
     }
+    if ($sec.Contains('enhanced_capture_mode')) {
+      $settings.enhanced_capture_mode = if ([string]$sec['enhanced_capture_mode'] -eq '0') { 0 } else { 1 }
+    }
     if ($sec.Contains('disable_copy')) {
       $settings.disable_copy = if ([string]$sec['disable_copy'] -eq '0') { 0 } else { 1 }
     }
@@ -329,6 +334,7 @@ function Get-AssistantSettings {
   $settings.api_key = ''
   $settings.has_api_key = if ([string]$settings.api_key_protected -ne '') { 1 } else { 0 }
   $settings.model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' '')) -Fallback 'doubao-seed-2-0-lite-260215'
+  $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour $settings.rate_limit_per_hour
   return $settings
@@ -373,6 +379,7 @@ function Save-AssistantSettings {
   $ini['Assistant']['active_template'] = [string]$settings.active_template
   $ini['Assistant']['prompt'] = ([string](Get-AssistantPromptByTemplate -Settings $settings) -replace '[\r\n]+', ' ')
   $ini['Assistant']['overlay_opacity'] = [string]$settings.overlay_opacity
+  $ini['Assistant']['enhanced_capture_mode'] = [string]$settings.enhanced_capture_mode
   $ini['Assistant']['disable_copy'] = [string]$settings.disable_copy
   $ini['Assistant']['rate_limit_enabled'] = [string]$settings.rate_limit_enabled
   $ini['Assistant']['rate_limit_per_hour'] = [string]$settings.rate_limit_per_hour

@@ -61,6 +61,7 @@ SaveData() {
     lines.Push("active_template=" gAssistantSettings["active_template"])
     lines.Push("prompt=" StrReplace(StrReplace(GetAssistantPromptByTemplate(gAssistantSettings), "`r", " "), "`n", " "))
     lines.Push("overlay_opacity=" gAssistantSettings["overlay_opacity"])
+    lines.Push("enhanced_capture_mode=" (gAssistantSettings.Has("enhanced_capture_mode") ? gAssistantSettings["enhanced_capture_mode"] : 0))
     lines.Push("disable_copy=" (gAssistantSettings.Has("disable_copy") ? gAssistantSettings["disable_copy"] : 1))
     lines.Push("rate_limit_enabled=" gAssistantSettings["rate_limit_enabled"])
     lines.Push("rate_limit_per_hour=" gAssistantSettings["rate_limit_per_hour"])

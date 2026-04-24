@@ -373,6 +373,7 @@ function Write-ConfigState {
   $lines.Add('active_template=' + $assistant.active_template)
   $lines.Add('prompt=' + ((Get-AssistantPromptByTemplate -Settings $assistant) -replace '[\r\n]+', ' '))
   $lines.Add('overlay_opacity=' + $assistant.overlay_opacity)
+  $lines.Add('enhanced_capture_mode=' + $assistant.enhanced_capture_mode)
   $lines.Add('disable_copy=' + $assistant.disable_copy)
   $lines.Add('rate_limit_enabled=' + $assistant.rate_limit_enabled)
   $lines.Add('rate_limit_per_hour=' + $assistant.rate_limit_per_hour)

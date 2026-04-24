@@ -222,6 +222,33 @@ IsAssistantOverlayCopyBlocked() {
     return gAssistantSettings["disable_copy"] ? true : false
 }
 
+IsAssistantEnhancedCaptureModeEnabled() {
+    global gAssistantSettings
+    if !IsObject(gAssistantSettings) || !gAssistantSettings.Has("enhanced_capture_mode") {
+        return false
+    }
+    return gAssistantSettings["enhanced_capture_mode"] ? true : false
+}
+
+GetAssistantCaptureMode() {
+    if IsAssistantEnhancedCaptureModeEnabled() {
+        return "enhanced"
+    }
+    return "standard"
+}
+
+IsAssistantEnhancedCaptureModeReady() {
+    global gAssistantOverlayAffinityActive
+    if (GetAssistantCaptureMode() != "enhanced") {
+        return false
+    }
+    return gAssistantOverlayAffinityActive ? true : false
+}
+
+CanAssistantKeepVisibleDuringCapture() {
+    return IsAssistantEnhancedCaptureModeReady()
+}
+
 EnsureAssistantOverlayReadonlyMousePolicy() {
     ; 回答区永久禁止鼠标选中与 I-beam 光标，保持纯展示区域体验。
     OnMessage(0x21, AssistantOverlayOnMouseActivate)     ; WM_MOUSEACTIVATE
@@ -351,7 +378,14 @@ StartAssistantCaptureFlow(showNotice := true) {
     EnsureAssistantOverlayGui()
     modelLabel := GetAssistantCurrentModelLabel()
     wasOverlayVisible := gAssistantOverlayVisible
+    restoreText := ""
+    restoreStatus := ""
     if wasOverlayVisible {
+        restoreText := GetAssistantOverlayCurrentText()
+        restoreStatus := gAssistantOverlayLastStatus
+        if (restoreText = "") {
+            restoreText := "截图问答悬浮窗已启动。`n按 F1 进行截图并问答。"
+        }
         SetAssistantOverlayText("准备开始截图问答...`n当前模型：" modelLabel)
         UpdateAssistantOverlayStatus("状态：准备截图 | 模型：" modelLabel)
     }
@@ -375,6 +409,9 @@ StartAssistantCaptureFlow(showNotice := true) {
     ok := CaptureAssistantScreenSafely(path)
     if !ok {
         WriteLog("assistant_capture_failed", "capture path=" path)
+        if wasOverlayVisible {
+            ShowAssistantOverlay(restoreText)
+        }
         if wasOverlayVisible {
             UpdateAssistantOverlayStatus("状态：截图失败 | 模型：" modelLabel)
         }
@@ -434,10 +471,21 @@ StartAssistantCaptureFlow(showNotice := true) {
     return res
 }
 
-CaptureAssistantScreenSafely(path) {
+CaptureAssistantScreenSafely(path, restoreAfterCapture := false) {
     global gAssistantOverlayVisible, gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayLastStatus
     if !(gAssistantOverlayVisible && IsObject(gAssistantOverlayGui)) {
         return CaptureFullScreen(path)
+    }
+
+    mode := GetAssistantCaptureMode()
+    if (mode = "enhanced" && CanAssistantKeepVisibleDuringCapture()) {
+        WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=enhanced_visible")
+        return CaptureFullScreen(path)
+    }
+    if (mode = "enhanced") {
+        WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=enhanced_fallback_hide")
+    } else {
+        WriteLog("assistant_overlay_capture_mode", "source=internal_capture mode=standard_hide")
     }
 
     restoreText := ""
@@ -456,8 +504,10 @@ CaptureAssistantScreenSafely(path) {
     ok := CaptureFullScreen(path)
     Sleep(60)
 
-    ShowAssistantOverlay(restoreText)
-    UpdateAssistantOverlayStatus(restoreStatus)
+    if restoreAfterCapture {
+        ShowAssistantOverlay(restoreText)
+        UpdateAssistantOverlayStatus(restoreStatus)
+    }
     return ok
 }
 
@@ -1160,6 +1210,13 @@ GetAssistantOverlayCharUnits(ch) {
 
 ShouldAssistantTempHideForCapture() {
     global gAssistantOverlayAffinityActive, gAssistantOverlaySecurityFirst
+    mode := GetAssistantCaptureMode()
+    if (mode = "enhanced" && CanAssistantKeepVisibleDuringCapture()) {
+        return false
+    }
+    if (mode = "enhanced") {
+        return true
+    }
     if gAssistantOverlaySecurityFirst {
         return true
     }

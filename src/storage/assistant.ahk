@@ -144,6 +144,7 @@ GetAssistantDefaultSettings() {
         "active_template", "default_template",
         "templates", GetAssistantDefaultTemplates(),
         "overlay_opacity", 100,
+        "enhanced_capture_mode", 0,
         "disable_copy", 1,
         "rate_limit_enabled", 1,
         "rate_limit_per_hour", 100
@@ -203,6 +204,8 @@ LoadAssistantSettings() {
                 if RegExMatch(value, "^\d+$") {
                     settings["overlay_opacity"] := ClampAssistantOpacity(Integer(value))
                 }
+            case "enhanced_capture_mode":
+                settings["enhanced_capture_mode"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
             case "disable_copy":
                 settings["disable_copy"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
             case "rate_limit_enabled":
@@ -246,6 +249,7 @@ LoadAssistantSettings() {
 
     settings["overlay_opacity"] := ClampAssistantOpacity(settings["overlay_opacity"])
     settings["enabled"] := 1
+    settings["enhanced_capture_mode"] := settings.Has("enhanced_capture_mode") ? (settings["enhanced_capture_mode"] ? 1 : 0) : 0
     settings["disable_copy"] := settings.Has("disable_copy") ? (settings["disable_copy"] ? 1 : 0) : 1
     settings["rate_limit_per_hour"] := ClampAssistantRatePerHour(settings["rate_limit_per_hour"])
     EnsureAssistantTemplates(settings)
