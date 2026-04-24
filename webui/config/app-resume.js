@@ -6,7 +6,7 @@ function normalizeRow(row, index = 0) {
   const type = String(row?.type || 'text').trim().toLowerCase();
   return {
     id: String(row?.id || `field_${index + 1}`).trim() || `field_${index + 1}`,
-    label: String(row?.label || `字段${index + 1}`).trim() || `字段${index + 1}`,
+    label: String(row?.label || `\u5b57\u6bb5${index + 1}`).trim() || `\u5b57\u6bb5${index + 1}`,
     value: String(row?.value || ''),
     aliases: String(row?.aliases || ''),
     type: ['text', 'textarea', 'select', 'date'].includes(type) ? type : 'text'
@@ -16,7 +16,7 @@ function normalizeRow(row, index = 0) {
 function normalizeSection(section, index = 0) {
   return {
     id: String(section?.id || `section_${index + 1}`).trim() || `section_${index + 1}`,
-    title: String(section?.title || `分区${index + 1}`).trim() || `分区${index + 1}`,
+    title: String(section?.title || `\u5206\u533a${index + 1}`).trim() || `\u5206\u533a${index + 1}`,
     description: String(section?.description || ''),
     rows: Array.isArray(section?.rows) ? section.rows.map((row, i) => normalizeRow(row, i)) : []
   };
@@ -41,12 +41,6 @@ function scheduleAutoSave() {
   }, 700);
 }
 
-function updatePreview() {
-  const el = byId('resumeJsonPreview');
-  if (!el) return;
-  el.value = JSON.stringify(state.resume.profile, null, 2);
-}
-
 function escAttr(text) {
   return String(text)
     .replace(/&/g, '&amp;')
@@ -68,9 +62,7 @@ function syncRowFromDom(sectionId, rowIndex, tr) {
   section.rows[rowIndex] = normalizeRow({
     ...section.rows[rowIndex],
     label: tr.querySelector('[data-k="label"]').value,
-    value: tr.querySelector('[data-k="value"]').value,
-    aliases: tr.querySelector('[data-k="aliases"]').value,
-    type: tr.querySelector('[data-k="type"]').value
+    value: tr.querySelector('[data-k="value"]').value
   }, rowIndex);
 }
 
@@ -101,30 +93,15 @@ function renderRows(section) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="text" data-k="label" value="${escAttr(row.label)}" /></td>
-      <td>${row.type === 'textarea'
-        ? `<textarea data-k="value">${escText(row.value)}</textarea>`
-        : `<input type="text" data-k="value" value="${escAttr(row.value)}" />`}</td>
-      <td><input type="text" data-k="aliases" value="${escAttr(row.aliases)}" /></td>
-      <td>
-        <select data-k="type">
-          ${['text', 'textarea', 'date', 'select'].map((type) => `<option value="${type}"${type === row.type ? ' selected' : ''}>${type}</option>`).join('')}
-        </select>
-      </td>
-      <td><button class="btn ghost" type="button" data-k="delete">删除</button></td>
+      <td><textarea data-k="value">${escText(row.value)}</textarea></td>
+      <td><button class="btn ghost" type="button" data-k="delete">\u5220\u9664</button></td>
     `;
 
     tr.querySelectorAll('input, textarea').forEach((el) => {
       el.addEventListener('input', () => {
         syncRowFromDom(section.id, index, tr);
-        updatePreview();
         scheduleAutoSave();
       });
-    });
-
-    tr.querySelector('[data-k="type"]').addEventListener('change', () => {
-      syncRowFromDom(section.id, index, tr);
-      renderResumeEditor();
-      scheduleAutoSave();
     });
 
     tr.querySelector('[data-k="delete"]').onclick = () => {
@@ -144,17 +121,15 @@ function renderResumeEditor() {
   const title = byId('resumeSectionTitle');
   const desc = byId('resumeSectionDesc');
   if (!section) {
-    title.textContent = '简历自动填写';
-    desc.textContent = '当前没有可编辑分区。';
+    title.textContent = '\u7b80\u5386\u81ea\u52a8\u586b\u5199';
+    desc.textContent = '\u5f53\u524d\u6ca1\u6709\u53ef\u7f16\u8f91\u5206\u533a\u3002';
     byId('resumeRows').innerHTML = '';
-    updatePreview();
     return;
   }
 
   title.textContent = section.title;
-  desc.textContent = section.description || '维护当前分区的字段。浏览器插件会按“字段名 + 别名”尝试匹配网页表单。';
+  desc.textContent = section.description || '\u7ef4\u62a4\u5f53\u524d\u5206\u533a\u7684\u5b57\u6bb5\u540d\u548c\u503c\uff0c\u522b\u540d\u4e0e\u5339\u914d\u89c4\u5219\u7531\u540e\u7aef\u8868\u7ef4\u62a4\u3002';
   renderRows(section);
-  updatePreview();
 }
 
 export function applyResumeState(payload) {
@@ -182,7 +157,7 @@ export async function saveResumeProfile(options = {}) {
   }
   applyResumeState({ resume: payload.state || state.resume });
   if (!silent) {
-    toast('简历资料已保存');
+    toast('\u7b80\u5386\u8d44\u6599\u5df2\u4fdd\u5b58');
   }
 }
 
@@ -200,18 +175,6 @@ export function initResumeHandlers() {
 
   const saveBtn = byId('resumeSaveBtn');
   if (saveBtn) {
-    saveBtn.onclick = () => saveResumeProfile().catch((e) => toast(`保存失败: ${e.message}`));
-  }
-
-  const copyBtn = byId('resumeCopyJsonBtn');
-  if (copyBtn) {
-    copyBtn.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(JSON.stringify(state.resume.profile, null, 2));
-        toast('已复制 JSON');
-      } catch (e) {
-        toast(`复制失败: ${e.message}`);
-      }
-    };
+    saveBtn.onclick = () => saveResumeProfile().catch((e) => toast(`\u4fdd\u5b58\u5931\u8d25: ${e.message}`));
   }
 }

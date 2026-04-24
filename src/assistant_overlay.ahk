@@ -2,7 +2,8 @@
 
 gAssistantOverlayGui := ""
 gAssistantOverlayText := ""
-gAssistantOverlayOpacitySlider := ""
+gAssistantOverlayTextHint := ""
+gAssistantOverlayOpacityButtons := []
 gAssistantOverlayOpacityLabel := ""
 gAssistantOverlayStatusText := ""
 gAssistantOverlayCaptureBtn := ""
@@ -23,12 +24,19 @@ gAssistantOverlayInSensitivePhase := false
 gAssistantThinkingActive := false
 gAssistantThinkingStartTick := 0
 gAssistantOverlayPlaced := false
-; Default ON: prioritize anti-capture / anti-recording.
+; Default ON: prioritize screenshot protection and keep recorder exclusion enabled.
 gAssistantOverlayAffinityEnabled := true
 gAssistantOverlayAffinityActive := false
-; UX-first final mode: keep overlay visible while WDA works; only fallback-hide when WDA is unavailable.
-gAssistantOverlaySecurityFirst := false
+; Keep WDA on for recorder exclusion, but only auto-hide on real screenshot actions.
+gAssistantOverlaySecurityFirst := true
 gAssistantOverlayTempRestoreStatus := "状态：悬浮窗已恢复"
+gAssistantOverlayLastProtectionRearmTick := 0
+gAssistantOverlayLastProtectionEnsureTick := 0
+gAssistantOverlayProtectionRearmPending := false
+gAssistantOverlayProtectionRearmReason := ""
+gAssistantOverlayFullText := ""
+gAssistantOverlayRenderedLines := []
+gAssistantOverlayScrollOffset := 1
 
 GetAssistantCurrentModelLabel() {
     global gAssistantSettings
@@ -59,6 +67,13 @@ EnsureAssistantOverlayReadonlyMousePolicy() {
     OnMessage(0x203, AssistantOverlayOnMouseDown)        ; WM_LBUTTONDBLCLK
     OnMessage(0x204, AssistantOverlayOnMouseDown)        ; WM_RBUTTONDOWN
     OnMessage(0x205, AssistantOverlayOnMouseDown)        ; WM_RBUTTONUP
+}
+
+EnsureAssistantOverlayProtectionMessageHooks() {
+    ; Re-arm protection after display / composition / app activation transitions.
+    OnMessage(0x007E, AssistantOverlayOnDisplayChange)   ; WM_DISPLAYCHANGE
+    OnMessage(0x031E, AssistantOverlayOnDisplayChange)   ; WM_DWMCOMPOSITIONCHANGED
+    OnMessage(0x001C, AssistantOverlayOnDisplayChange)   ; WM_ACTIVATEAPP
 }
 
 StartAssistantOverlayOnly(showNotice := true) {
@@ -183,9 +198,7 @@ CaptureAssistantScreenSafely(path) {
     }
 
     restoreText := ""
-    if IsObject(gAssistantOverlayText) {
-        restoreText := gAssistantOverlayText.Value
-    }
+    restoreText := GetAssistantOverlayCurrentText()
     if (restoreText = "") {
         restoreText := "截图完成，正在请求回答..."
     }
@@ -203,7 +216,7 @@ CaptureAssistantScreenSafely(path) {
 }
 
 EnsureAssistantOverlayGui() {
-    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayOpacitySlider, gAssistantOverlayOpacityLabel, gAssistantOverlayStatusText
+    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayOpacityButtons, gAssistantOverlayOpacityLabel, gAssistantOverlayStatusText
     global gAssistantOverlayCaptureBtn
     global gAppName, gTheme, gAssistantSettings
 
@@ -211,8 +224,9 @@ EnsureAssistantOverlayGui() {
         return
     }
 
-    ; E0x08000000 = WS_EX_NOACTIVATE, avoid stealing focus / being treated as app switch.
-    gAssistantOverlayGui := Gui("+AlwaysOnTop +ToolWindow +E0x08000000", gAppName " - Assistant")
+    ; Keep the overlay as a plain top-level window and rely on Show("NA") for non-activation.
+    ; This avoids stacking too many special window styles on top of WDA.
+    gAssistantOverlayGui := Gui("+AlwaysOnTop", gAppName " - Assistant")
     gAssistantOverlayGui.BackColor := gTheme["bg_app"]
     gAssistantOverlayGui.SetFont("s10", "Microsoft YaHei UI")
 
@@ -220,32 +234,37 @@ EnsureAssistantOverlayGui() {
     title.SetFont("s12 w700", "Segoe UI")
 
     gAssistantOverlayOpacityLabel := gAssistantOverlayGui.AddText("x330 y16 w160 h20 c" gTheme["text_hint"], "透明度")
-    ; Remove slider tooltip bubble to avoid showing numeric popup on hover/drag.
-    gAssistantOverlayOpacitySlider := gAssistantOverlayGui.AddSlider("x330 y38 w170 h24 Range35-100", ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
-    gAssistantOverlayOpacitySlider.OnEvent("Change", OnAssistantOverlayOpacityChanged)
+    gAssistantOverlayOpacityButtons := []
+    for item in [[0, "0%"], [50, "50%"], [75, "75%"], [100, "100%"]] {
+        x := 330 + ((A_Index - 1) * 44)
+        btn := gAssistantOverlayGui.AddButton("x" x " y38 w40 h24", item[2])
+        btn.OnEvent("Click", OnAssistantOverlayOpacityPresetClick)
+        gAssistantOverlayOpacityButtons.Push(Map("value", item[1], "ctrl", btn))
+    }
     gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x330 y68 w170 h28", "截图问答")
     gAssistantOverlayCaptureBtn.OnEvent("Click", OnAssistantOverlayCaptureButton)
 
     gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" gTheme["text_hint"], "状态：待命")
 
-    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y104 w486 h342 +Multi ReadOnly +Wrap c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
+    gAssistantOverlayTextHint := gAssistantOverlayGui.AddText("x330 y88 w172 h14 Right c" gTheme["text_hint"], "Alt+Up / Alt+Down 滚动")
+    gAssistantOverlayText := gAssistantOverlayGui.AddText("x16 y104 w486 h342 +0x200 Border c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
     gAssistantOverlayText.SetFont("s10", "Consolas")
 
     gAssistantOverlayGui.OnEvent("Close", OnAssistantOverlayClose)
     EnsureAssistantOverlayReadonlyMousePolicy()
+    EnsureAssistantOverlayProtectionMessageHooks()
     OnMessage(0x0301, AssistantOverlayOnCopyMessage)
 }
 
 ShowAssistantOverlay(answerText) {
-    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayOpacitySlider, gAssistantOverlayOpacityLabel
+    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayOpacityLabel
     global gAssistantOverlayVisible, gAssistantSettings, gAssistantOverlayRiskHidden, gAssistantOverlayPlaced
 
     EnsureAssistantOverlayGui()
 
     opacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
     SetAssistantOverlayText(answerText)
-    gAssistantOverlayOpacitySlider.Value := opacity
-    gAssistantOverlayOpacityLabel.Text := "透明度 " opacity "%"
+    UpdateAssistantOverlayOpacityUi(opacity)
 
     if gAssistantOverlayVisible {
         gAssistantOverlayGui.Show("NA w520 h462")
@@ -265,11 +284,14 @@ ShowAssistantOverlay(answerText) {
 }
 
 SetAssistantOverlayText(answerText) {
-    global gAssistantOverlayText
+    global gAssistantOverlayText, gAssistantOverlayFullText, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
     if !IsObject(gAssistantOverlayText) {
         return
     }
-    gAssistantOverlayText.Value := FormatAssistantOverlayText(answerText)
+    gAssistantOverlayFullText := FormatAssistantOverlayText(answerText)
+    gAssistantOverlayRenderedLines := WrapAssistantOverlayText(gAssistantOverlayFullText)
+    gAssistantOverlayScrollOffset := 1
+    RenderAssistantOverlayText()
 }
 
 UpdateAssistantOverlayStatus(text) {
@@ -309,17 +331,29 @@ FormatAssistantOverlayText(answerText) {
     }
 
     text := StrReplace(text, "\t", "    ")
+    text := RegExReplace(text, "[ \t]+\n", "`n")
+    text := RegExReplace(text, "\n{3,}", "`n`n")
     fence := Chr(96) Chr(96) Chr(96)
     text := RegExReplace(text, fence . "([^\r\n]+)[ \t]+", fence . "$1`n")
     text := RegExReplace(text, "([^\r\n])" . fence, "$1`n" . fence)
+    text := RegExReplace(text, "([。；：！？])([^\r\n])", "$1`n$2")
+    text := RegExReplace(text, "([)]|\]|】)([-*•\d])", "$1`n$2")
     return text
 }
 
 SetAssistantOverlayOpacity(opacity) {
-    global gAssistantOverlayGui
+    global gAssistantOverlayGui, gAssistantOverlayAffinityEnabled, gAssistantOverlayAffinityActive
     if !IsObject(gAssistantOverlayGui) {
         return
     }
+
+    ; Keep the protected overlay as a normal opaque window.
+    ; Layered transparency is one of the most fragile combinations for WDA capture exclusion.
+    if (gAssistantOverlayAffinityEnabled || gAssistantOverlayAffinityActive) {
+        try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
+        return
+    }
+
     val := ClampAssistantOpacity(opacity)
     if (val >= 100) {
         try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
@@ -331,8 +365,22 @@ SetAssistantOverlayOpacity(opacity) {
     try WinSetTransparent(alpha, "ahk_id " gAssistantOverlayGui.Hwnd)
 }
 
-ApplyAssistantOverlayCaptureProtection() {
-    global gAssistantOverlayGui, gAssistantOverlayAffinityEnabled, gAssistantOverlayAffinityActive
+GetAssistantOverlayCurrentDisplayAffinity() {
+    global gAssistantOverlayGui
+    if !IsObject(gAssistantOverlayGui) {
+        return -1
+    }
+    affinity := 0
+    ok := DllCall("user32\GetWindowDisplayAffinity", "Ptr", gAssistantOverlayGui.Hwnd, "UInt*", affinity, "Int")
+    if (ok = 0) {
+        return -1
+    }
+    return affinity
+}
+
+ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
+    global gAssistantOverlayGui, gAssistantOverlayAffinityEnabled, gAssistantOverlayAffinityActive, gAssistantSettings
+    global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick
     if !IsObject(gAssistantOverlayGui) {
         gAssistantOverlayAffinityActive := false
         return false
@@ -340,33 +388,78 @@ ApplyAssistantOverlayCaptureProtection() {
 
     hwnd := gAssistantOverlayGui.Hwnd
     if !gAssistantOverlayAffinityEnabled {
-        ; Default OFF to avoid black rectangle artifacts.
         try DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0, "Int")
         gAssistantOverlayAffinityActive := false
+        SetAssistantOverlayOpacity(ClampAssistantOpacity(gAssistantSettings["overlay_opacity"]))
         return true
     }
 
+    ; Reset layered transparency before applying WDA. This keeps the overlay locally visible
+    ; while avoiding a fragile layered-window + affinity combination.
+    try WinSetTransparent("Off", "ahk_id " hwnd)
+    if forceReset {
+        try DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0, "Int")
+        Sleep(20)
+    }
+
     ; WDA_EXCLUDEFROMCAPTURE (0x11): Windows 10 2004+ best effort.
+    wasActive := gAssistantOverlayAffinityActive
     ok := DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0x11, "Int")
     if (ok != 0) {
         gAssistantOverlayAffinityActive := true
-        WriteLog("assistant_overlay_protect_enabled", "mode=WDA_EXCLUDEFROMCAPTURE")
+        gAssistantOverlayLastProtectionEnsureTick := A_TickCount
+        if forceReset {
+            gAssistantOverlayLastProtectionRearmTick := A_TickCount
+            WriteLog("assistant_overlay_protect_rearm", "mode=WDA_EXCLUDEFROMCAPTURE reason=" reason)
+        }
+        if !wasActive {
+            WriteLog("assistant_overlay_protect_enabled", "mode=WDA_EXCLUDEFROMCAPTURE")
+        }
         return true
     }
 
     ; Do NOT fallback to WDA_MONITOR to avoid visible black block in captures.
     try DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0, "Int")
     gAssistantOverlayAffinityActive := false
-    WriteLog("assistant_overlay_protect_failed", "mode=WDA_EXCLUDEFROMCAPTURE last_error=" A_LastError)
+    if forceReset {
+        gAssistantOverlayLastProtectionRearmTick := A_TickCount
+    }
+    if (wasActive || forceReset) {
+        WriteLog("assistant_overlay_protect_failed", "mode=WDA_EXCLUDEFROMCAPTURE last_error=" A_LastError)
+    }
     return false
 }
 
-OnAssistantOverlayOpacityChanged(ctrl, *) {
-    global gAssistantSettings, gAssistantOverlayOpacityLabel
-    val := ClampAssistantOpacity(ctrl.Value)
+UpdateAssistantOverlayOpacityUi(val) {
+    global gAssistantOverlayOpacityButtons, gAssistantOverlayOpacityLabel, gAssistantOverlayAffinityEnabled, gAssistantSettings
+    val := ClampAssistantOpacity(val)
+    if IsObject(gAssistantOverlayOpacityButtons) {
+        for item in gAssistantOverlayOpacityButtons {
+            ctrl := item["ctrl"]
+            label := item["value"] = val ? "[" item["value"] "%]" : item["value"] "%"
+            try ctrl.Text := label
+        }
+    }
     gAssistantSettings["overlay_opacity"] := val
-    gAssistantOverlayOpacityLabel.Text := "透明度 " val "%"
+    if gAssistantOverlayAffinityEnabled {
+        gAssistantOverlayOpacityLabel.Text := "透明度 " val "%（防录屏开启时本地强制不透明）"
+    } else {
+        gAssistantOverlayOpacityLabel.Text := "透明度 " val "%"
+    }
     SetAssistantOverlayOpacity(val)
+}
+
+OnAssistantOverlayOpacityPresetClick(ctrl, *) {
+    global gAssistantOverlayOpacityButtons
+    if !IsObject(gAssistantOverlayOpacityButtons) {
+        return
+    }
+    for item in gAssistantOverlayOpacityButtons {
+        if (item["ctrl"] = ctrl) {
+            UpdateAssistantOverlayOpacityUi(item["value"])
+            return
+        }
+    }
 }
 
 OnAssistantOverlayCaptureButton(*) {
@@ -423,23 +516,58 @@ AssistantOverlayOnMouseDown(wParam, lParam, msg, hwnd) {
 
 OnAssistantOverlayClose(*) {
     global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayRiskHidden, gAssistantOverlayInSensitivePhase
+    global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason
     if IsObject(gAssistantOverlayGui) {
         gAssistantOverlayGui.Hide()
     }
     gAssistantOverlayVisible := false
     gAssistantOverlayRiskHidden := false
     gAssistantOverlayInSensitivePhase := false
+    gAssistantOverlayProtectionRearmPending := false
+    gAssistantOverlayProtectionRearmReason := ""
     StopAssistantOverlayCaptureGuard()
     StopAssistantThinkingTicker()
     try SaveData()
 }
 
+AssistantOverlayOnDisplayChange(wParam := 0, lParam := 0, msg := 0, hwnd := 0) {
+    QueueAssistantOverlayProtectionRearm("msg_" msg)
+}
+
+QueueAssistantOverlayProtectionRearm(reason := "manual") {
+    global gAssistantOverlayVisible, gAssistantOverlayAffinityEnabled
+    global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason
+    if !gAssistantOverlayVisible || !gAssistantOverlayAffinityEnabled {
+        return
+    }
+    gAssistantOverlayProtectionRearmPending := true
+    gAssistantOverlayProtectionRearmReason := reason
+    SetTimer(AssistantOverlayPerformProtectionRearm, -120)
+}
+
+AssistantOverlayPerformProtectionRearm(*) {
+    global gAssistantOverlayVisible, gAssistantOverlayAffinityEnabled
+    global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason
+    if !gAssistantOverlayProtectionRearmPending {
+        return
+    }
+    gAssistantOverlayProtectionRearmPending := false
+    if !gAssistantOverlayVisible || !gAssistantOverlayAffinityEnabled {
+        return
+    }
+    ApplyAssistantOverlayCaptureProtection(true, gAssistantOverlayProtectionRearmReason)
+}
+
 ScrollAssistantOverlay(lines) {
-    global gAssistantOverlayVisible, gAssistantOverlayText
+    global gAssistantOverlayVisible, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
     if !gAssistantOverlayVisible || !IsObject(gAssistantOverlayText) {
         return
     }
-    try DllCall("SendMessage", "Ptr", gAssistantOverlayText.Hwnd, "UInt", 0x00B6, "Ptr", 0, "Ptr", Integer(lines), "Ptr")
+    visibleLines := GetAssistantOverlayVisibleLineCount()
+    maxOffset := Max(1, gAssistantOverlayRenderedLines.Length - visibleLines + 1)
+    nextOffset := gAssistantOverlayScrollOffset + Integer(lines)
+    gAssistantOverlayScrollOffset := Min(maxOffset, Max(1, nextOffset))
+    RenderAssistantOverlayText()
 }
 
 AssistantOverlayScrollUp(*) {
@@ -462,9 +590,7 @@ TemporarilyHideAssistantOverlay(durationMs := 1200) {
     }
 
     gAssistantOverlayTempRestoreText := ""
-    if IsObject(gAssistantOverlayText) {
-        gAssistantOverlayTempRestoreText := gAssistantOverlayText.Value
-    }
+    gAssistantOverlayTempRestoreText := GetAssistantOverlayCurrentText()
     if (Trim(gAssistantOverlayTempRestoreText) = "") {
         gAssistantOverlayTempRestoreText := Trim(gAssistantLastResult)
     }
@@ -498,31 +624,18 @@ AssistantOverlayRestoreAfterTempHide(*) {
 
 EnterAssistantSensitivePhase(statusText := "") {
     global gAssistantOverlayInSensitivePhase, gAssistantOverlaySensitiveHidden
-    global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayText
-    global gAssistantOverlaySensitiveRestoreText, gAssistantOverlaySensitiveRestoreStatus, gAssistantOverlayLastStatus
     global gAssistantOverlayAffinityActive
     gAssistantOverlayInSensitivePhase := true
     if (statusText != "") {
         UpdateAssistantOverlayStatus(statusText)
     }
 
-    ; Final requirement: while WDA is active, keep overlay visible during F1 thinking/analysis.
-    if gAssistantOverlayAffinityActive {
-        gAssistantOverlaySensitiveHidden := false
-        return
-    }
-
+    ; Keep the overlay locally visible during analysis regardless of affinity state.
+    ; Screenshot actions are handled separately by the screenshot guard, while recording
+    ; exclusion relies on WDA best effort and must not force local auto-hide.
     gAssistantOverlaySensitiveHidden := false
-    if (gAssistantOverlayVisible && IsObject(gAssistantOverlayGui)) {
-        gAssistantOverlaySensitiveRestoreText := ""
-        if IsObject(gAssistantOverlayText) {
-            gAssistantOverlaySensitiveRestoreText := gAssistantOverlayText.Value
-        }
-        gAssistantOverlaySensitiveRestoreStatus := gAssistantOverlayLastStatus
-        try gAssistantOverlayGui.Hide()
-        gAssistantOverlayVisible := false
-        gAssistantOverlaySensitiveHidden := true
-        WriteLog("assistant_overlay_sensitive_hide", "phase=thinking")
+    if !gAssistantOverlayAffinityActive {
+        WriteLog("assistant_overlay_sensitive_visible", "phase=thinking affinity_active=0")
     }
 }
 
@@ -588,35 +701,30 @@ AssistantThinkingTick(*) {
 CheckAssistantCaptureRisk(*) {
     global gAssistantOverlayVisible, gAssistantOverlayGui, gAssistantOverlayRiskHidden, gAssistantOverlayRiskRestoreText, gAssistantOverlayRiskRestoreStatus
     global gAssistantOverlayText, gAssistantOverlayLastStatus, gAssistantOverlayInSensitivePhase, gAssistantOverlayTempHidden, gAssistantOverlayAffinityActive, gAssistantOverlayAffinityEnabled
+    global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick
 
-    ; Keep re-applying WDA while visible to reduce edge cases where protection gets dropped.
+    ; Probe actual affinity state instead of blindly spamming SetWindowDisplayAffinity.
     if (gAssistantOverlayVisible && gAssistantOverlayAffinityEnabled) {
-        ApplyAssistantOverlayCaptureProtection()
-    }
-
-    ; Final requirement: when WDA is active, overlay should stay visible during recording.
-    ; In this state we skip risk-hide and trust WDA exclusion.
-    if gAssistantOverlayAffinityActive {
-        if (gAssistantOverlayRiskHidden && !gAssistantOverlayTempHidden) {
-            gAssistantOverlayRiskHidden := false
-            ShowAssistantOverlay(gAssistantOverlayRiskRestoreText)
-            UpdateAssistantOverlayStatus(gAssistantOverlayRiskRestoreStatus)
-            WriteLog("assistant_overlay_risk_restore", "risk=0 mode=affinity_keep_visible")
+        actualAffinity := GetAssistantOverlayCurrentDisplayAffinity()
+        drifted := (actualAffinity != 0x11)
+        needsRearm := drifted || (A_TickCount - gAssistantOverlayLastProtectionRearmTick) >= 2500
+        needsEnsure := drifted || !gAssistantOverlayAffinityActive || (A_TickCount - gAssistantOverlayLastProtectionEnsureTick) >= 900
+        if needsRearm {
+            reason := drifted ? "affinity_drift_" actualAffinity : "periodic_rearm"
+            ApplyAssistantOverlayCaptureProtection(true, reason)
+        } else if needsEnsure {
+            ApplyAssistantOverlayCaptureProtection(false, "")
         }
-        return
     }
 
     risk := IsAssistantCaptureRiskActive()
     if (risk && gAssistantOverlayVisible && IsObject(gAssistantOverlayGui)) {
-        gAssistantOverlayRiskRestoreText := ""
-        if IsObject(gAssistantOverlayText) {
-            gAssistantOverlayRiskRestoreText := gAssistantOverlayText.Value
-        }
+        gAssistantOverlayRiskRestoreText := GetAssistantOverlayCurrentText()
         gAssistantOverlayRiskRestoreStatus := gAssistantOverlayLastStatus
         try gAssistantOverlayGui.Hide()
         gAssistantOverlayVisible := false
         gAssistantOverlayRiskHidden := true
-        WriteLog("assistant_overlay_risk_hide", "risk=1")
+        WriteLog("assistant_overlay_risk_hide", "risk=1 mode=" (gAssistantOverlayAffinityActive ? "affinity_active" : "temp_hide"))
         return
     }
 
@@ -624,7 +732,7 @@ CheckAssistantCaptureRisk(*) {
         gAssistantOverlayRiskHidden := false
         ShowAssistantOverlay(gAssistantOverlayRiskRestoreText)
         UpdateAssistantOverlayStatus(gAssistantOverlayRiskRestoreStatus)
-        WriteLog("assistant_overlay_risk_restore", "risk=0 mode=" (gAssistantOverlayAffinityActive ? "affinity" : "temp_hide"))
+        WriteLog("assistant_overlay_risk_restore", "risk=0 mode=" (gAssistantOverlayAffinityActive ? "affinity_restore" : "temp_hide"))
     }
 }
 
@@ -637,11 +745,7 @@ IsAssistantCaptureRiskActive() {
         return true
     }
 
-    if IsAssistantRecordingRiskActive() {
-        return true
-    }
-
-    ; Only detect active clipping windows, avoid persistent false positives.
+    ; Only detect active screenshot actions/windows, avoid persistent false positives.
     if WinActive("ahk_class ScreenClippingHost") || WinActive("ahk_exe SnippingTool.exe") {
         return true
     }
@@ -649,6 +753,106 @@ IsAssistantCaptureRiskActive() {
         return true
     }
     return false
+}
+
+GetAssistantOverlayCurrentText() {
+    global gAssistantOverlayFullText
+    return gAssistantOverlayFullText
+}
+
+GetAssistantOverlayVisibleLineCount() {
+    ; 486x342 answer area with 10pt Consolas yields about 18-19 comfortable rows.
+    return 19
+}
+
+RenderAssistantOverlayText() {
+    global gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
+    if !IsObject(gAssistantOverlayText) {
+        return
+    }
+
+    if !IsObject(gAssistantOverlayRenderedLines) || (gAssistantOverlayRenderedLines.Length = 0) {
+        gAssistantOverlayRenderedLines := [""]
+    }
+
+    visibleLines := GetAssistantOverlayVisibleLineCount()
+    maxOffset := Max(1, gAssistantOverlayRenderedLines.Length - visibleLines + 1)
+    gAssistantOverlayScrollOffset := Min(maxOffset, Max(1, gAssistantOverlayScrollOffset))
+
+    startLine := gAssistantOverlayScrollOffset
+    endLine := Min(gAssistantOverlayRenderedLines.Length, startLine + visibleLines - 1)
+    lines := []
+    Loop endLine - startLine + 1 {
+        idx := startLine + A_Index - 1
+        lines.Push(gAssistantOverlayRenderedLines[idx])
+    }
+    gAssistantOverlayText.Text := StrJoin(lines, "`r`n")
+
+    if IsObject(gAssistantOverlayTextHint) {
+        if (gAssistantOverlayRenderedLines.Length <= visibleLines) {
+            gAssistantOverlayTextHint.Text := ""
+        } else {
+            gAssistantOverlayTextHint.Text := "第 " startLine "-" endLine " / " gAssistantOverlayRenderedLines.Length " 行"
+        }
+    }
+}
+
+WrapAssistantOverlayText(text) {
+    maxUnits := 60
+    wrapped := []
+    normalized := StrReplace(text, "`r`n", "`n")
+    normalized := StrReplace(normalized, "`r", "`n")
+    sourceLines := StrSplit(normalized, "`n")
+    for rawLine in sourceLines {
+        if (rawLine = "") {
+            wrapped.Push("")
+            continue
+        }
+
+        remaining := rawLine
+        while (remaining != "") {
+            segment := TakeAssistantOverlayLineSegment(remaining, maxUnits)
+            if (segment = "") {
+                break
+            }
+            wrapped.Push(segment)
+            remaining := SubStr(remaining, StrLen(segment) + 1)
+        }
+    }
+
+    if (wrapped.Length = 0) {
+        wrapped.Push("")
+    }
+    return wrapped
+}
+
+TakeAssistantOverlayLineSegment(text, maxUnits) {
+    units := 0
+    lastSoftBreak := 0
+    Loop Parse, text {
+        ch := A_LoopField
+        nextUnits := units + GetAssistantOverlayCharUnits(ch)
+        if (nextUnits > maxUnits) {
+            breakAt := lastSoftBreak > 0 ? lastSoftBreak : A_Index - 1
+            if (breakAt < 1) {
+                breakAt := 1
+            }
+            return SubStr(text, 1, breakAt)
+        }
+        units := nextUnits
+        if InStr(" -_/\,.;:!?，。；：、）】])}", ch) {
+            lastSoftBreak := A_Index
+        }
+    }
+    return text
+}
+
+GetAssistantOverlayCharUnits(ch) {
+    code := Ord(ch)
+    if (code <= 0x7F) {
+        return 1
+    }
+    return 2
 }
 
 ShouldAssistantTempHideForCapture() {
@@ -660,7 +864,9 @@ ShouldAssistantTempHideForCapture() {
 }
 
 IsAssistantRecordingRiskActive() {
-    ; Best-effort recorder detection. If any known recorder is active, hide overlay.
+    ; Best-effort recorder detection helper kept for diagnostics/future use.
+    ; Recorder presence alone must NOT hide the overlay: the user should keep seeing it locally,
+    ; while WDA_EXCLUDEFROMCAPTURE attempts to keep it out of the recording stream.
     static recorderProcesses := [
         "obs64.exe", "obs32.exe",
         "bdcam.exe", "Bandicam.exe",
@@ -671,7 +877,8 @@ IsAssistantRecordingRiskActive() {
         "NVIDIA Share.exe", "Action_x64.exe", "XSplit.Core.exe",
         "XboxGameBar.exe", "GameBar.exe", "GameBarFTServer.exe",
         "Captura.exe", "Loom.exe",
-        "Zoom.exe", "ms-teams.exe", "Teams.exe", "TencentMeeting.exe", "WeMeetApp.exe", "Lark.exe", "DingTalk.exe"
+        "Zoom.exe", "ms-teams.exe", "Teams.exe", "TencentMeeting.exe", "WeMeetApp.exe",
+        "Lark.exe", "DingTalk.exe"
     ]
 
     for procName in recorderProcesses {
@@ -681,7 +888,12 @@ IsAssistantRecordingRiskActive() {
     }
 
     ; Window title based fallback for recorder apps.
-    for key in ["OBS", "Bandicam", "Snagit", "Camtasia", "Game Bar", "Xbox Game Bar", "正在录制", "录制中", "正在共享", "共享屏幕", "Screen sharing", "You are sharing"] {
+    for key in [
+        "OBS", "Bandicam", "Snagit", "Camtasia",
+        "Game Bar", "Xbox Game Bar",
+        "正在录制", "录制中", "正在共享", "共享屏幕",
+        "Screen sharing", "You are sharing"
+    ] {
         if WinExist(key) {
             return true
         }

@@ -1,6 +1,7 @@
-ReloadAssistantPanel() {
+﻿ReloadAssistantPanel() {
     global gAssistantSettings, gAssistantEnabledCheckbox, gAssistantApiEndpointEdit, gAssistantApiKeyEdit
-    global gAssistantModelEdit, gAssistantPromptEdit, gAssistantOpacitySlider, gAssistantOpacityLabel, gAssistantResultEdit, gAssistantLastResult
+    global gAssistantModelEdit, gAssistantPromptEdit, gAssistantOpacitySlider, gAssistantOpacityLabel, gAssistantCapturePathEdit, gAssistantResultEdit, gAssistantLastResult
+    global gCaptureDir
 
     if !IsObject(gAssistantApiEndpointEdit) {
         return
@@ -15,6 +16,11 @@ ReloadAssistantPanel() {
     opacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
     gAssistantOpacitySlider.Value := opacity
     gAssistantOpacityLabel.Text := "透明度 " opacity "%"
+
+    if IsObject(gAssistantCapturePathEdit) {
+        EnsureCaptureStore()
+        gAssistantCapturePathEdit.Value := gCaptureDir
+    }
 
     if IsObject(gAssistantResultEdit) {
         gAssistantResultEdit.Value := gAssistantLastResult
@@ -41,7 +47,7 @@ SaveAssistantSettingsFromGui() {
 
     prompt := Trim(gAssistantPromptEdit.Value)
     if (prompt = "") {
-        prompt := "编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。"
+        prompt := GetAssistantDefaultPrompt()
     }
 
     gAssistantSettings["enabled"] := gAssistantEnabledCheckbox.Value ? 1 : 0
@@ -106,4 +112,10 @@ OnAssistantRunMock(*) {
         gAssistantResultEdit.Value := result["text"]
     }
     MsgBox("本地模拟测试完成。")
+}
+
+OnOpenAssistantCaptureFolder(*) {
+    global gCaptureDir
+    EnsureCaptureStore()
+    Run(gCaptureDir)
 }

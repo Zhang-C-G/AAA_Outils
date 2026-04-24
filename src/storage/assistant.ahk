@@ -22,7 +22,19 @@ IsAssistantPromptBroken(text) {
 }
 
 ClampAssistantOpacity(opacity) {
-    return Min(100, Max(35, Integer(opacity)))
+    allowed := [0, 50, 75, 100]
+    value := 100
+    try value := Integer(opacity)
+    best := allowed[1]
+    bestDiff := Abs(value - best)
+    for candidate in allowed {
+        diff := Abs(value - candidate)
+        if (diff < bestDiff || (diff = bestDiff && candidate > best)) {
+            best := candidate
+            bestDiff := diff
+        }
+    }
+    return best
 }
 
 ClampAssistantRatePerHour(limitValue) {
@@ -131,7 +143,7 @@ GetAssistantDefaultSettings() {
         "prompt", GetAssistantDefaultPrompt(),
         "active_template", "default_template",
         "templates", GetAssistantDefaultTemplates(),
-        "overlay_opacity", 92,
+        "overlay_opacity", 100,
         "disable_copy", 1,
         "rate_limit_enabled", 1,
         "rate_limit_per_hour", 100

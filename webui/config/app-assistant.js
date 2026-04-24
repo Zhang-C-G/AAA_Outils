@@ -1,26 +1,79 @@
-import { state, byId, api, toast, toInt } from './app-common.js';
+import { state, byId, api, toast } from './app-common.js';
 
 const API_KEY_MASK = '****************';
+const DEFAULT_PROMPT = '\u7f16\u7a0b\u9898\uff1a\u76f4\u63a5\u7ed9\u5b8c\u6574\u53ef\u8fd0\u884c\u4ee3\u7801\uff0c\u5e76\u5728\u4ee3\u7801\u6846\u4e2d\u8f93\u51fa\uff1b\u968f\u540e\u5bf9\u6838\u5fc3\u601d\u8def\u505a\u7b80\u77ed\u8bf4\u660e\u3002\u9009\u62e9\u9898\uff1a\u5148\u519915\u5b57\u4ee5\u5185\u9898\u76ee\u603b\u7ed3\uff0c\u518d\u76f4\u63a5\u7ed9\u7b54\u6848\u3002';
+const OPACITY_LEVELS = [0, 50, 75, 100];
+
 let assistantAutoSaveTimer = 0;
 let assistantAutoSaveInFlight = false;
 let assistantAutoSaveQueued = false;
 let assistantAdvancedVisible = false;
 
+function normalizeOpacity(value, fallback = 100) {
+  const raw = Number(value);
+  const target = Number.isFinite(raw) ? raw : fallback;
+  let best = OPACITY_LEVELS[0];
+  let diff = Math.abs(target - best);
+  for (const level of OPACITY_LEVELS) {
+    const nextDiff = Math.abs(target - level);
+    if (nextDiff < diff || (nextDiff === diff && level > best)) {
+      best = level;
+      diff = nextDiff;
+    }
+  }
+  return best;
+}
+
+function defaults() {
+  return {
+    enabled: 1,
+    api_endpoint: 'https://ark.cn-beijing.volces.com/api/v3/responses',
+    api_key: '',
+    has_api_key: 0,
+    model: 'doubao-seed-2-0-lite-260215',
+    model_options: [
+      { id: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite (Vision)', enabled: 1 },
+      { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 }
+    ],
+    prompt: DEFAULT_PROMPT,
+    active_template: 'default_template',
+    templates: [{ name: 'default_template', prompt: DEFAULT_PROMPT }],
+    overlay_opacity: 100,
+    disable_copy: 1,
+    rate_limit_enabled: 1,
+    rate_limit_per_hour: 100,
+    capture_dir: '',
+    latest_capture: ''
+  };
+}
+
 function setAssistantAdvancedVisible(visible) {
   assistantAdvancedVisible = !!visible;
   const body = byId('assistantAdvancedBody');
   const btn = byId('assistantAdvancedToggleBtn');
+  const text = byId('assistantAdvancedToggleText');
+  const section = byId('assistantAdvancedSection');
+
   if (body) {
     body.classList.toggle('hidden', !assistantAdvancedVisible);
   }
+  if (section) {
+    section.classList.toggle('hidden', !assistantAdvancedVisible);
+  }
   if (btn) {
-    btn.textContent = assistantAdvancedVisible ? '收起高级设置' : '开启高级设置';
+    btn.classList.toggle('active', assistantAdvancedVisible);
+    btn.setAttribute('aria-pressed', assistantAdvancedVisible ? 'true' : 'false');
+  }
+  if (text) {
+    text.textContent = assistantAdvancedVisible
+      ? '\u9ad8\u7ea7\u8bbe\u7f6e\u5df2\u5f00\u542f'
+      : '\u9ad8\u7ea7\u8bbe\u7f6e\u5df2\u5173\u95ed';
   }
 }
 
 function hotkeyToFriendly(hk) {
   const raw = String(hk || '').trim();
-  if (!raw) return '(未设置)';
+  if (!raw) return '(\u672a\u8bbe\u7f6e)';
 
   let i = 0;
   const mods = [];
@@ -49,11 +102,20 @@ function hotkeyToFriendly(hk) {
 function renderHotkeyExplain() {
   const el = byId('assistantHotkeyExplain');
   if (!el) return;
-  const hkOpen = hotkeyToFriendly(state.hotkeys?.assistant_capture || 'F2');
+  const hkOpen = hotkeyToFriendly(state.hotkeys?.assistant_capture || '!+A');
   const hkRun = hotkeyToFriendly(state.hotkeys?.assistant_capture_now || 'F1');
   const hkUp = hotkeyToFriendly(state.hotkeys?.assistant_overlay_up || '!Up');
   const hkDown = hotkeyToFriendly(state.hotkeys?.assistant_overlay_down || '!Down');
-  el.textContent = `快捷键说明（自动同步配置）：启动悬浮窗 ${hkOpen}；截图并问答 ${hkRun}；答案上滚 ${hkUp}；答案下滚 ${hkDown}。`;
+  el.textContent = `\u5feb\u6377\u952e\u8bf4\u660e\uff08\u81ea\u52a8\u540c\u6b65\u914d\u7f6e\uff09\uff1a\u542f\u52a8\u60ac\u6d6e\u7a97 ${hkOpen}\uff1b\u622a\u56fe\u5e76\u95ee\u7b54 ${hkRun}\uff1b\u7b54\u6848\u4e0a\u6eda ${hkUp}\uff1b\u7b54\u6848\u4e0b\u6eda ${hkDown}\u3002`;
+}
+
+function setAssistantOpacityChoice(value) {
+  const normalized = normalizeOpacity(value, state.assistant.overlay_opacity);
+  state.assistant.overlay_opacity = normalized;
+  document.querySelectorAll('.assistant-opacity-choice').forEach((btn) => {
+    const current = Number(btn.dataset.value || 0);
+    btn.classList.toggle('active', current === normalized);
+  });
 }
 
 function scheduleAssistantAutoSave(immediate = false) {
@@ -76,7 +138,7 @@ async function runAssistantAutoSave() {
   try {
     await saveAssistantSettings({ silent: true });
   } catch {
-    // 自动保存失败时不打断用户编辑，保留手动保存入口。
+    // Auto-save failures should not block editing.
   } finally {
     assistantAutoSaveInFlight = false;
     if (assistantAutoSaveQueued) {
@@ -84,30 +146,6 @@ async function runAssistantAutoSave() {
       scheduleAssistantAutoSave(true);
     }
   }
-}
-
-function defaults() {
-  return {
-    enabled: 1,
-    api_endpoint: 'https://ark.cn-beijing.volces.com/api/v3/responses',
-    api_key: '',
-    has_api_key: 0,
-    model: 'doubao-seed-2-0-lite-260215',
-    model_options: [
-      { id: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite (Vision)', enabled: 1 },
-      { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 }
-    ],
-    prompt: '编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。',
-    active_template: 'default_template',
-    templates: [{
-      name: 'default_template',
-      prompt: '编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。'
-    }],
-    overlay_opacity: 92,
-    disable_copy: 1,
-    rate_limit_enabled: 1,
-    rate_limit_per_hour: 100
-  };
 }
 
 function normalizeModelOptions(options) {
@@ -126,10 +164,7 @@ function normalizeModelOptions(options) {
       enabled: Number(m?.enabled ?? 1) === 0 ? 0 : 1
     });
   }
-  if (!out.length) {
-    return defaults().model_options;
-  }
-  return out;
+  return out.length ? out : defaults().model_options;
 }
 
 function renderModelOptions(selectedModel) {
@@ -153,8 +188,8 @@ function renderModelOptions(selectedModel) {
 function isBrokenPrompt(text) {
   const t = String(text || '').trim();
   if (!t) return true;
-  if (/^\?+$/.test(t)) return true;
-  if (t.includes('???')) return true;
+  if (/^[?？]+$/.test(t)) return true;
+  if (t.includes('???') || t.includes('？？？')) return true;
   return false;
 }
 
@@ -223,7 +258,7 @@ function syncCurrentTemplateFromUi() {
 
   const duplicated = state.assistant.templates.find((t, i) => i !== idx && t.name.toLowerCase() === nextName.toLowerCase());
   if (duplicated) {
-    toast(`模板名重复：${nextName}`);
+    toast(`\u6a21\u677f\u540d\u91cd\u590d\uff1a${nextName}`);
     byId('assistantTemplateName').value = currentName;
     nextName = currentName;
   }
@@ -254,21 +289,24 @@ export function applyAssistantState(payload) {
   }
 
   state.assistant.templates = normalizeTemplates(incoming.templates || state.assistant.templates, fallback.prompt);
+  state.assistant.overlay_opacity = normalizeOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
   ensureActiveTemplate();
 
   byId('assistantEnabled').checked = Number(state.assistant.enabled || 0) !== 0;
-  byId('assistantOpacity').value = toInt(state.assistant.overlay_opacity, 92, 35, 100);
   renderModelOptions(state.assistant.model || 'doubao-seed-2-0-lite-260215');
-  byId('assistantEndpoint').value = state.assistant.api_endpoint || 'https://ark.cn-beijing.volces.com/api/v3/responses';
   byId('assistantApiKey').value = Number(state.assistant.has_api_key || 0) !== 0 ? API_KEY_MASK : '';
   byId('assistantDisableCopy').checked = Number(state.assistant.disable_copy ?? 1) !== 0;
   byId('assistantApiKey').placeholder = Number(state.assistant.has_api_key || 0) !== 0
-    ? '已保存密钥（星号表示保持不变）'
-    : '请输入 API Key';
+    ? '\u5df2\u4fdd\u5b58\u5bc6\u94a5\uff08\u4fdd\u6301\u661f\u53f7\u8868\u793a\u4e0d\u53d8\uff09'
+    : '\u8bf7\u8f93\u5165 API Key';
   byId('assistantRateEnabled').checked = Number(state.assistant.rate_limit_enabled || 0) !== 0;
-  byId('assistantRatePerHour').value = toInt(state.assistant.rate_limit_per_hour, 100, 1, 10000);
+  byId('assistantRatePerHour').value = Math.max(1, Number(state.assistant.rate_limit_per_hour || 100));
+  byId('assistantCaptureDir').value = state.assistant.capture_dir || '';
+  byId('assistantLatestCapture').value = state.assistant.latest_capture || '';
+
   renderTemplateControls();
   renderHotkeyExplain();
+  setAssistantOpacityChoice(state.assistant.overlay_opacity);
   setAssistantAdvancedVisible(false);
 }
 
@@ -276,12 +314,12 @@ function readAssistantFromUi() {
   syncCurrentTemplateFromUi();
 
   state.assistant.enabled = byId('assistantEnabled').checked ? 1 : 0;
-  state.assistant.overlay_opacity = toInt(byId('assistantOpacity').value, 92, 35, 100);
+  state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 100);
   state.assistant.model = (byId('assistantModel').value || '').trim() || 'doubao-seed-2-0-lite-260215';
-  state.assistant.api_endpoint = (byId('assistantEndpoint').value || '').trim() || 'https://ark.cn-beijing.volces.com/api/v3/responses';
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
-  state.assistant.rate_limit_per_hour = toInt(byId('assistantRatePerHour').value, 100, 1, 10000);
+  state.assistant.rate_limit_per_hour = Math.min(10000, Math.max(1, Math.round(Number(byId('assistantRatePerHour').value || 100))));
+  state.assistant.api_endpoint = (state.assistant.api_endpoint || defaults().api_endpoint).trim() || defaults().api_endpoint;
 
   const inputKey = String(byId('assistantApiKey').value || '').trim();
   if (inputKey && inputKey !== API_KEY_MASK) {
@@ -310,8 +348,13 @@ export async function saveAssistantSettings(options = {}) {
   state.assistant.keep_api_key = 0;
   applyAssistantState({ assistant: state.assistant });
   if (!silent) {
-    toast('助手设置已保存');
+    toast('\u52a9\u624b\u8bbe\u7f6e\u5df2\u4fdd\u5b58');
   }
+}
+
+async function openAssistantFolder() {
+  const payload = await api('/api/assistant/open-folder', { method: 'POST', body: '{}' });
+  if (!payload.ok) throw new Error(payload.error || 'open folder failed');
 }
 
 export function initAssistantHandlers() {
@@ -355,22 +398,27 @@ export function initAssistantHandlers() {
   byId('assistantDeleteTplBtn').onclick = () => {
     syncCurrentTemplateFromUi();
     if (state.assistant.templates.length <= 1) {
-      toast('至少保留一个模板');
+      toast('\u81f3\u5c11\u4fdd\u7559\u4e00\u4e2a\u6a21\u677f');
       return;
     }
     const name = state.assistant.active_template;
-    if (!confirm(`确认删除模板【${name}】吗？`)) return;
+    if (!confirm(`\u786e\u8ba4\u5220\u9664\u6a21\u677f\u3010${name}\u3011\u5417\uff1f`)) return;
     state.assistant.templates = state.assistant.templates.filter((t) => t.name !== name);
     state.assistant.active_template = state.assistant.templates[0].name;
     renderTemplateControls();
     scheduleAssistantAutoSave(true);
   };
 
-  byId('assistantSaveBtn').onclick = () => saveAssistantSettings().catch((e) => toast(`保存失败: ${e.message}`));
+  document.querySelectorAll('.assistant-opacity-choice').forEach((btn) => {
+    btn.onclick = () => {
+      setAssistantOpacityChoice(Number(btn.dataset.value || 100));
+      scheduleAssistantAutoSave(true);
+    };
+  });
+
+  byId('assistantSaveBtn').onclick = () => saveAssistantSettings().catch((e) => toast(`\u4fdd\u5b58\u5931\u8d25: ${e.message}`));
   byId('assistantEnabled').onchange = () => scheduleAssistantAutoSave(true);
-  byId('assistantOpacity').oninput = () => scheduleAssistantAutoSave();
   byId('assistantModel').onchange = () => scheduleAssistantAutoSave(true);
-  byId('assistantEndpoint').oninput = () => scheduleAssistantAutoSave();
   byId('assistantDisableCopy').onchange = () => scheduleAssistantAutoSave(true);
   byId('assistantApiKey').onchange = () => scheduleAssistantAutoSave(true);
   byId('assistantRateEnabled').onchange = () => scheduleAssistantAutoSave(true);
@@ -381,9 +429,9 @@ export function initAssistantHandlers() {
       await saveAssistantSettings();
       const payload = await api('/api/assistant/show-overlay', { method: 'POST', body: '{}' });
       if (!payload.ok) throw new Error(payload.error || 'show overlay failed');
-      toast('悬浮窗启动指令已发送');
+      toast('\u60ac\u6d6e\u7a97\u542f\u52a8\u6307\u4ee4\u5df2\u53d1\u9001');
     } catch (e) {
-      toast(`启动失败: ${e.message}`);
+      toast(`\u542f\u52a8\u5931\u8d25: ${e.message}`);
     }
   };
 
@@ -392,9 +440,25 @@ export function initAssistantHandlers() {
       await saveAssistantSettings();
       const payload = await api('/api/assistant/trigger-capture', { method: 'POST', body: '{}' });
       if (!payload.ok) throw new Error(payload.error || 'assistant run failed');
-      toast('截图问答已触发，请查看悬浮窗');
+      toast('\u622a\u56fe\u95ee\u7b54\u5df2\u89e6\u53d1\uff0c\u8bf7\u67e5\u770b\u60ac\u6d6e\u7a97');
     } catch (e) {
-      toast(`执行失败: ${e.message}`);
+      toast(`\u6267\u884c\u5931\u8d25: ${e.message}`);
+    }
+  };
+
+  byId('assistantOpenFolderBtn').onclick = async () => {
+    try {
+      await openAssistantFolder();
+    } catch (e) {
+      toast(`\u6253\u5f00\u5931\u8d25: ${e.message}`);
+    }
+  };
+
+  byId('assistantOpenFolderInlineBtn').onclick = async () => {
+    try {
+      await openAssistantFolder();
+    } catch (e) {
+      toast(`\u6253\u5f00\u5931\u8d25: ${e.message}`);
     }
   };
 }

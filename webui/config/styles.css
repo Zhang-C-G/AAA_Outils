@@ -166,9 +166,88 @@ label span { color: #d2d2d2; font-size: 14px; }
 .assistant-grid-basic label:last-child { grid-column: 1 / -1; }
 .assistant-grid textarea { min-height: 120px; }
 .assistant-template-actions { display: flex; gap: 8px; align-items: end; }
+.assistant-template-actions-basic { align-self: end; justify-content: flex-start; }
 .assistant-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.assistant-folder-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+.assistant-advanced-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #3a3a3a;
+  background: #121212;
+  color: #ddd;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+.assistant-advanced-switch.active {
+  border-color: #ffffff;
+  background: #f5f5f5;
+  color: #111;
+}
+.assistant-advanced-switch-track {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #3a3a3a;
+  flex: 0 0 auto;
+  transition: background .18s ease;
+}
+.assistant-advanced-switch.active .assistant-advanced-switch-track {
+  background: #111;
+}
+.assistant-advanced-switch-dot {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f7f7f7;
+  transition: transform .18s ease, background .18s ease;
+}
+.assistant-advanced-switch.active .assistant-advanced-switch-dot {
+  transform: translateX(16px);
+  background: #fff;
+}
+.assistant-opacity-group {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.assistant-opacity-group > span {
+  color: #d7d7d7;
+  font-size: 13px;
+}
+.assistant-opacity-choices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.assistant-opacity-choice {
+  border: 1px solid #3a3a3a;
+  background: #101010;
+  color: #ddd;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+.assistant-opacity-choice.active {
+  border-color: #fff;
+  background: #fff;
+  color: #111;
+  font-weight: 700;
+}
 .assistant-hotkey-explain {
-  margin-top: 6px;
+  margin-bottom: 12px;
   color: #e8e8e8;
   font-size: 13px;
   line-height: 1.5;
@@ -240,11 +319,7 @@ label span { color: #d2d2d2; font-size: 14px; }
   align-items: start;
 }
 .resume-table-wrap textarea {
-  min-height: 88px;
-}
-#resumeJsonPreview {
   min-height: 220px;
-  font-family: Consolas, "Courier New", monospace;
 }
 .toast {
   position: fixed;
@@ -270,4 +345,5 @@ label span { color: #d2d2d2; font-size: 14px; }
   .capture-status { grid-template-columns: 1fr; }
   .resume-layout { grid-template-columns: 1fr; }
   .resume-main-head { flex-direction: column; }
+  .assistant-folder-row { grid-template-columns: 1fr; }
 }

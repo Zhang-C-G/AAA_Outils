@@ -49,7 +49,7 @@ function Consume-AssistantRateLimit {
     return [ordered]@{ ok=$true; used=0; limit=0; remaining=0 }
   }
 
-  $limit = Clamp-AssistantRatePerHour (Get-Prop $Settings 'rate_limit_per_hour' 30)
+  $limit = Clamp-AssistantRatePerHour (Get-Prop $Settings 'rate_limit_per_hour' 100)
   $window = Get-Date -Format 'yyyyMMddHH'
   $rateFile = Get-AssistantRateFilePath
   $ini = Read-Ini $rateFile
@@ -223,6 +223,16 @@ function Request-AssistantCaptureRun {
   } catch {
     Write-AppLog 'assistant_capture_req_failed' $_.Exception.Message
     return [ordered]@{ ok=$false; error=$_.Exception.Message }
+  }
+}
+
+function Open-AssistantCaptureFolder {
+  try {
+    Ensure-CaptureStore
+    Start-Process $CaptureDir | Out-Null
+    return [ordered]@{ ok = $true; path = $CaptureDir }
+  } catch {
+    return [ordered]@{ ok = $false; error = $_.Exception.Message }
   }
 }
 

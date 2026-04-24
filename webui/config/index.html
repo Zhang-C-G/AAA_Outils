@@ -110,36 +110,49 @@
 
     <section id="assistantView" class="view hidden">
       <section class="panel assistant-layout">
+        <div id="assistantHotkeyExplain" class="assistant-hotkey-explain"></div>
         <div class="assistant-sections">
           <section class="assistant-block">
             <div class="assistant-block-head">
               <h2>基础设置</h2>
-              <button id="assistantAdvancedToggleBtn" class="btn ghost" type="button">开启高级设置</button>
+              <button id="assistantAdvancedToggleBtn" class="assistant-advanced-switch" type="button" aria-pressed="false">
+                <span class="assistant-advanced-switch-track">
+                  <span class="assistant-advanced-switch-dot"></span>
+                </span>
+                <span id="assistantAdvancedToggleText">高级设置已关闭</span>
+              </button>
             </div>
             <div class="assistant-grid assistant-grid-basic">
               <label><span>模型选择</span><select id="assistantModel"></select></label>
               <label><span>模板选择</span><select id="assistantTemplateSelect"></select></label>
               <label><span>模板名称</span><input id="assistantTemplateName" type="text" /></label>
+              <div class="assistant-template-actions assistant-template-actions-basic">
+                <button id="assistantAddTplBtn" class="btn ghost">新增模板</button>
+                <button id="assistantDeleteTplBtn" class="btn danger">删除模板</button>
+              </div>
               <label><span>Prompt</span><textarea id="assistantPrompt"></textarea></label>
             </div>
           </section>
 
-          <section class="assistant-block">
+          <section id="assistantAdvancedSection" class="assistant-block hidden">
             <div class="assistant-block-head">
               <h2>高级设置</h2>
             </div>
             <div id="assistantAdvancedBody" class="assistant-grid assistant-grid-advanced hidden">
               <label class="check"><span>启用助手</span><input id="assistantEnabled" type="checkbox" /></label>
-              <label><span>透明度(35-100)</span><input id="assistantOpacity" type="number" min="35" max="100" /></label>
-              <label><span>API Endpoint</span><input id="assistantEndpoint" type="text" /></label>
+              <div class="assistant-opacity-group">
+                <span>透明度档位</span>
+                <div id="assistantOpacityChoices" class="assistant-opacity-choices">
+                  <button class="assistant-opacity-choice" type="button" data-value="0">0%</button>
+                  <button class="assistant-opacity-choice" type="button" data-value="50">50%</button>
+                  <button class="assistant-opacity-choice" type="button" data-value="75">75%</button>
+                  <button class="assistant-opacity-choice" type="button" data-value="100">100%</button>
+                </div>
+              </div>
               <label><span>API Key</span><input id="assistantApiKey" type="password" /></label>
               <label class="check"><span>禁止复制悬浮窗答案</span><input id="assistantDisableCopy" type="checkbox" /></label>
               <label class="check"><span>启用每小时限流</span><input id="assistantRateEnabled" type="checkbox" /></label>
               <label><span>每小时最多调用次数</span><input id="assistantRatePerHour" type="number" min="1" max="10000" /></label>
-              <div class="assistant-template-actions">
-                <button id="assistantAddTplBtn" class="btn ghost">新增模板</button>
-                <button id="assistantDeleteTplBtn" class="btn danger">删除模板</button>
-              </div>
             </div>
           </section>
         </div>
@@ -148,8 +161,13 @@
           <button id="assistantSaveBtn" class="btn">保存助手设置</button>
           <button id="assistantShowOverlayBtn" class="btn ghost">启动悬浮窗</button>
           <button id="assistantRunBtn" class="btn primary">截图并问答（F1）</button>
+          <button id="assistantOpenFolderBtn" class="btn ghost">打开截图文件夹</button>
         </div>
-        <div id="assistantHotkeyExplain" class="assistant-hotkey-explain"></div>
+        <div class="assistant-folder-row">
+          <label><span>截图保存目录（固定，不可修改）</span><input id="assistantCaptureDir" type="text" readonly /></label>
+          <button id="assistantOpenFolderInlineBtn" class="btn ghost" type="button">打开目录</button>
+        </div>
+        <label><span>最新截图文件</span><input id="assistantLatestCapture" type="text" readonly /></label>
       </section>
     </section>
 
@@ -170,14 +188,13 @@
             </div>
             <div class="assistant-actions">
               <button id="resumeSaveBtn" class="btn">保存简历资料</button>
-              <button id="resumeCopyJsonBtn" class="btn ghost">复制 JSON</button>
             </div>
           </div>
 
           <div class="table-wrap resume-table-wrap">
             <table>
               <thead>
-                <tr><th>字段名</th><th>值</th><th>匹配别名</th><th>类型</th><th>操作</th></tr>
+                <tr><th>字段名</th><th>值</th><th>操作</th></tr>
               </thead>
               <tbody id="resumeRows"></tbody>
             </table>
@@ -186,8 +203,6 @@
           <div class="row-actions">
             <button id="resumeAddRowBtn" class="btn">新增字段</button>
           </div>
-
-          <label><span>当前 Profile JSON 预览</span><textarea id="resumeJsonPreview" readonly></textarea></label>
         </div>
       </section>
     </section>

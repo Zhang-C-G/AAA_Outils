@@ -66,23 +66,33 @@ function Get-AssistantDefaults {
     prompt = $prompt
     active_template = 'default_template'
     templates = @([ordered]@{ name = 'default_template'; prompt = $prompt })
-    overlay_opacity = 92
+    overlay_opacity = 100
     disable_copy = 1
     rate_limit_enabled = 1
-    rate_limit_per_hour = 30
+    rate_limit_per_hour = 100
   }
 }
 
 function Clamp-AssistantOpacity {
   param($Opacity)
-  $v = 92
+  $v = 100
   [int]::TryParse([string]$Opacity, [ref]$v) | Out-Null
-  return [Math]::Min(100, [Math]::Max(35, $v))
+  $allowed = @(0, 50, 75, 100)
+  $best = $allowed[0]
+  $bestDiff = [Math]::Abs($v - $best)
+  foreach ($candidate in $allowed) {
+    $diff = [Math]::Abs($v - $candidate)
+    if ($diff -lt $bestDiff -or ($diff -eq $bestDiff -and $candidate -gt $best)) {
+      $best = $candidate
+      $bestDiff = $diff
+    }
+  }
+  return $best
 }
 
 function Clamp-AssistantRatePerHour {
   param($Limit)
-  $v = 30
+  $v = 100
   [int]::TryParse([string]$Limit, [ref]$v) | Out-Null
   return [Math]::Min(10000, [Math]::Max(1, $v))
 }
@@ -216,10 +226,10 @@ function Convert-ToAssistantSettings {
   $settings.active_template = ([string](Get-Prop $PayloadAssistant 'active_template' (Get-Prop $Fallback 'active_template' 'default_template'))).Trim()
   if ($settings.active_template -eq '') { $settings.active_template = 'default_template' }
 
-  $settings.overlay_opacity = Clamp-AssistantOpacity (Get-Prop $PayloadAssistant 'overlay_opacity' (Get-Prop $Fallback 'overlay_opacity' 92))
+  $settings.overlay_opacity = Clamp-AssistantOpacity (Get-Prop $PayloadAssistant 'overlay_opacity' (Get-Prop $Fallback 'overlay_opacity' 100))
   $settings.disable_copy = if ([string](Get-Prop $PayloadAssistant 'disable_copy' (Get-Prop $Fallback 'disable_copy' 1)) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_enabled = if ([string](Get-Prop $PayloadAssistant 'rate_limit_enabled' (Get-Prop $Fallback 'rate_limit_enabled' 1)) -eq '0') { 0 } else { 1 }
-  $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 30))
+  $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 100))
 
   $payloadTemplates = Get-Prop $PayloadAssistant 'templates' $null
   if ($null -eq $payloadTemplates) {
@@ -341,6 +351,8 @@ function Get-AssistantPublicSettings {
   $public['api_key'] = ''
   $public['has_api_key'] = if ([string](Get-Prop $Settings 'api_key_protected' '') -ne '') { 1 } else { 0 }
   $public['model_options'] = Get-AssistantModelCatalog
+  $public['capture_dir'] = [string]$CaptureDir
+  $public['latest_capture'] = (Get-CaptureLatestPath)
   return $public
 }
 
