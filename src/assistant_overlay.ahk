@@ -42,6 +42,7 @@ gAssistantOverlayRecordingProtectionActive := false
 gAssistantOverlayOpenGraceUntilTick := 0
 gAssistantOverlayAffinityRepairFailures := 0
 gAssistantOverlayAffinityRepairCooldownUntilTick := 0
+gAssistantOverlayCaptureRiskLastSeenTick := 0
 
 ResetAssistantOverlayProtectionStability() {
     global gAssistantOverlayAffinityRepairFailures, gAssistantOverlayAffinityRepairCooldownUntilTick
@@ -292,6 +293,29 @@ RefreshAssistantOverlayWindow(redrawFrame := true) {
     try DllCall("dwmapi\DwmFlush")
 }
 
+WaitAssistantOverlayHidden(timeoutMs := 260) {
+    global gAssistantOverlayGui
+    if !IsObject(gAssistantOverlayGui) {
+        return true
+    }
+
+    hwnd := gAssistantOverlayGui.Hwnd
+    deadline := A_TickCount + Max(40, Abs(Integer(timeoutMs)))
+    loop {
+        visible := DllCall("user32\IsWindowVisible", "Ptr", hwnd, "Int")
+        if (visible = 0) {
+            break
+        }
+        if (A_TickCount >= deadline) {
+            break
+        }
+        Sleep(15)
+    }
+    try DllCall("dwmapi\DwmFlush")
+    Sleep(45)
+    return DllCall("user32\IsWindowVisible", "Ptr", hwnd, "Int") = 0
+}
+
 StartAssistantOverlayOnly(showNotice := true) {
     global gAssistantSettings, gAssistantLastResult
 
@@ -326,29 +350,34 @@ StartAssistantCaptureFlow(showNotice := true) {
 
     EnsureAssistantOverlayGui()
     modelLabel := GetAssistantCurrentModelLabel()
-    if gAssistantOverlayVisible {
+    wasOverlayVisible := gAssistantOverlayVisible
+    if wasOverlayVisible {
         SetAssistantOverlayText("准备开始截图问答...`n当前模型：" modelLabel)
-    } else {
-        ShowAssistantOverlay("准备开始截图问答...`n当前模型：" modelLabel)
+        UpdateAssistantOverlayStatus("状态：准备截图 | 模型：" modelLabel)
     }
-    UpdateAssistantOverlayStatus("状态：准备截图 | 模型：" modelLabel)
 
     rateRes := ConsumeAssistantRateLimit(gAssistantSettings)
     if !rateRes["ok"] {
         WriteLog("assistant_rate_limited", "limit=" rateRes["limit"] " used=" rateRes["used"])
-        UpdateAssistantOverlayStatus("状态：限流触发 | 模型：" modelLabel)
+        if wasOverlayVisible {
+            UpdateAssistantOverlayStatus("状态：限流触发 | 模型：" modelLabel)
+        }
         if showNotice {
             MsgBox(rateRes["error"])
         }
         return Map("ok", 0, "text", "", "error", rateRes["error"], "path", "")
     }
 
-    UpdateAssistantOverlayStatus("状态：正在截图 | 模型：" modelLabel)
+    if wasOverlayVisible {
+        UpdateAssistantOverlayStatus("状态：正在截图 | 模型：" modelLabel)
+    }
     path := GenerateCapturePath()
     ok := CaptureAssistantScreenSafely(path)
     if !ok {
         WriteLog("assistant_capture_failed", "capture path=" path)
-        UpdateAssistantOverlayStatus("状态：截图失败 | 模型：" modelLabel)
+        if wasOverlayVisible {
+            UpdateAssistantOverlayStatus("状态：截图失败 | 模型：" modelLabel)
+        }
         if showNotice {
             MsgBox("截图失败，请重试。")
         }
@@ -358,7 +387,9 @@ StartAssistantCaptureFlow(showNotice := true) {
     gCaptureLastPath := path
     try PublishLatestCapture(path)
     WriteLog("assistant_capture", "path=" path)
-    UpdateAssistantOverlayStatus("状态：截图完毕 | 模型：" modelLabel)
+    if wasOverlayVisible {
+        UpdateAssistantOverlayStatus("状态：截图完毕 | 模型：" modelLabel)
+    }
     EnterAssistantSensitivePhase("状态：正在分析（0秒） | 模型：" modelLabel)
     StartAssistantThinkingTicker()
 
@@ -404,11 +435,7 @@ StartAssistantCaptureFlow(showNotice := true) {
 }
 
 CaptureAssistantScreenSafely(path) {
-    global gAssistantOverlayVisible, gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayLastStatus, gAssistantOverlayAffinityActive
-    if gAssistantOverlayAffinityActive {
-        return CaptureFullScreen(path)
-    }
-
+    global gAssistantOverlayVisible, gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayLastStatus
     if !(gAssistantOverlayVisible && IsObject(gAssistantOverlayGui)) {
         return CaptureFullScreen(path)
     }
@@ -422,9 +449,12 @@ CaptureAssistantScreenSafely(path) {
 
     try gAssistantOverlayGui.Hide()
     gAssistantOverlayVisible := false
-    Sleep(70)
+    hiddenReady := WaitAssistantOverlayHidden(280)
+    if !hiddenReady {
+        WriteLog("assistant_overlay_capture_hide_timeout", "source=internal_capture")
+    }
     ok := CaptureFullScreen(path)
-    Sleep(40)
+    Sleep(60)
 
     ShowAssistantOverlay(restoreText)
     UpdateAssistantOverlayStatus(restoreStatus)
@@ -474,13 +504,26 @@ ShowAssistantOverlay(answerText) {
 
     opacity := GetAssistantOverlayEffectiveOpacity()
     SetAssistantOverlayText(answerText)
+    needsProtection := ShouldAssistantOverlayProtectionBeActive()
+    showOpts := "NA w520 h462"
+    if !gAssistantOverlayPlaced {
+        x := Max(0, A_ScreenWidth - 540)
+        y := 60
+        showOpts := "NA x" x " y" y " w520 h462"
+    }
+
+    ; Core-first: when recorder exclusion is required, prepare the native window
+    ; and apply capture protection before the overlay becomes visible on screen.
+    if (!gAssistantOverlayVisible && needsProtection) {
+        gAssistantOverlayGui.Show("Hide " showOpts)
+        NormalizeAssistantOverlayWindowStyles()
+        ApplyAssistantOverlayCaptureProtection(true, "pre_show")
+    }
 
     if gAssistantOverlayVisible {
         gAssistantOverlayGui.Show("NA w520 h462")
     } else if !gAssistantOverlayPlaced {
-        x := Max(0, A_ScreenWidth - 540)
-        y := 60
-        gAssistantOverlayGui.Show("NA x" x " y" y " w520 h462")
+        gAssistantOverlayGui.Show(showOpts)
         gAssistantOverlayPlaced := true
     } else {
         gAssistantOverlayGui.Show("NA w520 h462")
@@ -493,7 +536,10 @@ ShowAssistantOverlay(answerText) {
         DisableAssistantOverlayCaptureProtection("semi_transparent_show")
     }
     SetAssistantOverlayOpacity(opacity)
-    if (ShouldAssistantOverlayProtectionBeActive()) {
+    if (needsProtection && !gAssistantOverlayAffinityActive) {
+        ApplyAssistantOverlayCaptureProtection(true, "show")
+    }
+    if (needsProtection) {
         QueueAssistantOverlayProtectionRearm("show")
     }
     StartAssistantOverlayCaptureGuard()
@@ -898,7 +944,7 @@ StartAssistantOverlayCaptureGuard() {
         return
     }
     gAssistantOverlayCaptureGuardRunning := true
-    SetTimer(CheckAssistantCaptureRisk, 120)
+    SetTimer(CheckAssistantCaptureRisk, 60)
 }
 
 StopAssistantOverlayCaptureGuard() {
@@ -943,6 +989,7 @@ CheckAssistantCaptureRisk(*) {
     global gAssistantOverlayText, gAssistantOverlayLastStatus, gAssistantOverlayInSensitivePhase, gAssistantOverlayTempHidden, gAssistantOverlayAffinityActive, gAssistantOverlayAffinityEnabled
     global gAssistantOverlayRecordingProtectionActive
     global gAssistantOverlayLastProtectionEnsureTick, gAssistantOverlayLastProtectionRearmTick, gAssistantSettings
+    global gAssistantOverlayCaptureRiskLastSeenTick
 
     ; Recorder protection is the top priority: when active, keep re-checking WDA
     ; and repair it immediately if Windows drops the capture exclusion.
@@ -962,12 +1009,22 @@ CheckAssistantCaptureRisk(*) {
 
     risk := IsAssistantCaptureRiskActive()
     if (risk && gAssistantOverlayVisible && IsObject(gAssistantOverlayGui)) {
+        gAssistantOverlayCaptureRiskLastSeenTick := A_TickCount
         gAssistantOverlayRiskRestoreText := GetAssistantOverlayCurrentText()
         gAssistantOverlayRiskRestoreStatus := gAssistantOverlayLastStatus
         try gAssistantOverlayGui.Hide()
         gAssistantOverlayVisible := false
         gAssistantOverlayRiskHidden := true
         WriteLog("assistant_overlay_risk_hide", "risk=1 mode=" (gAssistantOverlayAffinityActive ? "affinity_active" : "temp_hide"))
+        return
+    }
+
+    if risk {
+        gAssistantOverlayCaptureRiskLastSeenTick := A_TickCount
+        return
+    }
+
+    if (gAssistantOverlayCaptureRiskLastSeenTick > 0 && (A_TickCount - gAssistantOverlayCaptureRiskLastSeenTick) < 450) {
         return
     }
 
@@ -990,6 +1047,9 @@ IsAssistantCaptureRiskActive() {
 
     ; Only detect active screenshot actions/windows, avoid persistent false positives.
     if WinActive("ahk_class ScreenClippingHost") || WinActive("ahk_exe SnippingTool.exe") {
+        return true
+    }
+    if WinExist("ahk_class ScreenClippingHost") || WinExist("ahk_exe SnippingTool.exe") {
         return true
     }
     if WinExist("截图和草图") || WinExist("Snipping Tool") {
