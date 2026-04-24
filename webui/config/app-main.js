@@ -4,7 +4,7 @@ import { initNotesHandlers, loadNotes, saveCurrentNote } from './app-notes.js';
 import { initCaptureHandlers, refreshCaptureState } from './app-capture.js';
 import { initAssistantHandlers, applyAssistantState, saveAssistantSettings } from './app-assistant.js';
 import { initResumeHandlers, applyResumeState, saveResumeProfile } from './app-resume.js';
-import { initTestingHandlers, runOverlayRecordTest } from './app-testing.js';
+import { initTestingHandlers, runOverlayRecordTest, refreshTestingState } from './app-testing.js';
 
 let capturePollTimer = 0;
 const SHORTCUTS_DRAFT_KEY = 'raccourci.shortcutsDraft';
@@ -98,6 +98,9 @@ async function switchMode(mode) {
   }
   if (mode === 'assistant') {
     applyAssistantState({ assistant: state.assistant });
+  }
+  if (mode === 'testing') {
+    await refreshTestingState();
   }
   if (mode === 'resume') {
     applyResumeState({ resume: state.resume });

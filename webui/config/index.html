@@ -148,10 +148,28 @@
                   <button class="assistant-opacity-choice" type="button" data-value="100">100%</button>
                 </div>
               </div>
-              <label class="check"><span>增强模式：截图时本地可见，截图不可见，录屏不可见</span><input id="assistantEnhancedCaptureMode" type="checkbox" /></label>
+              <label class="assistant-toggle-row">
+                <span>增强模式：截图时本地可见，截图不可见，录屏不可见</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantEnhancedCaptureMode" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
               <label><span>API Key</span><input id="assistantApiKey" type="password" /></label>
-              <label class="check"><span>禁止复制悬浮窗答案</span><input id="assistantDisableCopy" type="checkbox" /></label>
-              <label class="check"><span>启用每小时限流</span><input id="assistantRateEnabled" type="checkbox" /></label>
+              <label class="assistant-toggle-row">
+                <span>禁止复制悬浮窗答案</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantDisableCopy" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
+              <label class="assistant-toggle-row">
+                <span>启用每小时限流</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantRateEnabled" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
               <label><span>每小时最多调用次数</span><input id="assistantRatePerHour" type="number" min="1" max="10000" /></label>
             </div>
           </section>
@@ -162,6 +180,7 @@
           <button id="assistantOpenFolderInlineBtn" class="btn ghost" type="button">打开目录</button>
           <button id="assistantPickFolderBtn" class="btn" type="button">修改目录</button>
         </div>
+
       </section>
     </section>
 
@@ -201,14 +220,53 @@
 
     <section id="testingView" class="view hidden">
       <section class="panel assistant-layout">
-        <div class="assistant-grid">
-          <label><span>测试时长（秒）</span><input id="testDurationSec" type="number" min="4" max="30" value="6" /></label>
-          <label><span>录制帧率（FPS）</span><input id="testFps" type="number" min="5" max="30" value="10" /></label>
-          <div class="assistant-template-actions">
-            <button id="openHotkeyProbeBtn" class="btn ghost">打开按键焦点探针</button>
-            <button id="runOverlayRecordTestBtn" class="btn primary">执行录屏捕获检测</button>
-          </div>
-          <label><span>测试输出</span><textarea id="testOutput" readonly></textarea></label>
+        <div class="assistant-sections">
+          <section class="assistant-block assistant-benchmark-block">
+            <div class="assistant-block-head">
+              <h2>API 基线测试</h2>
+              <div class="assistant-benchmark-toolbar">
+                <label class="assistant-benchmark-model-label">
+                  <span>测试模型</span>
+                  <select id="assistantBenchmarkModel"></select>
+                </label>
+                <div id="assistantBenchmarkTimer" class="assistant-benchmark-timer">0.0 s</div>
+                <button id="assistantBenchmarkRunBtn" class="btn primary" type="button">开始测试</button>
+              </div>
+            </div>
+            <p class="assistant-benchmark-note">
+              固定默认题图，直接测试“图片进入当前视觉 API，到拿到答案”为止的基础耗时。
+              这里不测 F1 截图、悬浮窗保护或 UI 展示，只测图片问答接口这一层。
+            </p>
+            <div class="assistant-benchmark-layout">
+              <div class="assistant-benchmark-preview">
+                <img id="assistantBenchmarkImage" alt="API 基线测试默认题图" />
+              </div>
+              <div class="assistant-benchmark-meta">
+                <div id="assistantBenchmarkMeta" class="assistant-benchmark-meta-card"></div>
+                <div id="assistantBenchmarkSummary" class="assistant-benchmark-summary"></div>
+                <pre id="assistantBenchmarkAnswer" class="assistant-benchmark-answer"></pre>
+              </div>
+            </div>
+            <div>
+              <h3 class="assistant-benchmark-history-title">最近测试</h3>
+              <div id="assistantBenchmarkHistory" class="assistant-benchmark-history"></div>
+            </div>
+          </section>
+
+          <section class="assistant-block">
+            <div class="assistant-block-head">
+              <h2>录屏捕获检测</h2>
+            </div>
+            <div class="assistant-grid">
+              <label><span>测试时长（秒）</span><input id="testDurationSec" type="number" min="4" max="30" value="6" /></label>
+              <label><span>录制帧率（FPS）</span><input id="testFps" type="number" min="5" max="30" value="10" /></label>
+              <div class="assistant-template-actions">
+                <button id="openHotkeyProbeBtn" class="btn ghost">打开按键焦点探针</button>
+                <button id="runOverlayRecordTestBtn" class="btn primary">执行录屏捕获检测</button>
+              </div>
+              <label><span>测试输出</span><textarea id="testOutput" readonly></textarea></label>
+            </div>
+          </section>
         </div>
       </section>
     </section>

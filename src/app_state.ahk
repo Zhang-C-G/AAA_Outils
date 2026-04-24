@@ -17,6 +17,7 @@ gWebConfigPort := 8798
 gWebConfigServerFile := A_ScriptDir "\\webui\\config\\server.ps1"
 gWebConfigPidFile := A_Temp "\\raccourci_web_config_server.pid"
 gWebConfigActionFile := A_Temp "\\raccourci_web_config_action.json"
+gWebConfigDesiredFile := A_Temp "\\raccourci_web_config_desired.flag"
 gResumeProfileFile := A_ScriptDir "\\resume_profile.json"
 gAppName := "ZCG-Raccourci Control"
 
@@ -85,6 +86,7 @@ Init() {
     RegisterHotkeys()
     RestartAutoRefreshTimer()
     OnExit(OnAppExit)
+    RestoreWebConfigServerIfNeeded()
     StartDevAutoReloadWatcher()
 
     WriteLog("startup", "script initialized")

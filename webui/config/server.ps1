@@ -191,6 +191,17 @@ while ($true) {
     elseif ($path -eq '/api/assistant/state' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; state=(Get-AssistantState) })
     }
+    elseif ($path -eq '/api/assistant/benchmark-state' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{ ok=$true; benchmark=(Get-AssistantBenchmarkState) })
+    }
+    elseif ($path -eq '/api/assistant/benchmark-image' -and $method -eq 'GET') {
+      Send-File -Res $res -Path (Ensure-AssistantBenchmarkImage) -Type 'image/png'
+    }
+    elseif ($path -eq '/api/assistant/benchmark-run' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $result = Invoke-AssistantBenchmarkRun $payload
+      Send-Json $res $result
+    }
     elseif ($path -eq '/api/assistant/save-settings' -and $method -eq 'POST') {
       $payload = Read-BodyJson $req
       $settings = Save-AssistantSettings $payload

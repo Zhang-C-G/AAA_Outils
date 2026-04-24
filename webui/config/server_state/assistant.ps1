@@ -66,7 +66,7 @@ function Get-AssistantDefaults {
     prompt = $prompt
     active_template = 'default_template'
     templates = @([ordered]@{ name = 'default_template'; prompt = $prompt })
-    overlay_opacity = 100
+    overlay_opacity = 75
     enhanced_capture_mode = 0
     disable_copy = 1
     rate_limit_enabled = 1

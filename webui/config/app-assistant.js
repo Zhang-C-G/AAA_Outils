@@ -26,7 +26,7 @@ function saveAssistantAdvancedVisible(visible) {
   }
 }
 
-function normalizeOpacity(value, fallback = 100) {
+function normalizeOpacity(value, fallback = 75) {
   const raw = Number(value);
   const target = Number.isFinite(raw) ? raw : fallback;
   let best = OPACITY_LEVELS[0];
@@ -55,12 +55,20 @@ function defaults() {
     prompt: DEFAULT_PROMPT,
     active_template: 'default_template',
     templates: [{ name: 'default_template', prompt: DEFAULT_PROMPT }],
-    overlay_opacity: 100,
+    overlay_opacity: 75,
     enhanced_capture_mode: 0,
     disable_copy: 1,
     rate_limit_enabled: 1,
     rate_limit_per_hour: 100,
-    capture_dir: ''
+    capture_dir: '',
+    benchmark: {
+      image_url: '',
+      image_name: '',
+      image_kb: 0,
+      note: '',
+      last_result: null,
+      history: []
+    }
   };
 }
 
@@ -333,7 +341,7 @@ function readAssistantFromUi() {
   syncCurrentTemplateFromUi();
 
   state.assistant.enabled = 1;
-  state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 100);
+  state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 75);
   state.assistant.model = (byId('assistantModel').value || '').trim() || 'doubao-seed-2-0-lite-260215';
   state.assistant.enhanced_capture_mode = byId('assistantEnhancedCaptureMode').checked ? 1 : 0;
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;

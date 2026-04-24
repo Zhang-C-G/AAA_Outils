@@ -31,6 +31,45 @@ function Send-Text {
   $Res.OutputStream.Write($buf, 0, $buf.Length)
 }
 
+function Send-File {
+  param(
+    $Res,
+    [string]$Path,
+    [string]$Type = ''
+  )
+
+  if (!(Test-Path -LiteralPath $Path)) {
+    $Res.StatusCode = 404
+    Send-Text $Res 'not found'
+    return
+  }
+
+  $ext = [IO.Path]::GetExtension($Path).ToLowerInvariant()
+  if ([string]::IsNullOrWhiteSpace($Type)) {
+    $Type = switch ($ext) {
+      '.html' { 'text/html; charset=utf-8' }
+      '.css' { 'text/css; charset=utf-8' }
+      '.js' { 'application/javascript; charset=utf-8' }
+      '.svg' { 'image/svg+xml' }
+      '.png' { 'image/png' }
+      '.jpg' { 'image/jpeg' }
+      '.jpeg' { 'image/jpeg' }
+      default { 'application/octet-stream' }
+    }
+  }
+
+  $bytes = [IO.File]::ReadAllBytes($Path)
+  $Res.Headers['Access-Control-Allow-Origin'] = '*'
+  $Res.Headers['Access-Control-Allow-Headers'] = 'Content-Type'
+  $Res.Headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+  $Res.Headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+  $Res.Headers['Pragma'] = 'no-cache'
+  $Res.Headers['Expires'] = '0'
+  $Res.ContentType = $Type
+  $Res.ContentLength64 = $bytes.Length
+  $Res.OutputStream.Write($bytes, 0, $bytes.Length)
+}
+
 function Read-BodyJson {
   param($Req)
   $ms = New-Object IO.MemoryStream
@@ -192,21 +231,5 @@ function Serve-Static {
     return
   }
 
-  $ext = [IO.Path]::GetExtension($file).ToLowerInvariant()
-  $ct = switch ($ext) {
-    '.html' { 'text/html; charset=utf-8' }
-    '.css' { 'text/css; charset=utf-8' }
-    '.js' { 'application/javascript; charset=utf-8' }
-    '.svg' { 'image/svg+xml' }
-    '.png' { 'image/png' }
-    default { 'application/octet-stream' }
-  }
-
-  $bytes = [IO.File]::ReadAllBytes($file)
-  $Res.Headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-  $Res.Headers['Pragma'] = 'no-cache'
-  $Res.Headers['Expires'] = '0'
-  $Res.ContentType = $ct
-  $Res.ContentLength64 = $bytes.Length
-  $Res.OutputStream.Write($bytes, 0, $bytes.Length)
+  Send-File -Res $Res -Path $file
 }

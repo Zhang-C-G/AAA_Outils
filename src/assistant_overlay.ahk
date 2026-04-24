@@ -280,6 +280,7 @@ EnsureAssistantOverlayReadonlyMousePolicy() {
     ; 回答区永久禁止鼠标选中与 I-beam 光标，保持纯展示区域体验。
     OnMessage(0x21, AssistantOverlayOnMouseActivate)     ; WM_MOUSEACTIVATE
     OnMessage(0x20, AssistantOverlayOnSetCursor)         ; WM_SETCURSOR
+    OnMessage(0x20A, AssistantOverlayOnMouseWheel)       ; WM_MOUSEWHEEL
     OnMessage(0x201, AssistantOverlayOnMouseDown)        ; WM_LBUTTONDOWN
     OnMessage(0x202, AssistantOverlayOnMouseDown)        ; WM_LBUTTONUP
     OnMessage(0x203, AssistantOverlayOnMouseDown)        ; WM_LBUTTONDBLCLK
@@ -870,6 +871,32 @@ AssistantOverlayOnMouseDown(wParam, lParam, msg, hwnd) {
         ; 吞掉鼠标点击，阻止文本聚焦与选区。
         return 0
     }
+}
+
+AssistantOverlayOnMouseWheel(wParam, lParam, msg, hwnd) {
+    global gAssistantOverlayText, gAssistantOverlayGui, gAssistantOverlayVisible
+    if !gAssistantOverlayVisible || !IsObject(gAssistantOverlayText) || !IsObject(gAssistantOverlayGui) {
+        return
+    }
+
+    rootHwnd := IsAssistantOverlayMessageTarget(hwnd)
+    overText := (hwnd = gAssistantOverlayText.Hwnd)
+    if (!rootHwnd && !overText) {
+        return
+    }
+
+    delta := (wParam >> 16) & 0xFFFF
+    if (delta >= 0x8000) {
+        delta -= 0x10000
+    }
+
+    step := (Abs(delta) >= 240) ? 6 : 4
+    if (delta > 0) {
+        ScrollAssistantOverlay(-step)
+    } else if (delta < 0) {
+        ScrollAssistantOverlay(step)
+    }
+    return 0
 }
 
 OnAssistantOverlayClose(*) {

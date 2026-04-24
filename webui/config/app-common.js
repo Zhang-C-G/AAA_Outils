@@ -21,13 +21,22 @@
       name: 'default_template',
       prompt: '编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。'
     }],
-    overlay_opacity: 100,
+    overlay_opacity: 75,
     enhanced_capture_mode: 0,
     disable_copy: 1,
     rate_limit_enabled: 1,
     rate_limit_per_hour: 100,
     capture_dir: '',
-    latest_capture: ''
+    latest_capture: '',
+    benchmark: {
+      image_url: '',
+      image_name: '',
+      image_kb: 0,
+      note: '',
+      selected_model: '',
+      last_result: null,
+      history: []
+    }
   },
   selectedCategoryId: null,
   protectedCategoryIds: new Set(['fields', 'prompts', 'quick_fields']),

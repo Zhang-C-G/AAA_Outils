@@ -201,6 +201,233 @@ function Get-AssistantState {
   return [ordered]@{
     settings = (Get-AssistantPublicSettings -Settings $settings)
     latest_capture = (Get-CaptureLatestPath)
+    benchmark = (Get-AssistantBenchmarkState)
+  }
+}
+
+function Get-AssistantBenchmarkImagePath {
+  return (Join-Path $CaptureDir 'assistant_api_benchmark_baseline.png')
+}
+
+function Ensure-AssistantBenchmarkImage {
+  $path = Get-AssistantBenchmarkImagePath
+  if (Test-Path -LiteralPath $path) {
+    return $path
+  }
+
+  try {
+    Ensure-CaptureStore
+    Add-Type -AssemblyName System.Drawing | Out-Null
+
+    $w = 1200
+    $h = 760
+    $bmp = New-Object System.Drawing.Bitmap($w, $h)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $font = New-Object System.Drawing.Font('Segoe UI', 18)
+    $brush = [System.Drawing.Brushes]::Black
+    try {
+      $g.Clear([System.Drawing.Color]::White)
+      $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+      $lines = @(
+        '1. Alibaba prefers depth and breadth, practical application, learning ability, communication, and ownership.',
+        '',
+        '2. Baidu values deep framework understanding, delivery skills, Github experience, initiative, resilience, and communication.',
+        '',
+        '3. Tencent expects language foundations, extensions, language features, data structures, algorithms, and problem solving.',
+        '',
+        '4. ByteDance emphasizes Java basics, algorithms, data structures, code design, curiosity about new tech, and product awareness.',
+        '',
+        '5. Meituan values broad and deep technical ability, advanced bytecode topics, open-source participation, logic, and execution.'
+      )
+      $text = [string]::Join([Environment]::NewLine, $lines)
+      $rect = New-Object System.Drawing.RectangleF(20, 20, [single]($w - 40), [single]($h - 40))
+      $g.DrawString($text, $font, $brush, $rect)
+      $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+    } finally {
+      $g.Dispose()
+      $font.Dispose()
+      $bmp.Dispose()
+    }
+  } catch {
+    Write-AppLog 'assistant_benchmark_image_failed' $_.Exception.Message
+  }
+
+  return $path
+}
+
+function Get-AssistantBenchmarkState {
+  $path = Ensure-AssistantBenchmarkImage
+  $exists = Test-Path -LiteralPath $path
+  $sizeKb = 0
+  $stamp = ''
+  if ($exists) {
+    $item = Get-Item -LiteralPath $path
+    $sizeKb = [Math]::Round($item.Length / 1KB, 2)
+    $stamp = [string]$item.LastWriteTimeUtc.Ticks
+  }
+
+  return [ordered]@{
+    image_name = [IO.Path]::GetFileName($path)
+    image_path = $path
+    image_kb = $sizeKb
+    image_url = if ($exists) { '/api/assistant/benchmark-image?ts=' + $stamp } else { '' }
+    note = 'Fixed baseline image for measuring image-to-answer API latency only.'
+  }
+}
+
+function Invoke-AssistantByImageWithPerf {
+  param([string]$ImagePath, $Settings)
+  try {
+    if (!(Test-Path -LiteralPath $ImagePath)) {
+      return [ordered]@{ ok = $false; error = 'image not found'; text = '' }
+    }
+
+    $endpoint = ([string](Get-Prop $Settings 'api_endpoint' 'https://ark.cn-beijing.volces.com/api/v3/responses')).Trim()
+    if ($endpoint -eq '') { $endpoint = 'https://ark.cn-beijing.volces.com/api/v3/responses' }
+    $apiKey = Resolve-AssistantApiKey -Settings $Settings
+    $model = Resolve-AssistantModel -Requested ([string](Get-Prop $Settings 'model' 'doubao-seed-2-0-lite-260215')) -Fallback 'doubao-seed-2-0-lite-260215'
+    $prompt = ([string](Get-AssistantPromptByTemplate -Settings $Settings)).Trim()
+    if ($prompt -eq '') { $prompt = Get-AssistantDefaultPrompt }
+
+    if (Test-AssistantMockMode -Settings $Settings) {
+      $text = Get-AssistantMockAnswer -ImagePath $ImagePath -Settings $Settings
+      return [ordered]@{
+        ok = $true
+        text = $text
+        error = ''
+        perf = [ordered]@{
+          read_ms = 0
+          base64_ms = 0
+          json_ms = 0
+          request_ms = 0
+          parse_ms = 0
+          total_ms = 0
+          image_kb = 0
+          payload_kb = 0
+        }
+      }
+    }
+
+    $swTotal = [System.Diagnostics.Stopwatch]::StartNew()
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $bytes = [IO.File]::ReadAllBytes($ImagePath)
+    $sw.Stop()
+    $readMs = $sw.ElapsedMilliseconds
+
+    $sw.Restart()
+    $b64 = [Convert]::ToBase64String($bytes)
+    $imgUrl = 'data:image/png;base64,' + $b64
+    $sw.Stop()
+    $base64Ms = $sw.ElapsedMilliseconds
+
+    $headers = @{}
+    if ($apiKey -ne '') {
+      $headers['Authorization'] = 'Bearer ' + $apiKey
+    }
+
+    $isResponses = $endpoint.ToLowerInvariant().Contains('/responses')
+    $sw.Restart()
+    if ($isResponses) {
+      $payload = [ordered]@{
+        model = $model
+        input = @(
+          [ordered]@{
+            role = 'user'
+            content = @(
+              [ordered]@{ type='input_image'; image_url=$imgUrl },
+              [ordered]@{ type='input_text'; text=$prompt }
+            )
+          }
+        )
+      }
+    } else {
+      $payload = [ordered]@{
+        model = $model
+        messages = @(
+          [ordered]@{
+            role = 'user'
+            content = @(
+              [ordered]@{ type='text'; text=$prompt },
+              [ordered]@{ type='image_url'; image_url=[ordered]@{ url=$imgUrl } }
+            )
+          }
+        )
+        temperature = 0.2
+        max_tokens = 700
+      }
+    }
+    $json = $payload | ConvertTo-Json -Depth 30
+    $sw.Stop()
+    $jsonMs = $sw.ElapsedMilliseconds
+
+    $sw.Restart()
+    $res = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -ContentType 'application/json' -Body $json
+    $sw.Stop()
+    $requestMs = $sw.ElapsedMilliseconds
+
+    $sw.Restart()
+    $text = Extract-AssistantText -Response $res -IsResponses $isResponses
+    $sw.Stop()
+    $parseMs = $sw.ElapsedMilliseconds
+
+    $swTotal.Stop()
+    return [ordered]@{
+      ok = $true
+      text = $text
+      error = ''
+      perf = [ordered]@{
+        read_ms = $readMs
+        base64_ms = $base64Ms
+        json_ms = $jsonMs
+        request_ms = $requestMs
+        parse_ms = $parseMs
+        total_ms = $swTotal.ElapsedMilliseconds
+        image_kb = [Math]::Round($bytes.Length / 1KB, 2)
+        payload_kb = [Math]::Round($json.Length / 1KB, 2)
+      }
+    }
+  } catch {
+    return [ordered]@{ ok=$false; text=''; error=$_.Exception.Message }
+  }
+}
+
+function Invoke-AssistantBenchmarkRun {
+  param($Payload = $null)
+
+  $settings = Get-AssistantSettings
+  $requestedModel = ([string](Get-Prop $Payload 'model' '')).Trim()
+  if ($requestedModel -ne '') {
+    $settings.model = Resolve-AssistantModel -Requested $requestedModel -Fallback ([string]$settings.model)
+  }
+  $imagePath = Ensure-AssistantBenchmarkImage
+  $startedAt = Get-Date
+  $result = Invoke-AssistantByImageWithPerf -ImagePath $imagePath -Settings $settings
+  if (-not $result.ok) {
+    Write-AppLog 'assistant_benchmark_failed' ('error=' + $result.error)
+    return [ordered]@{
+      ok = $false
+      error = $result.error
+      benchmark = (Get-AssistantBenchmarkState)
+    }
+  }
+
+  $preview = [string]$result.text
+  if ($preview.Length -gt 220) {
+    $preview = $preview.Substring(0, 220) + '...'
+  }
+
+  $perf = $result.perf
+  Write-AppLog 'assistant_benchmark_run' ('model=' + $settings.model + ' total_ms=' + $perf.total_ms + ' request_ms=' + $perf.request_ms)
+  return [ordered]@{
+    ok = $true
+    benchmark = (Get-AssistantBenchmarkState)
+    model = [string]$settings.model
+    started_at = $startedAt.ToString('yyyy-MM-dd HH:mm:ss')
+    prompt_preview = ([string](Get-AssistantPromptByTemplate -Settings $settings))
+    perf = $perf
+    answer = [string]$result.text
+    answer_preview = $preview
   }
 }
 

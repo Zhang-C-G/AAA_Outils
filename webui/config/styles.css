@@ -170,9 +170,113 @@ label span { color: #d2d2d2; font-size: 14px; }
 .assistant-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 .assistant-folder-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: end;
+}
+.assistant-folder-row label {
+  margin: 0;
+}
+.assistant-folder-row .btn {
+  white-space: nowrap;
+}
+.assistant-benchmark-block {
+  display: grid;
+  gap: 12px;
+}
+.assistant-benchmark-note {
+  margin: 0;
+  color: #c9c9c9;
+  line-height: 1.6;
+  font-size: 13px;
+}
+.assistant-benchmark-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.assistant-benchmark-model-label {
+  min-width: 260px;
+}
+.assistant-benchmark-model-label span {
+  display: block;
+  margin-bottom: 6px;
+}
+.assistant-benchmark-timer {
+  min-width: 110px;
+  padding: 9px 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  background: #101010;
+  color: #f4f4f4;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.assistant-benchmark-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.assistant-benchmark-preview {
+  border: 1px solid #303030;
+  border-radius: 12px;
+  padding: 10px;
+  background: #0f0f0f;
+}
+.assistant-benchmark-preview img {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+}
+.assistant-benchmark-meta {
+  display: grid;
+  gap: 10px;
+}
+.assistant-benchmark-meta-card,
+.assistant-benchmark-summary,
+.assistant-benchmark-answer,
+.assistant-benchmark-history-item,
+.assistant-benchmark-history-empty {
+  border: 1px solid #303030;
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+  padding: 10px 12px;
+}
+.assistant-benchmark-meta-card,
+.assistant-benchmark-summary {
+  display: grid;
+  gap: 6px;
+  color: #d8d8d8;
+  font-size: 13px;
+}
+.assistant-benchmark-answer {
+  margin: 0;
+  min-height: 120px;
+  white-space: pre-wrap;
+  color: #ececec;
+  line-height: 1.55;
+  font-family: "Consolas", "Microsoft YaHei UI", monospace;
+}
+.assistant-benchmark-history-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.assistant-benchmark-history {
+  display: grid;
+  gap: 8px;
+}
+.assistant-benchmark-history-item {
+  display: grid;
+  gap: 4px;
+  color: #d4d4d4;
+  font-size: 13px;
+}
+.assistant-benchmark-history-empty {
+  color: #9f9f9f;
+  font-size: 13px;
 }
 .assistant-advanced-switch {
   display: inline-flex;
@@ -245,6 +349,64 @@ label span { color: #d2d2d2; font-size: 14px; }
   background: #fff;
   color: #111;
   font-weight: 700;
+}
+.assistant-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+}
+.assistant-toggle-row > span:first-child {
+  color: #d7d7d7;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.assistant-inline-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.assistant-inline-switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.assistant-inline-switch-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #323232;
+  border: 1px solid #4a4a4a;
+  transition: background .18s ease, border-color .18s ease;
+}
+.assistant-inline-switch-dot {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  transition: transform .18s ease, background .18s ease;
+}
+.assistant-inline-switch input:checked + .assistant-inline-switch-track {
+  background: #f2f2f2;
+  border-color: #f2f2f2;
+}
+.assistant-inline-switch input:checked + .assistant-inline-switch-track .assistant-inline-switch-dot {
+  transform: translateX(18px);
+  background: #111;
+}
+.assistant-inline-switch input:focus-visible + .assistant-inline-switch-track {
+  outline: 2px solid #f2f2f2;
+  outline-offset: 2px;
 }
 .assistant-hotkey-explain {
   margin-bottom: 12px;
@@ -350,4 +512,5 @@ label span { color: #d2d2d2; font-size: 14px; }
   .resume-layout { grid-template-columns: 1fr; }
   .resume-main-head { flex-direction: column; }
   .assistant-folder-row { grid-template-columns: 1fr; }
+  .assistant-benchmark-layout { grid-template-columns: 1fr; }
 }

@@ -143,7 +143,7 @@ GetAssistantDefaultSettings() {
         "prompt", GetAssistantDefaultPrompt(),
         "active_template", "default_template",
         "templates", GetAssistantDefaultTemplates(),
-        "overlay_opacity", 100,
+        "overlay_opacity", 75,
         "enhanced_capture_mode", 0,
         "disable_copy", 1,
         "rate_limit_enabled", 1,
