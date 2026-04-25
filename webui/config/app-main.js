@@ -10,6 +10,12 @@ import { initTestingHandlers, runOverlayRecordTest, refreshTestingState } from '
 let capturePollTimer = 0;
 const SHORTCUTS_DRAFT_KEY = 'raccourci.shortcutsDraft';
 const SHORTCUTS_DRAFT_RESTORE_KEY = 'raccourci.shortcutsDraftRestorePending';
+const NOTES_DRAFT_KEY = 'raccourci.notesDraft';
+const NOTES_DRAFT_RESTORE_KEY = 'raccourci.notesDraftRestorePending';
+const NOTES_DISPLAY_DRAFT_KEY = 'raccourci.notesDisplayDraft';
+const NOTES_DISPLAY_DRAFT_RESTORE_KEY = 'raccourci.notesDisplayDraftRestorePending';
+const RESUME_DRAFT_KEY = 'raccourci.resumeDraft';
+const RESUME_DRAFT_RESTORE_KEY = 'raccourci.resumeDraftRestorePending';
 const DEFAULT_MODE_ORDER = ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing'];
 const MODE_BUTTON_IDS = {
   shortcuts: 'modeShortcutsBtn',
@@ -22,6 +28,30 @@ const MODE_BUTTON_IDS = {
   testing: 'modeTestingBtn'
 };
 let draggingModeId = '';
+
+function markShortcutsDraftRestorePending() {
+  try {
+    sessionStorage.setItem(SHORTCUTS_DRAFT_RESTORE_KEY, '1');
+  } catch {}
+}
+
+function markNotesDraftRestorePending() {
+  try {
+    sessionStorage.setItem(NOTES_DRAFT_RESTORE_KEY, '1');
+  } catch {}
+}
+
+function markNotesDisplayDraftRestorePending() {
+  try {
+    sessionStorage.setItem(NOTES_DISPLAY_DRAFT_RESTORE_KEY, '1');
+  } catch {}
+}
+
+function markResumeDraftRestorePending() {
+  try {
+    sessionStorage.setItem(RESUME_DRAFT_RESTORE_KEY, '1');
+  } catch {}
+}
 
 function normalizeModeOrder(order) {
   const seen = new Set();
@@ -142,6 +172,47 @@ function saveShortcutsDraft() {
   } catch {}
 }
 
+function saveNotesDraft() {
+  try {
+    const id = String(state.notes.currentId || '').trim();
+    if (!id) return;
+    const draft = {
+      ts: Date.now(),
+      id,
+      title: byId('noteTitle')?.value || '',
+      content: byId('noteContent')?.value || ''
+    };
+    sessionStorage.setItem(NOTES_DRAFT_KEY, JSON.stringify(draft));
+  } catch {}
+}
+
+function saveNotesDisplayDraft() {
+  try {
+    const id = String(state.notesDisplay.currentId || '').trim();
+    const content = byId('notesDisplayContent')?.value || '';
+    if (!id && !content.trim()) return;
+    const draft = {
+      ts: Date.now(),
+      id,
+      content
+    };
+    sessionStorage.setItem(NOTES_DISPLAY_DRAFT_KEY, JSON.stringify(draft));
+  } catch {}
+}
+
+function saveResumeDraft() {
+  try {
+    const sections = state.resume?.profile?.sections;
+    if (!Array.isArray(sections) || !sections.length) return;
+    const draft = {
+      ts: Date.now(),
+      selectedSectionId: state.resume.selectedSectionId || '',
+      profile: state.resume.profile
+    };
+    sessionStorage.setItem(RESUME_DRAFT_KEY, JSON.stringify(draft));
+  } catch {}
+}
+
 function tryRestoreShortcutsDraft() {
   try {
     if (sessionStorage.getItem(SHORTCUTS_DRAFT_RESTORE_KEY) !== '1') return;
@@ -170,6 +241,110 @@ function tryRestoreShortcutsDraft() {
   finally {
     try { sessionStorage.removeItem(SHORTCUTS_DRAFT_RESTORE_KEY); } catch {}
   }
+}
+
+function tryRestoreNotesDraft() {
+  try {
+    if (sessionStorage.getItem(NOTES_DRAFT_RESTORE_KEY) !== '1') return false;
+    const raw = sessionStorage.getItem(NOTES_DRAFT_KEY);
+    if (!raw) return false;
+    const draft = JSON.parse(raw);
+    const id = String(draft?.id || '').trim();
+    if (!id) return false;
+
+    state.notes.currentId = id;
+    if (byId('noteTitle')) byId('noteTitle').value = String(draft?.title || '');
+    if (byId('noteContent')) byId('noteContent').value = String(draft?.content || '');
+    state.notes.dirty = true;
+    setDirty(true, 'notes');
+    toast('已恢复刷新前未保存笔记草稿');
+    return true;
+  } catch {}
+  finally {
+    try { sessionStorage.removeItem(NOTES_DRAFT_RESTORE_KEY); } catch {}
+  }
+  return false;
+}
+
+function tryRestoreNotesDisplayDraft() {
+  try {
+    if (sessionStorage.getItem(NOTES_DISPLAY_DRAFT_RESTORE_KEY) !== '1') return false;
+    const raw = sessionStorage.getItem(NOTES_DISPLAY_DRAFT_KEY);
+    if (!raw) return false;
+    const draft = JSON.parse(raw);
+    const id = String(draft?.id || '').trim();
+    const content = String(draft?.content || '');
+    if (!id && !content.trim()) return false;
+
+    if (id) state.notesDisplay.currentId = id;
+    if (byId('notesDisplayContent')) {
+      byId('notesDisplayContent').value = content;
+      byId('notesDisplayContent').dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      state.notesDisplay.dirty = true;
+      setDirty(true, 'notes_display');
+    }
+    toast('已恢复刷新前未保存笔记显示草稿');
+    return true;
+  } catch {}
+  finally {
+    try { sessionStorage.removeItem(NOTES_DISPLAY_DRAFT_RESTORE_KEY); } catch {}
+  }
+  return false;
+}
+
+function tryRestoreResumeDraft() {
+  try {
+    if (sessionStorage.getItem(RESUME_DRAFT_RESTORE_KEY) !== '1') return false;
+    const raw = sessionStorage.getItem(RESUME_DRAFT_KEY);
+    if (!raw) return false;
+    const draft = JSON.parse(raw);
+    if (!draft?.profile || !Array.isArray(draft.profile.sections)) return false;
+
+    state.resume.profile = draft.profile;
+    state.resume.selectedSectionId = String(draft?.selectedSectionId || '');
+    applyResumeState({ resume: { profile: state.resume.profile, flat_map: state.resume.flat_map } });
+    toast('已恢复刷新前未保存简历草稿');
+    return true;
+  } catch {}
+  finally {
+    try { sessionStorage.removeItem(RESUME_DRAFT_RESTORE_KEY); } catch {}
+  }
+  return false;
+}
+
+function persistShortcutsDraftForHardRefresh() {
+  if (!(state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys')) return;
+  if (!state.dirty) return;
+  saveShortcutsDraft();
+  markShortcutsDraftRestorePending();
+}
+
+function persistNotesDraftForHardRefresh() {
+  if (state.app.active_mode !== 'notes') return;
+  if (!state.notes.dirty) return;
+  saveNotesDraft();
+  markNotesDraftRestorePending();
+}
+
+function persistNotesDisplayDraftForHardRefresh() {
+  if (state.app.active_mode !== 'notes_display') return;
+  if (!state.notesDisplay.dirty) return;
+  saveNotesDisplayDraft();
+  markNotesDisplayDraftRestorePending();
+}
+
+function persistResumeDraftForHardRefresh() {
+  if (state.app.active_mode !== 'resume') return;
+  saveResumeDraft();
+  markResumeDraftRestorePending();
+}
+
+function persistAllDraftsForHardRefresh() {
+  persistShortcutsDraftForHardRefresh();
+  persistNotesDraftForHardRefresh();
+  persistNotesDisplayDraftForHardRefresh();
+  persistResumeDraftForHardRefresh();
 }
 
 async function switchMode(mode) {
@@ -213,8 +388,10 @@ async function switchMode(mode) {
   if (mode === 'notes' || mode === 'notes_display') {
     if (mode === 'notes') {
       await loadNotes();
+      tryRestoreNotesDraft();
     } else {
       await loadNotesDisplayNotes();
+      tryRestoreNotesDisplayDraft();
     }
   }
   if (mode === 'capture') {
@@ -231,6 +408,7 @@ async function switchMode(mode) {
   }
   if (mode === 'resume') {
     applyResumeState({ resume: state.resume });
+    tryRestoreResumeDraft();
   }
 }
 
@@ -294,7 +472,7 @@ function bindHeaderActions() {
       try {
         if ((state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') && state.dirty) {
           saveShortcutsDraft();
-          try { sessionStorage.setItem(SHORTCUTS_DRAFT_RESTORE_KEY, '1'); } catch {}
+          markShortcutsDraftRestorePending();
         }
         await reloadAll();
         if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
@@ -335,9 +513,20 @@ function bindHeaderActions() {
   byId('modeTestingBtn').onclick = () => switchMode('testing').catch(e => toast(`切换失败: ${e.message}`));
 
   window.addEventListener('beforeunload', (e) => {
+    persistAllDraftsForHardRefresh();
     if (!state.notes.dirty && !state.notesDisplay.dirty) return;
     e.preventDefault();
     e.returnValue = '存在未保存改动，确定离开吗？';
+  });
+
+  window.addEventListener('pagehide', () => {
+    persistAllDraftsForHardRefresh();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      persistAllDraftsForHardRefresh();
+    }
   });
 }
 
@@ -355,6 +544,7 @@ async function bootstrap() {
   await waitForServerReady();
   await reloadAll();
   setDirty(false, 'shortcuts');
+  tryRestoreShortcutsDraft();
 }
 
 bootstrap().catch(e => {

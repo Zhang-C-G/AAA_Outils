@@ -1,21 +1,80 @@
-﻿# New Mode Checklist
+# 新模块开发清单
 
-Use this when adding a new top-level mode (example: diary/taskboard).
+用于新增一个新的顶层模式、页面或独立模块。
 
-## Code
-1. Add mode state and switch mapping.
-2. Add UI tab/button.
-3. Add save/load branch in frontend and backend.
-4. Add storage section and defaults.
-5. Add hotkeys if needed.
+开始前先读：
 
-## Docs
-1. Add/Update module doc in `docs/modules/`.
-2. Update shared contracts if cross-cutting.
-3. Update `docs/components/20_UI_AND_MODES.md` and API docs.
-4. Append `docs/ACTION_LOG.md` maintenance entry.
+1. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+2. `docs/extension/全局私人偏好文档.md`
+3. `docs/extension/global_preferences/` 下与本次能力相关的主题子文档
+4. 如果该模块包含悬浮窗，再读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
+5. 对应模块文档 `docs/modules/*.md`
 
-## Validation
-1. Open mode, edit data, save, reload.
-2. Restart app and verify persistence.
-3. Check no regression in existing modes.
+## 1. 第一阶段：界面与结构
+
+这一阶段先做壳，不追求完整业务闭环。
+
+### 1.1 必做项
+
+1. 增加模块入口、标签页或导航入口
+2. 搭建页面结构、区块布局、标题层级
+3. 放入必要的按钮、开关、下拉、输入区
+4. 补齐空态、占位内容、说明文字
+5. 写清楚该模块的核心主功能与边界
+
+### 1.2 验收项
+
+1. 用户能看懂这个模块是做什么的
+2. 页面结构稳定，不需要第二阶段重做布局
+3. 不会明显破坏现有模块排版
+
+## 2. 第二阶段：真实功能与闭环
+
+这一阶段把模块从“能看”做成“能用”。
+
+### 2.1 必做项
+
+1. 第二阶段开始前，先写本次能力说明文档
+2. 能力说明文档按用户点击行为、输入行为、拖动行为、刷新行为拆颗粒度
+3. 第二阶段实现前，先对照全局私人偏好总索引
+4. 再读取与本次能力相关的全局私人偏好子文档
+5. 将标准能力说明和相关全局私人偏好融合成最终能力说明文档
+6. 增加前端读取、回填、保存逻辑
+7. 增加后端读取、保存、聚合返回逻辑
+8. 增加本地默认值、持久化、重启恢复
+9. 增加运行时真实生效逻辑
+10. 如有需要，增加快捷键注册与处理
+11. 增加日志、异常处理、失败兜底
+
+### 2.2 验收项
+
+1. 打开模块后能正常使用
+2. 保存后刷新不丢
+3. 重启后状态不丢
+4. 不影响已有模块主功能
+5. 文档已补齐已实现、未实现、风险和恢复锚点
+6. 页面内刷新与浏览器原生刷新都已单独验证
+7. 自动保存未完成时，仍有草稿或兜底恢复能力
+8. 如模块存在编辑态，优先复用统一的会话草稿恢复机制，而不是单独临时拼补
+9. 如模块存在栏目、分区、标签标题，标题本身支持直接改名并能持久化
+10. 本次实现结果与第二阶段能力说明文档一致
+
+## 3. 如果模块包含悬浮窗
+
+除了本清单，还必须额外检查：
+
+1. 悬浮窗显示、隐藏、关闭、恢复是否稳定
+2. 悬浮窗位置是否可保存、可恢复
+3. 快捷键是否有独立作用域
+4. 是否会抢焦点、误触发失焦
+5. 是否补了日志定位线
+6. 如带保护态，是否优先保护核心能力
+
+详细规则看 `docs/extension/OVERLAY_STAGE2_GUIDE.md`。
+
+## 4. 最终提交前检查
+
+1. 当前实现了什么
+2. 当前没实现什么
+3. 现在的稳定回滚点是什么
+4. 下一步继续开发时先读哪些文档

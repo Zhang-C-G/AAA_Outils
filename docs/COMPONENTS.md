@@ -39,9 +39,18 @@
 - 组件拆分文档目录：`docs/components/`
 - 模块化维护目录：`docs/modules/README.md`
 - 公用块维护目录：`docs/shared/README.md`
+- 扩展开发规范目录：`docs/extension/README.md`
 - 文档系统总图：`docs/DOC_SYSTEM.md`
+- AI 开发分阶段指南：`docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+- 悬浮窗二阶段开发指南：`docs/extension/OVERLAY_STAGE2_GUIDE.md`
 - 决策记录（ADR）：`docs/adr/README.md`
 - 更新执行清单：`docs/UPDATE_CHECKLIST.md`
+
+## 开发前置要求（必须保持）
+
+- 每次开始一个新的开发阶段前，必须先阅读 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`。
+- 如果本轮开发涉及悬浮窗、保护态、热键作用域、位置保存、隐藏恢复，还必须同时阅读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`。
+- 如果本轮开发针对某个具体模块，还必须同时阅读对应 `docs/modules/*.md`。
 
 ## 目录结构（代码）
 

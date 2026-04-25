@@ -2,6 +2,7 @@
 
 ## 必做
 
+0. 本轮开发开始前，先读取 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`；如涉及悬浮窗，再读取 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
 1. 更新受影响模块文档：`docs/modules/*.md`
 2. 更新受影响公用块文档：`docs/shared/*.md`（如涉及）
 3. 更新架构/API文档：`docs/components/*.md`（如涉及）

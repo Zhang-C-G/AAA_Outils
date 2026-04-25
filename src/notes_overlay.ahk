@@ -82,6 +82,7 @@ DisposeNotesOverlayGui() {
 HideNotesDisplayOverlay() {
     global gNotesOverlayGui, gNotesOverlayVisible, gNotesOverlayTempHidden
     CancelNotesOverlayTempRestore()
+    SaveNotesOverlayWindowPlacement()
     if IsObject(gNotesOverlayGui) {
         try gNotesOverlayGui.Hide()
     }
@@ -114,23 +115,16 @@ ShowNotesDisplayOverlay(note) {
     gNotesOverlayCurrentContent := parsed["display_text"]
 
     SetNotesOverlayDocument(parsed)
-    showOpts := "NA w700 h500"
-    if !gNotesOverlayPlaced {
-        x := Max(0, A_ScreenWidth - 730)
-        y := 80
-        showOpts := "NA x" x " y" y " w700 h500"
-    }
+    showOpts := GetNotesOverlayShowOptions()
 
     NormalizeNotesOverlayWindowStyles()
     EnableNotesOverlayCaptureProtection("pre_show")
 
     if gNotesOverlayVisible {
         gNotesOverlayGui.Show("NA w700 h500")
-    } else if !gNotesOverlayPlaced {
+    } else {
         gNotesOverlayGui.Show(showOpts)
         gNotesOverlayPlaced := true
-    } else {
-        gNotesOverlayGui.Show("NA w700 h500")
     }
 
     gNotesOverlayVisible := true
@@ -159,6 +153,59 @@ EnsureNotesOverlayGui() {
     gNotesOverlayContentEdit.SetFont("s10", "Consolas")
 
     gNotesOverlayGui.OnEvent("Close", OnNotesOverlayClose)
+}
+
+GetNotesOverlayShowOptions() {
+    global gAppSettings, gNotesOverlayPlaced
+
+    width := 700
+    height := 500
+    hasSavedX := gAppSettings.Has("notes_overlay_x") && gAppSettings["notes_overlay_x"] != ""
+    hasSavedY := gAppSettings.Has("notes_overlay_y") && gAppSettings["notes_overlay_y"] != ""
+
+    if (hasSavedX && hasSavedY) {
+        x := Integer(gAppSettings["notes_overlay_x"])
+        y := Integer(gAppSettings["notes_overlay_y"])
+        x := Max(0, Min(x, Max(0, A_ScreenWidth - width)))
+        y := Max(0, Min(y, Max(0, A_ScreenHeight - height)))
+        gNotesOverlayPlaced := true
+        return "NA x" x " y" y " w" width " h" height
+    }
+
+    x := Max(0, A_ScreenWidth - 730)
+    y := 80
+    return "NA x" x " y" y " w" width " h" height
+}
+
+SaveNotesOverlayWindowPlacement(forceSave := false) {
+    global gNotesOverlayGui, gAppSettings, gNotesOverlayPlaced
+    if !IsObject(gNotesOverlayGui) {
+        return false
+    }
+
+    try WinGetPos(&x, &y, &w, &h, "ahk_id " gNotesOverlayGui.Hwnd)
+    catch {
+        return false
+    }
+
+    if (w <= 0 || h <= 0) {
+        return false
+    }
+
+    nextX := Integer(x)
+    nextY := Integer(y)
+    prevX := gAppSettings.Has("notes_overlay_x") ? gAppSettings["notes_overlay_x"] : ""
+    prevY := gAppSettings.Has("notes_overlay_y") ? gAppSettings["notes_overlay_y"] : ""
+
+    gAppSettings["notes_overlay_x"] := nextX
+    gAppSettings["notes_overlay_y"] := nextY
+    gNotesOverlayPlaced := true
+
+    if forceSave || (prevX != nextX || prevY != nextY) {
+        SaveData()
+        WriteNotesOverlayStateLog("notes_overlay_position_saved", "x=" nextX " y=" nextY)
+    }
+    return true
 }
 
 BuildNotesOverlayDocument(note) {
@@ -461,6 +508,7 @@ HideNotesOverlayForCapture() {
     if !gNotesOverlayVisible || !IsObject(gNotesOverlayGui) {
         return false
     }
+    SaveNotesOverlayWindowPlacement()
     try gNotesOverlayGui.Hide()
     gNotesOverlayVisible := false
     gNotesOverlayTempHidden := false
