@@ -1,4 +1,5 @@
 import { state, byId, api, toast } from './app-common.js';
+import { enhanceTopLayerSelect, refreshTopLayerSelect } from './top-layer-select.js';
 
 const API_KEY_MASK = '****************';
 const DEFAULT_PROMPT = '\u7f16\u7a0b\u9898\uff1a\u76f4\u63a5\u7ed9\u5b8c\u6574\u53ef\u8fd0\u884c\u4ee3\u7801\uff0c\u5e76\u5728\u4ee3\u7801\u6846\u4e2d\u8f93\u51fa\uff1b\u968f\u540e\u5bf9\u6838\u5fc3\u601d\u8def\u505a\u7b80\u77ed\u8bf4\u660e\u3002\u9009\u62e9\u9898\uff1a\u5148\u519915\u5b57\u4ee5\u5185\u9898\u76ee\u603b\u7ed3\uff0c\u518d\u76f4\u63a5\u7ed9\u7b54\u6848\u3002';
@@ -9,6 +10,7 @@ let assistantAutoSaveTimer = 0;
 let assistantAutoSaveInFlight = false;
 let assistantAutoSaveQueued = false;
 let assistantAdvancedVisible = false;
+let assistantVoiceDevicesLoaded = false;
 
 function loadAssistantAdvancedVisible() {
   try {
@@ -60,6 +62,8 @@ function defaults() {
     enhanced_capture_mode: 0,
     disable_copy: 1,
     voice_input_enabled: 0,
+    voice_input_device_id: '',
+    voice_input_devices: [],
     rate_limit_enabled: 1,
     rate_limit_per_hour: 100,
     capture_dir: '',
@@ -277,6 +281,81 @@ function renderTemplateControls() {
   state.assistant.prompt = current.prompt;
 }
 
+function getVoiceDeviceSelect() {
+  return byId('assistantVoiceDevice');
+}
+
+function buildVoiceDeviceLabel(device, index) {
+  const label = String(device?.label || '').trim();
+  if (label) {
+    return Number(device?.is_default || 0) !== 0 ? `${label}（当前系统默认）` : label;
+  }
+  return Number(device?.is_default || 0) !== 0
+    ? `麦克风 ${index + 1}（当前系统默认）`
+    : `麦克风 ${index + 1}`;
+}
+
+function renderVoiceDeviceOptions() {
+  const select = getVoiceDeviceSelect();
+  if (!select) return;
+
+  const incomingDevices = Array.isArray(state.assistant.voice_input_devices)
+    ? state.assistant.voice_input_devices
+    : [];
+  const devices = incomingDevices
+    .map((item, index) => ({
+      id: String(item?.id || '').trim(),
+      label: buildVoiceDeviceLabel(item, index)
+    }))
+    .filter((item) => item.id !== '');
+
+  const currentValue = String(state.assistant.voice_input_device_id || '').trim();
+  select.innerHTML = '';
+
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = devices.length
+    ? '系统默认麦克风'
+    : '系统默认麦克风（当前未枚举到独立设备）';
+  select.appendChild(defaultOpt);
+
+  for (const device of devices) {
+    const opt = document.createElement('option');
+    opt.value = device.id;
+    opt.textContent = device.label;
+    select.appendChild(opt);
+  }
+
+  const hasCurrent = Array.from(select.options).some((opt) => opt.value === currentValue);
+  select.value = hasCurrent ? currentValue : '';
+  state.assistant.voice_input_device_id = select.value;
+  refreshTopLayerSelect(select);
+}
+
+async function refreshAssistantVoiceDevices() {
+  const select = getVoiceDeviceSelect();
+  if (!select) return;
+
+  let devices = [];
+  try {
+    const payload = await api('/api/assistant/audio-input-devices');
+    const rawDevices = Array.isArray(payload?.devices) ? payload.devices : [];
+    devices = rawDevices
+      .map((item, index) => ({
+        id: String(item?.id || '').trim(),
+        label: buildVoiceDeviceLabel(item, index),
+        is_default: Number(item?.is_default || 0) !== 0
+      }))
+      .filter((item) => item.id !== '');
+  } catch (error) {
+    toast(`麦克风列表读取失败: ${error.message}`, { type: 'warning', dedupeKey: 'assistant-voice-devices-failed' });
+  }
+
+  state.assistant.voice_input_devices = devices;
+  assistantVoiceDevicesLoaded = true;
+  renderVoiceDeviceOptions();
+}
+
 function syncCurrentTemplateFromUi() {
   const currentName = state.assistant.active_template;
   const idx = state.assistant.templates.findIndex((t) => t.name === currentName);
@@ -321,6 +400,10 @@ export function applyAssistantState(payload) {
   state.assistant.overlay_opacity = normalizeOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
   state.assistant.enhanced_capture_mode = Number(incoming.enhanced_capture_mode ?? state.assistant.enhanced_capture_mode ?? 0) === 0 ? 0 : 1;
   state.assistant.voice_input_enabled = Number(incoming.voice_input_enabled ?? state.assistant.voice_input_enabled ?? 0) === 0 ? 0 : 1;
+  state.assistant.voice_input_device_id = String(incoming.voice_input_device_id ?? state.assistant.voice_input_device_id ?? '').trim();
+  state.assistant.voice_input_devices = Array.isArray(incoming.voice_input_devices)
+    ? incoming.voice_input_devices
+    : (Array.isArray(state.assistant.voice_input_devices) ? state.assistant.voice_input_devices : []);
   state.assistant.enabled = 1;
   ensureActiveTemplate();
 
@@ -339,7 +422,11 @@ export function applyAssistantState(payload) {
   renderTemplateControls();
   renderHotkeyExplain();
   setAssistantOpacityChoice(state.assistant.overlay_opacity);
+  renderVoiceDeviceOptions();
   setAssistantAdvancedVisible(loadAssistantAdvancedVisible());
+  if (!assistantVoiceDevicesLoaded) {
+    void refreshAssistantVoiceDevices();
+  }
 }
 
 function readAssistantFromUi() {
@@ -351,6 +438,7 @@ function readAssistantFromUi() {
   state.assistant.enhanced_capture_mode = byId('assistantEnhancedCaptureMode').checked ? 1 : 0;
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
   state.assistant.voice_input_enabled = byId('assistantVoiceEnabled').checked ? 1 : 0;
+  state.assistant.voice_input_device_id = String(getVoiceDeviceSelect()?.value || '').trim();
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
   state.assistant.rate_limit_per_hour = Math.min(10000, Math.max(1, Math.round(Number(byId('assistantRatePerHour').value || 100))));
   state.assistant.api_endpoint = (state.assistant.api_endpoint || defaults().api_endpoint).trim() || defaults().api_endpoint;
@@ -411,6 +499,8 @@ async function pickAssistantFolder() {
 }
 
 export function initAssistantHandlers() {
+  enhanceTopLayerSelect('assistantVoiceDevice', { placeholder: '系统默认麦克风' });
+
   const advancedToggleBtn = byId('assistantAdvancedToggleBtn');
   if (advancedToggleBtn) {
     advancedToggleBtn.onclick = () => {
@@ -499,6 +589,11 @@ export function initAssistantHandlers() {
   if (enhancedCaptureMode) enhancedCaptureMode.onchange = () => scheduleAssistantAutoSave(true);
   const voiceEnabled = byId('assistantVoiceEnabled');
   if (voiceEnabled) voiceEnabled.onchange = () => scheduleAssistantAutoSave(true);
+  const voiceDevice = getVoiceDeviceSelect();
+  if (voiceDevice) {
+    voiceDevice.onchange = () => scheduleAssistantAutoSave(true);
+    void refreshAssistantVoiceDevices();
+  }
   const apiKey = byId('assistantApiKey');
   if (apiKey) apiKey.onchange = () => scheduleAssistantAutoSave(true);
   const rateEnabled = byId('assistantRateEnabled');

@@ -54,6 +54,8 @@ gAssistantThinkingHasStreamData := false
 gAssistantOverlayInputSummary := ""
 gAssistantVoiceInputActive := false
 gAssistantVoiceSession := ""
+gAssistantVoiceTranscriptWatchRunning := false
+gAssistantVoiceTranscriptLastText := ""
 
 BuildAssistantOverlayIdleStatus() {
     return "状态：待命：" GetAssistantCurrentModelLabel()
@@ -562,8 +564,10 @@ StartAssistantVoiceInputHold(showNotice := true) {
 
     gAssistantVoiceSession := session
     gAssistantVoiceInputActive := true
+    gAssistantVoiceTranscriptLastText := ""
     SetAssistantOverlayText("正在监听输入...`n按住热键说话，松开后自动提交。")
     UpdateAssistantOverlayStatus("状态：正在监听输入 | 识别：" providerLabel)
+    StartAssistantVoiceTranscriptWatch()
     WriteLog("assistant_voice_input_start", "provider=" session["provider"])
     return Map("ok", 1, "error", "")
 }
@@ -575,6 +579,7 @@ StopAssistantVoiceInputHold(showNotice := true) {
     }
 
     gAssistantVoiceInputActive := false
+    StopAssistantVoiceTranscriptWatch()
     providerLabel := GetAssistantVoiceProviderLabel(gAssistantSettings)
     UpdateAssistantOverlayStatus("状态：正在结束监听 | 识别：" providerLabel)
     result := StopAssistantVoiceRecognitionSession(gAssistantVoiceSession)
@@ -598,8 +603,46 @@ StopAssistantVoiceInputHold(showNotice := true) {
         return Map("ok", 0, "text", "", "error", "voice input empty")
     }
 
+    SetAssistantOverlayText("语音输入：`n" transcript "`n`n正在生成回答...")
     WriteLog("assistant_voice_input_text", "chars=" StrLen(transcript))
     return StartAssistantTextQueryFlow(transcript, showNotice)
+}
+
+StartAssistantVoiceTranscriptWatch() {
+    global gAssistantVoiceTranscriptWatchRunning
+    gAssistantVoiceTranscriptWatchRunning := true
+    SetTimer(AssistantVoiceTranscriptTick, 180)
+}
+
+StopAssistantVoiceTranscriptWatch() {
+    global gAssistantVoiceTranscriptWatchRunning
+    gAssistantVoiceTranscriptWatchRunning := false
+    SetTimer(AssistantVoiceTranscriptTick, 0)
+}
+
+AssistantVoiceTranscriptTick(*) {
+    global gAssistantVoiceTranscriptWatchRunning, gAssistantVoiceInputActive, gAssistantVoiceSession
+    global gAssistantVoiceTranscriptLastText, gAssistantSettings
+
+    if !gAssistantVoiceTranscriptWatchRunning || !gAssistantVoiceInputActive || !IsObject(gAssistantVoiceSession) {
+        SetTimer(AssistantVoiceTranscriptTick, 0)
+        return
+    }
+
+    transcriptPath := gAssistantVoiceSession.Has("transcript_path") ? gAssistantVoiceSession["transcript_path"] : ""
+    if (transcriptPath = "" || !FileExist(transcriptPath)) {
+        return
+    }
+
+    latestText := ""
+    try latestText := Trim(FileRead(transcriptPath, "UTF-8"))
+    if (latestText = "" || latestText = gAssistantVoiceTranscriptLastText) {
+        return
+    }
+
+    gAssistantVoiceTranscriptLastText := latestText
+    SetAssistantOverlayText("正在监听输入...`n按住热键说话，松开后自动提交。`n`n当前识别：`n" latestText)
+    UpdateAssistantOverlayStatus("状态：正在监听输入 | 识别：" GetAssistantVoiceProviderLabel(gAssistantSettings))
 }
 
 StartAssistantTextQueryFlow(queryText, showNotice := true) {
@@ -1113,13 +1156,14 @@ OnAssistantOverlayClose(*) {
     global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayRiskHidden, gAssistantOverlayInSensitivePhase
     global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason, gAssistantOverlayRecordingProtectionActive
     global gAssistantOverlayOpenGraceUntilTick, gAssistantOverlayProtectionGapHidden, gAssistantOverlayEnhancedProtectGapSinceTick
-    global gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantOverlayInputSummary
+    global gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantVoiceTranscriptLastText
     if IsObject(gAssistantOverlayGui) {
         gAssistantOverlayGui.Hide()
     }
     if gAssistantVoiceInputActive {
         try StopAssistantVoiceRecognitionSession(gAssistantVoiceSession)
     }
+    StopAssistantVoiceTranscriptWatch()
     gAssistantOverlayVisible := false
     gAssistantOverlayRiskHidden := false
     gAssistantOverlayInSensitivePhase := false
@@ -1131,6 +1175,7 @@ OnAssistantOverlayClose(*) {
     gAssistantOverlayOpenGraceUntilTick := 0
     gAssistantVoiceInputActive := false
     gAssistantVoiceSession := ""
+    gAssistantVoiceTranscriptLastText := ""
     gAssistantOverlayInputSummary := ""
     ResetAssistantOverlayProtectionStability()
     StopAssistantOverlayCaptureGuard()

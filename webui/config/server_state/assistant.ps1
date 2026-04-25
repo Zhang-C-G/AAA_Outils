@@ -2,6 +2,12 @@
   return '编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。'
 }
 
+function Get-AssistantVoiceInputScriptPath {
+  $moduleRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+  $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $moduleRoot))
+  return Join-Path $repoRoot 'scripts\assistant_voice_input.ps1'
+}
+
 function Get-AssistantModelCatalog {
   return @(
     [ordered]@{
@@ -78,6 +84,7 @@ function Get-AssistantDefaults {
     enhanced_capture_mode = 0
     disable_copy = 1
     voice_input_enabled = 0
+    voice_input_device_id = ''
     rate_limit_enabled = 1
     rate_limit_per_hour = 100
   }
@@ -240,6 +247,7 @@ function Convert-ToAssistantSettings {
   $settings.enhanced_capture_mode = if ([string](Get-Prop $PayloadAssistant 'enhanced_capture_mode' (Get-Prop $Fallback 'enhanced_capture_mode' 0)) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $PayloadAssistant 'disable_copy' (Get-Prop $Fallback 'disable_copy' 1)) -eq '0') { 0 } else { 1 }
   $settings.voice_input_enabled = if ([string](Get-Prop $PayloadAssistant 'voice_input_enabled' (Get-Prop $Fallback 'voice_input_enabled' 0)) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_device_id = ([string](Get-Prop $PayloadAssistant 'voice_input_device_id' (Get-Prop $Fallback 'voice_input_device_id' ''))).Trim()
   $settings.rate_limit_enabled = if ([string](Get-Prop $PayloadAssistant 'rate_limit_enabled' (Get-Prop $Fallback 'rate_limit_enabled' 1)) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 100))
 
@@ -315,6 +323,9 @@ function Get-AssistantSettings {
     if ($sec.Contains('voice_input_enabled')) {
       $settings.voice_input_enabled = if ([string]$sec['voice_input_enabled'] -eq '0') { 0 } else { 1 }
     }
+    if ($sec.Contains('voice_input_device_id')) {
+      $settings.voice_input_device_id = ([string]$sec['voice_input_device_id']).Trim()
+    }
     if ($sec.Contains('rate_limit_enabled')) {
       $settings.rate_limit_enabled = if ([string]$sec['rate_limit_enabled'] -eq '0') { 0 } else { 1 }
     }
@@ -350,6 +361,7 @@ function Get-AssistantSettings {
   $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
   $settings.voice_input_enabled = if ([string](Get-Prop $settings 'voice_input_enabled' 0) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_device_id = ([string](Get-Prop $settings 'voice_input_device_id' '')).Trim()
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour $settings.rate_limit_per_hour
   return $settings
 }
@@ -376,6 +388,63 @@ function Get-AssistantPublicSettings {
   return $public
 }
 
+function Get-AssistantAudioInputDevices {
+  $scriptPath = Get-AssistantVoiceInputScriptPath
+  if (-not (Test-Path $scriptPath)) {
+    return @()
+  }
+
+  $jsonPath = Join-Path $env:TEMP 'raccourci_assistant_audio_devices.json'
+  try {
+    if (Test-Path $jsonPath) {
+      Remove-Item -LiteralPath $jsonPath -Force
+    }
+  } catch {}
+
+  $args = @(
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-File', $scriptPath,
+    '-Mode', 'list',
+    '-DevicesJsonPath', $jsonPath
+  )
+
+  try {
+    $proc = Start-Process -FilePath 'powershell' -ArgumentList $args -WindowStyle Hidden -PassThru -Wait
+    if ($proc.ExitCode -ne 0) {
+      return @()
+    }
+    if (-not (Test-Path $jsonPath)) {
+      return @()
+    }
+
+    $raw = [IO.File]::ReadAllText($jsonPath, [Text.Encoding]::UTF8)
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+      return @()
+    }
+
+    $parsed = $raw | ConvertFrom-Json
+    $items = @()
+    foreach ($item in @($parsed)) {
+      $items += [ordered]@{
+        id = ([string](Get-Prop $item 'id' '')).Trim()
+        label = ([string](Get-Prop $item 'label' '')).Trim()
+        is_default = if ([bool](Get-Prop $item 'is_default' $false)) { 1 } else { 0 }
+      }
+    }
+    return @($items | Where-Object { -not [string]::IsNullOrWhiteSpace($_.id) })
+  } catch {
+    Write-AppLog 'assistant_audio_input_devices_failed' $_.Exception.Message
+    return @()
+  } finally {
+    try {
+      if (Test-Path $jsonPath) {
+        Remove-Item -LiteralPath $jsonPath -Force
+      }
+    } catch {}
+  }
+}
+
 function Save-AssistantSettings {
   param($Payload)
 
@@ -396,6 +465,7 @@ function Save-AssistantSettings {
   $ini['Assistant']['enhanced_capture_mode'] = [string]$settings.enhanced_capture_mode
   $ini['Assistant']['disable_copy'] = [string]$settings.disable_copy
   $ini['Assistant']['voice_input_enabled'] = [string]$settings.voice_input_enabled
+  $ini['Assistant']['voice_input_device_id'] = [string]$settings.voice_input_device_id
   $ini['Assistant']['rate_limit_enabled'] = [string]$settings.rate_limit_enabled
   $ini['Assistant']['rate_limit_per_hour'] = [string]$settings.rate_limit_per_hour
 

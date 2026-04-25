@@ -91,6 +91,11 @@ while ($true) {
       Set-AppModeOrder -ModeOrder (Get-Prop $payload 'mode_order' @())
       Send-Json $res ([ordered]@{ ok=$true })
     }
+    elseif ($path -eq '/api/app/shortcuts-category' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppShortcutsSelectedCategory -CategoryId ([string](Get-Prop $payload 'shortcuts_selected_category' ''))
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
     elseif ($path -eq '/api/notes/list' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; notes=(Get-NotesMeta) })
     }
@@ -234,6 +239,9 @@ while ($true) {
     }
     elseif ($path -eq '/api/assistant/state' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; state=(Get-AssistantState) })
+    }
+    elseif ($path -eq '/api/assistant/audio-input-devices' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{ ok=$true; devices=(Get-AssistantAudioInputDevices) })
     }
     elseif ($path -eq '/api/assistant/benchmark-state' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; benchmark=(Get-AssistantBenchmarkState) })

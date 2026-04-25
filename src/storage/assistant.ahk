@@ -147,6 +147,7 @@ GetAssistantDefaultSettings() {
         "enhanced_capture_mode", 0,
         "disable_copy", 1,
         "voice_input_enabled", 0,
+        "voice_input_device_id", "",
         "rate_limit_enabled", 1,
         "rate_limit_per_hour", 100,
         "voice_input_provider", "local_windows",
@@ -248,6 +249,8 @@ LoadAssistantSettings() {
                 settings["disable_copy"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
             case "voice_input_enabled":
                 settings["voice_input_enabled"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
+            case "voice_input_device_id":
+                settings["voice_input_device_id"] := value
             case "rate_limit_enabled":
                 settings["rate_limit_enabled"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
             case "rate_limit_per_hour":
@@ -300,6 +303,7 @@ LoadAssistantSettings() {
     settings["enhanced_capture_mode"] := settings.Has("enhanced_capture_mode") ? (settings["enhanced_capture_mode"] ? 1 : 0) : 0
     settings["disable_copy"] := settings.Has("disable_copy") ? (settings["disable_copy"] ? 1 : 0) : 1
     settings["voice_input_enabled"] := settings.Has("voice_input_enabled") ? (settings["voice_input_enabled"] ? 1 : 0) : 0
+    settings["voice_input_device_id"] := settings.Has("voice_input_device_id") ? Trim(settings["voice_input_device_id"]) : ""
     settings["rate_limit_per_hour"] := ClampAssistantRatePerHour(settings["rate_limit_per_hour"])
     EnsureAssistantTemplates(settings)
     return settings
@@ -1076,50 +1080,33 @@ StartAssistantVoiceRecognitionSession(settings) {
         return Map("ok", 0, "provider", provider, "error", "voice provider not implemented: " provider)
     }
 
+    scriptPath := A_ScriptDir "\\scripts\\assistant_voice_input.ps1"
+    if !FileExist(scriptPath) {
+        return Map("ok", 0, "provider", provider, "error", "voice input script missing")
+    }
+
     transcriptPath := A_Temp "\\raccourci_voice_input_transcript.txt"
     stopPath := A_Temp "\\raccourci_voice_input_stop.flag"
     errPath := A_Temp "\\raccourci_voice_input_err.txt"
-    psPath := A_Temp "\\raccourci_voice_input_listen.ps1"
+    selectedDeviceId := settings.Has("voice_input_device_id") ? Trim(settings["voice_input_device_id"]) : ""
 
-    script := "$ErrorActionPreference='Stop'`n"
-        . "$out='" PsSingleQuote(transcriptPath) "'`n"
-        . "$stop='" PsSingleQuote(stopPath) "'`n"
-        . "$err='" PsSingleQuote(errPath) "'`n"
-        . "try {`n"
-        . "  Add-Type -AssemblyName System.Speech`n"
-        . "  try { $engine = New-Object System.Speech.Recognition.SpeechRecognitionEngine([System.Globalization.CultureInfo]::InstalledUICulture) } catch { $engine = New-Object System.Speech.Recognition.SpeechRecognitionEngine }`n"
-        . "  $grammar = New-Object System.Speech.Recognition.DictationGrammar`n"
-        . "  $engine.LoadGrammar($grammar)`n"
-        . "  $engine.SetInputToDefaultAudioDevice()`n"
-        . "  $parts = New-Object 'System.Collections.Generic.List[string]'`n"
-        . "  while(-not (Test-Path -LiteralPath $stop)){`n"
-        . "    $result = $null`n"
-        . "    try { $result = $engine.Recognize([TimeSpan]::FromMilliseconds(700)) } catch { Start-Sleep -Milliseconds 120; continue }`n"
-        . "    if($null -eq $result){ continue }`n"
-        . "    $text = ([string]$result.Text).Trim()`n"
-        . "    if([string]::IsNullOrWhiteSpace($text)){ continue }`n"
-        . "    if($result.Confidence -lt 0.35){ continue }`n"
-        . "    if($parts.Count -gt 0 -and $parts[$parts.Count - 1] -eq $text){ continue }`n"
-        . "    [void]$parts.Add($text)`n"
-        . "    [IO.File]::WriteAllText($out, [string]::Join([Environment]::NewLine, $parts), [Text.Encoding]::UTF8)`n"
-        . "  }`n"
-        . "  if(-not (Test-Path -LiteralPath $out)){ [IO.File]::WriteAllText($out, '', [Text.Encoding]::UTF8) }`n"
-        . "} catch {`n"
-        . "  [IO.File]::WriteAllText($err, $_.Exception.Message, [Text.Encoding]::UTF8)`n"
-        . "} finally {`n"
-        . "  try { if($null -ne $engine){ $engine.Dispose() } } catch {}`n"
-        . "}`n"
-
-    for path in [transcriptPath, stopPath, errPath, psPath] {
+    for path in [transcriptPath, stopPath, errPath] {
         if FileExist(path) {
             FileDelete(path)
         }
     }
-    FileAppend(script, psPath, "UTF-8")
 
     pid := 0
     try {
-        Run('powershell -NoProfile -ExecutionPolicy Bypass -File "' psPath '"', , "Hide", &pid)
+        cmd := 'powershell -NoProfile -ExecutionPolicy Bypass -File "' scriptPath '"'
+            . ' -Mode listen'
+            . ' -TranscriptPath "' transcriptPath '"'
+            . ' -StopPath "' stopPath '"'
+            . ' -ErrorPath "' errPath '"'
+        if (selectedDeviceId != "") {
+            cmd .= ' -SelectedDeviceId "' selectedDeviceId '"'
+        }
+        Run(cmd, , "Hide", &pid)
     } catch {
         return Map("ok", 0, "provider", provider, "error", "voice recognition command failed")
     }
@@ -1127,10 +1114,11 @@ StartAssistantVoiceRecognitionSession(settings) {
         "ok", 1,
         "provider", provider,
         "pid", pid,
+        "selected_device_id", selectedDeviceId,
         "transcript_path", transcriptPath,
         "stop_path", stopPath,
         "error_path", errPath,
-        "script_path", psPath
+        "script_path", scriptPath
     )
 }
 
