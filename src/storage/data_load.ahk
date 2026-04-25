@@ -27,6 +27,8 @@ EnsureDataFile() {
         . "assistant_capture_now=F1`n"
         . "assistant_voice_input=F3`n"
         . "notes_display_overlay=F4`n"
+        . "notes_overlay_up=Up`n"
+        . "notes_overlay_down=Down`n"
         . "assistant_overlay_up=!Up`n"
         . "assistant_overlay_down=!Down`n"
         . "close_panel=Esc`n"

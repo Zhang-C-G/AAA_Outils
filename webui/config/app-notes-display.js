@@ -37,7 +37,9 @@ function renderNotesDisplayHotkeyExplain() {
   const el = byId('notesDisplayHotkeyExplain');
   if (!el) return;
   const hkOpen = hotkeyToFriendly(state.hotkeys?.notes_display_overlay || 'F4');
-  el.textContent = `快捷键说明（自动同步配置）：启动笔记显示悬浮窗 ${hkOpen}；在本页写入 Markdown 后会自动解析目录；点击目录后正文预览自动跳转。`;
+  const hkUp = hotkeyToFriendly(state.hotkeys?.notes_overlay_up || 'Up');
+  const hkDown = hotkeyToFriendly(state.hotkeys?.notes_overlay_down || 'Down');
+  el.textContent = `快捷键说明（自动同步配置）：启动笔记显示悬浮窗 ${hkOpen}；目录上移 ${hkUp}；目录下移 ${hkDown}；在本页写入 Markdown 后会自动解析目录；点击目录或使用上下键后正文预览自动跳转。`;
 }
 
 function deriveNotesDisplayTitle(content) {
@@ -51,6 +53,19 @@ function deriveNotesDisplayTitle(content) {
     return text.slice(0, 60);
   }
   return 'Untitled';
+}
+
+async function ensureNotesDisplayCurrentId() {
+  if (state.notesDisplay.currentId) return state.notesDisplay.currentId;
+  const payload = await api('/api/notes-display/create', {
+    method: 'POST',
+    body: JSON.stringify({ title: 'Untitled' })
+  });
+  if (!payload.ok || !payload.id) {
+    throw new Error(payload.error || 'create notes display note failed');
+  }
+  state.notesDisplay.currentId = String(payload.id);
+  return state.notesDisplay.currentId;
 }
 
 function renderNotesDisplayList() {
@@ -337,6 +352,13 @@ export async function loadNotesDisplayNotes() {
   if (!payload.ok) throw new Error(payload.error || 'load notes display notes failed');
   state.notesDisplay.list = payload.notes || [];
 
+  if (!state.notesDisplay.list.length) {
+    await ensureNotesDisplayCurrentId();
+    const retry = await api('/api/notes-display/list');
+    if (!retry.ok) throw new Error(retry.error || 'reload notes display notes failed');
+    state.notesDisplay.list = retry.notes || [];
+  }
+
   if (!state.notesDisplay.currentId || !state.notesDisplay.list.find((n) => n.id === state.notesDisplay.currentId)) {
     state.notesDisplay.currentId = state.notesDisplay.list[0]?.id || '';
   }
@@ -353,13 +375,7 @@ export async function loadNotesDisplayNotes() {
 }
 
 export async function saveCurrentNotesDisplayNote(options = {}) {
-  const id = state.notesDisplay.currentId;
-  if (!id) {
-    if (!options.silent) {
-      toast('请先新建笔记显示内容');
-    }
-    return;
-  }
+  const id = await ensureNotesDisplayCurrentId();
 
   const content = byId('notesDisplayContent').value;
   const title = deriveNotesDisplayTitle(content);

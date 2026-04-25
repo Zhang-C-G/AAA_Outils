@@ -54,6 +54,7 @@ ToggleNotesDisplayOverlay(showNotice := true) {
 StartNotesDisplayOverlay(showNotice := true) {
     global gNotesOverlayManualCloseLock
     gNotesOverlayManualCloseLock := false
+    EnsureNotesOverlayGui()
     note := LoadLatestNoteForOverlay()
     if !IsObject(note) || Trim(note["id"]) = "" {
         msg := "No note is available to display."
@@ -68,6 +69,16 @@ StartNotesDisplayOverlay(showNotice := true) {
     return Map("ok", 1, "id", note["id"], "title", note["title"])
 }
 
+DisposeNotesOverlayGui() {
+    global gNotesOverlayGui, gNotesOverlayTocList, gNotesOverlayContentEdit
+    if IsObject(gNotesOverlayGui) {
+        try gNotesOverlayGui.Destroy()
+    }
+    gNotesOverlayGui := ""
+    gNotesOverlayTocList := ""
+    gNotesOverlayContentEdit := ""
+}
+
 HideNotesDisplayOverlay() {
     global gNotesOverlayGui, gNotesOverlayVisible, gNotesOverlayTempHidden
     CancelNotesOverlayTempRestore()
@@ -78,6 +89,7 @@ HideNotesDisplayOverlay() {
     gNotesOverlayTempHidden := false
     StopNotesOverlayProtectionGuard()
     DisableNotesOverlayCaptureProtection("hide")
+    DisposeNotesOverlayGui()
     WriteNotesOverlayStateLog("notes_overlay_hide", "")
 }
 
@@ -109,11 +121,8 @@ ShowNotesDisplayOverlay(note) {
         showOpts := "NA x" x " y" y " w700 h500"
     }
 
-    if !gNotesOverlayVisible {
-        gNotesOverlayGui.Show("Hide " showOpts)
-        NormalizeNotesOverlayWindowStyles()
-        EnableNotesOverlayCaptureProtection("pre_show")
-    }
+    NormalizeNotesOverlayWindowStyles()
+    EnableNotesOverlayCaptureProtection("pre_show")
 
     if gNotesOverlayVisible {
         gNotesOverlayGui.Show("NA w700 h500")
@@ -274,6 +283,46 @@ NotesOverlayOnTocChange(ctrl, *) {
     ScrollNotesOverlayContentToLine(targetLine)
 }
 
+NotesOverlayMoveSelection(delta) {
+    global gNotesOverlayTocList, gNotesOverlayTocLineMap
+    if !IsObject(gNotesOverlayTocList) {
+        return
+    }
+
+    count := gNotesOverlayTocLineMap.Length
+    if (count <= 0) {
+        return
+    }
+
+    currentIndex := Integer(gNotesOverlayTocList.Value)
+    if !(currentIndex >= 1 && currentIndex <= count) {
+        currentIndex := 1
+    }
+
+    nextIndex := currentIndex + Integer(delta)
+    if (nextIndex < 1) {
+        nextIndex := 1
+    } else if (nextIndex > count) {
+        nextIndex := count
+    }
+
+    NotesOverlaySelectTocIndex(nextIndex)
+}
+
+NotesOverlaySelectTocIndex(index) {
+    global gNotesOverlayTocList, gNotesOverlayTocLineMap
+    if !IsObject(gNotesOverlayTocList) {
+        return
+    }
+    if !(index >= 1 && index <= gNotesOverlayTocLineMap.Length) {
+        return
+    }
+
+    gNotesOverlayTocList.Choose(index)
+    targetLine := Max(1, Integer(gNotesOverlayTocLineMap[index]))
+    ScrollNotesOverlayContentToLine(targetLine)
+}
+
 ScrollNotesOverlayContentToLine(targetLine) {
     global gNotesOverlayContentEdit
     if !IsObject(gNotesOverlayContentEdit) {
@@ -415,6 +464,7 @@ HideNotesOverlayForCapture() {
     try gNotesOverlayGui.Hide()
     gNotesOverlayVisible := false
     gNotesOverlayTempHidden := false
+    DisposeNotesOverlayGui()
     return true
 }
 

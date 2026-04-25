@@ -350,7 +350,7 @@ function renderHotkeys() {
     grouped.get(group).items.push(def);
   }
 
-  const groupOrder = ['shared', 'assistant'];
+  const groupOrder = ['shared', 'assistant', 'notes_display'];
   const entries = [...grouped.entries()].sort((a, b) => {
     const ia = groupOrder.indexOf(a[0]);
     const ib = groupOrder.indexOf(b[0]);
@@ -372,6 +372,8 @@ function renderHotkeys() {
     desc.className = 'hotkey-group-desc';
     desc.textContent = groupId === 'assistant'
       ? '只作用于截图问答模块'
+      : groupId === 'notes_display'
+        ? '只作用于笔记显示模块'
       : '所有模块共享可用';
     block.appendChild(desc);
 

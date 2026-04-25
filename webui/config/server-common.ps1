@@ -246,6 +246,8 @@ function Get-HotkeyDefs {
     [ordered]@{ id='assistant_capture_now'; label='截图并问答'; default='F1'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
     [ordered]@{ id='assistant_voice_input'; label='按住语音输入'; default='F3'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
     [ordered]@{ id='notes_display_overlay'; label='启动笔记显示悬浮窗'; default='F4'; group='notes_display'; group_label='笔记显示特有'; scope='notes_display' },
+    [ordered]@{ id='notes_overlay_up'; label='笔记目录上移'; default='Up'; group='notes_display'; group_label='笔记显示特有'; scope='notes_display' },
+    [ordered]@{ id='notes_overlay_down'; label='笔记目录下移'; default='Down'; group='notes_display'; group_label='笔记显示特有'; scope='notes_display' },
     [ordered]@{ id='assistant_overlay_up'; label='问答悬浮上移'; default='!Up'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
     [ordered]@{ id='assistant_overlay_down'; label='问答悬浮下移'; default='!Down'; group='assistant'; group_label='截图问答特有'; scope='assistant' }
   )

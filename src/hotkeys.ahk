@@ -9,6 +9,8 @@ InitHotkeyDefs() {
         Map("id", "assistant_capture_now", "label", "截图并问答", "default", "F1", "scope", "global"),
         Map("id", "assistant_voice_input", "label", "按住语音输入", "default", "F3", "scope", "global"),
         Map("id", "notes_display_overlay", "label", "启动笔记显示悬浮窗", "default", "F4", "scope", "global"),
+        Map("id", "notes_overlay_up", "label", "笔记目录上移", "default", "Up", "scope", "notes_overlay"),
+        Map("id", "notes_overlay_down", "label", "笔记目录下移", "default", "Down", "scope", "notes_overlay"),
         Map("id", "assistant_overlay_up", "label", "助手悬浮窗上移", "default", "!Up", "scope", "assistant_overlay"),
         Map("id", "assistant_overlay_down", "label", "助手悬浮窗下移", "default", "!Down", "scope", "assistant_overlay"),
         Map("id", "close_panel", "label", "关闭悬浮窗", "default", "Esc", "scope", "panel"),
@@ -26,6 +28,11 @@ PanelHotkeyCondition(*) {
 AssistantOverlayHotkeyCondition(*) {
     global gAssistantOverlayVisible
     return gAssistantOverlayVisible
+}
+
+NotesOverlayHotkeyCondition(*) {
+    global gNotesOverlayVisible
+    return gNotesOverlayVisible
 }
 
 ProtectedOverlayHotkeyCondition(*) {
@@ -54,6 +61,8 @@ RegisterHotkeys() {
             HotIf(PanelHotkeyCondition)
         } else if (scope = "assistant_overlay") {
             HotIf(AssistantOverlayHotkeyCondition)
+        } else if (scope = "notes_overlay") {
+            HotIf(NotesOverlayHotkeyCondition)
         } else {
             HotIf()
         }
@@ -82,6 +91,8 @@ UnregisterHotkeys() {
             HotIf(PanelHotkeyCondition)
         } else if (item["scope"] = "assistant_overlay") {
             HotIf(AssistantOverlayHotkeyCondition)
+        } else if (item["scope"] = "notes_overlay") {
+            HotIf(NotesOverlayHotkeyCondition)
         } else if (item["scope"] = "protected_overlay") {
             HotIf(ProtectedOverlayHotkeyCondition)
         } else {
@@ -119,6 +130,10 @@ GetHotkeyHandler(id) {
             return HotkeyAssistantVoiceInputDown
         case "notes_display_overlay":
             return HotkeyNotesDisplayOverlay
+        case "notes_overlay_up":
+            return HotkeyNotesOverlayUp
+        case "notes_overlay_down":
+            return HotkeyNotesOverlayDown
         case "assistant_overlay_up":
             return HotkeyAssistantOverlayUp
         case "assistant_overlay_down":
@@ -161,6 +176,14 @@ HotkeyAssistantVoiceInputUp(*) {
 
 HotkeyNotesDisplayOverlay(*) {
     ToggleNotesDisplayOverlay(false)
+}
+
+HotkeyNotesOverlayUp(*) {
+    NotesOverlayMoveSelection(-1)
+}
+
+HotkeyNotesOverlayDown(*) {
+    NotesOverlayMoveSelection(1)
 }
 
 HotkeyAssistantOverlayUp(*) {
