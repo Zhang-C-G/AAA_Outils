@@ -1,5 +1,10 @@
 import { state, byId, api, toast, setDirty, escapeHtml } from './app-common.js';
 
+const NOTES_DISPLAY_AUTOSAVE_DELAY_MS = 700;
+let notesDisplayAutosaveTimer = 0;
+let notesDisplayLoading = false;
+let notesDisplayPreviewEditing = false;
+
 function hotkeyToFriendly(hk) {
   const raw = String(hk || '').trim();
   if (!raw) return '(未设置)';
@@ -35,10 +40,28 @@ function renderNotesDisplayHotkeyExplain() {
   el.textContent = `快捷键说明（自动同步配置）：启动笔记显示悬浮窗 ${hkOpen}；在本页写入 Markdown 后会自动解析目录；点击目录后正文预览自动跳转。`;
 }
 
+function deriveNotesDisplayTitle(content) {
+  const lines = String(content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const heading = trimmed.match(/^#{1,6}\s+(.+)$/);
+    const text = heading ? heading[1].trim() : trimmed;
+    if (!text) continue;
+    return text.slice(0, 60);
+  }
+  return 'Untitled';
+}
+
 function renderNotesDisplayList() {
   const listEl = byId('notesDisplayList');
   if (!listEl) return;
   listEl.innerHTML = '';
+
+  if (!Array.isArray(state.notesDisplay.list) || state.notesDisplay.list.length === 0) {
+    listEl.innerHTML = '<div class="notes-display-list-empty">当前还没有可展示内容。先在右侧写入 Markdown，系统会自动保存并生成目录与预览。</div>';
+    return;
+  }
 
   for (const note of state.notesDisplay.list) {
     const item = document.createElement('div');
@@ -170,15 +193,100 @@ function buildMarkdownPreview(markdown) {
   return { toc, html: html.join('') };
 }
 
+function collectMarkdownFromPreviewNode(node, lines) {
+  if (!node) return;
+  const tag = (node.nodeName || '').toUpperCase();
+
+  if (tag === '#TEXT') {
+    const text = String(node.textContent || '').replace(/\u00A0/g, ' ').trim();
+    if (text) lines.push(text);
+    return;
+  }
+
+  if (/^H[1-6]$/.test(tag)) {
+    const level = Number(tag.slice(1));
+    const text = (node.innerText || node.textContent || '').replace(/\u00A0/g, ' ').trim();
+    if (text) {
+      lines.push(`${'#'.repeat(level)} ${text}`);
+      lines.push('');
+    }
+    return;
+  }
+
+  if (tag === 'P') {
+    const text = (node.innerText || node.textContent || '').replace(/\u00A0/g, ' ').trim();
+    if (text) {
+      lines.push(text);
+      lines.push('');
+    }
+    return;
+  }
+
+  if (tag === 'UL' || tag === 'OL') {
+    const items = Array.from(node.children || []).filter((child) => child.nodeName.toUpperCase() === 'LI');
+    items.forEach((item, index) => {
+      const text = (item.innerText || item.textContent || '').replace(/\u00A0/g, ' ').trim();
+      if (!text) return;
+      lines.push(`${tag === 'OL' ? `${index + 1}. ` : '- '}${text}`);
+    });
+    if (items.length) lines.push('');
+    return;
+  }
+
+  if (tag === 'PRE') {
+    const code = (node.innerText || node.textContent || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd();
+    lines.push('```');
+    if (code) lines.push(code);
+    lines.push('```');
+    lines.push('');
+    return;
+  }
+
+  if (tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE') {
+    Array.from(node.childNodes || []).forEach((child) => collectMarkdownFromPreviewNode(child, lines));
+    return;
+  }
+
+  const text = (node.innerText || node.textContent || '').replace(/\u00A0/g, ' ').trim();
+  if (text) {
+    lines.push(text);
+    lines.push('');
+  }
+}
+
+function serializePreviewBodyToMarkdown(bodyEl) {
+  const lines = [];
+  Array.from(bodyEl.childNodes || []).forEach((node) => collectMarkdownFromPreviewNode(node, lines));
+  while (lines.length && !String(lines[lines.length - 1]).trim()) {
+    lines.pop();
+  }
+  return lines.join('\n');
+}
+
+function syncNotesDisplayPreviewEdit() {
+  const bodyEl = byId('notesDisplayPreviewBody');
+  const contentEl = byId('notesDisplayContent');
+  if (!bodyEl || !contentEl) return;
+  contentEl.value = serializePreviewBodyToMarkdown(bodyEl);
+  state.notesDisplay.dirty = true;
+  setDirty(true, 'notes_display');
+  scheduleNotesDisplayAutosave();
+}
+
+function clearNotesDisplayAutosaveTimer() {
+  if (!notesDisplayAutosaveTimer) return;
+  window.clearTimeout(notesDisplayAutosaveTimer);
+  notesDisplayAutosaveTimer = 0;
+}
+
 function renderNotesDisplayPreview() {
   const tocEl = byId('notesDisplayPreviewToc');
   const bodyEl = byId('notesDisplayPreviewBody');
-  const title = byId('notesDisplayTitle')?.value || '';
   const content = byId('notesDisplayContent')?.value || '';
   if (!tocEl || !bodyEl) return;
+  if (notesDisplayPreviewEditing) return;
 
-  const source = `${title ? `# ${title}\n\n` : ''}${content}`;
-  const parsed = buildMarkdownPreview(source);
+  const parsed = buildMarkdownPreview(content);
 
   if (!parsed.toc.length) {
     tocEl.innerHTML = '<div class="notes-display-preview-empty">当前没有可用于生成目录的 Markdown 标题。</div>';
@@ -194,6 +302,9 @@ function renderNotesDisplayPreview() {
     bodyEl.innerHTML = parsed.html;
   }
 
+  bodyEl.setAttribute('contenteditable', 'true');
+  bodyEl.setAttribute('spellcheck', 'false');
+
   tocEl.querySelectorAll('[data-target]').forEach((btn) => {
     btn.onclick = () => {
       const target = document.getElementById(btn.dataset.target || '');
@@ -208,14 +319,17 @@ async function loadNotesDisplayContent(id) {
   const payload = await api(`/api/notes-display/get?id=${encodeURIComponent(id)}`);
   if (!payload.ok) throw new Error(payload.error || 'load notes display note failed');
   const note = payload.note || { id, title: '', content: '' };
+
+  notesDisplayLoading = true;
+  clearNotesDisplayAutosaveTimer();
   state.notesDisplay.currentId = note.id;
-  byId('notesDisplayTitle').value = note.title || '';
   byId('notesDisplayContent').value = note.content || '';
   state.notesDisplay.dirty = false;
   setDirty(false, 'notes_display');
   renderNotesDisplayList();
   renderNotesDisplayHotkeyExplain();
   renderNotesDisplayPreview();
+  notesDisplayLoading = false;
 }
 
 export async function loadNotesDisplayNotes() {
@@ -232,85 +346,83 @@ export async function loadNotesDisplayNotes() {
   if (state.notesDisplay.currentId) {
     await loadNotesDisplayContent(state.notesDisplay.currentId);
   } else {
-    byId('notesDisplayTitle').value = '';
+    clearNotesDisplayAutosaveTimer();
     byId('notesDisplayContent').value = '';
     renderNotesDisplayPreview();
   }
 }
 
-export async function saveCurrentNotesDisplayNote() {
+export async function saveCurrentNotesDisplayNote(options = {}) {
   const id = state.notesDisplay.currentId;
   if (!id) {
-    toast('请先新建笔记显示内容');
+    if (!options.silent) {
+      toast('请先新建笔记显示内容');
+    }
     return;
   }
-  const title = byId('notesDisplayTitle').value;
+
   const content = byId('notesDisplayContent').value;
+  const title = deriveNotesDisplayTitle(content);
   const payload = await api('/api/notes-display/save', {
     method: 'POST',
     body: JSON.stringify({ id, title, content })
   });
   if (!payload.ok) throw new Error(payload.error || 'save notes display note failed');
+
   state.notesDisplay.dirty = false;
   setDirty(false, 'notes_display');
   await loadNotesDisplayNotes();
-  toast('笔记显示内容已保存');
+  if (!options.silent) {
+    toast('笔记显示内容已保存');
+  }
+}
+
+function scheduleNotesDisplayAutosave() {
+  if (notesDisplayLoading) return;
+  clearNotesDisplayAutosaveTimer();
+  notesDisplayAutosaveTimer = window.setTimeout(() => {
+    notesDisplayAutosaveTimer = 0;
+    saveCurrentNotesDisplayNote({ silent: true }).catch((e) => toast(`自动保存失败: ${e.message}`));
+  }, NOTES_DISPLAY_AUTOSAVE_DELAY_MS);
 }
 
 export async function selectNotesDisplayNote(id) {
   if (state.notesDisplay.currentId === id) return;
   if (state.notesDisplay.dirty) {
-    await saveCurrentNotesDisplayNote();
+    await saveCurrentNotesDisplayNote({ silent: true });
   }
   await loadNotesDisplayContent(id);
 }
 
 export function initNotesDisplayHandlers() {
-  byId('notesDisplayTitle').oninput = () => {
+  const contentEl = byId('notesDisplayContent');
+  const previewBodyEl = byId('notesDisplayPreviewBody');
+
+  contentEl.oninput = () => {
     state.notesDisplay.dirty = true;
     setDirty(true, 'notes_display');
     renderNotesDisplayPreview();
+    scheduleNotesDisplayAutosave();
   };
-  byId('notesDisplayContent').oninput = () => {
-    state.notesDisplay.dirty = true;
-    setDirty(true, 'notes_display');
+
+  contentEl.addEventListener('blur', () => {
+    if (!state.notesDisplay.dirty) return;
+    saveCurrentNotesDisplayNote({ silent: true }).catch((e) => toast(`自动保存失败: ${e.message}`));
+  });
+
+  previewBodyEl.addEventListener('focus', () => {
+    notesDisplayPreviewEditing = true;
+  });
+
+  previewBodyEl.addEventListener('input', () => {
+    syncNotesDisplayPreviewEdit();
+  });
+
+  previewBodyEl.addEventListener('blur', () => {
+    notesDisplayPreviewEditing = false;
+    syncNotesDisplayPreviewEdit();
     renderNotesDisplayPreview();
-  };
-
-  byId('newNotesDisplayBtn').onclick = async () => {
-    if (state.notesDisplay.dirty) {
-      await saveCurrentNotesDisplayNote();
-    }
-    const payload = await api('/api/notes-display/create', {
-      method: 'POST',
-      body: JSON.stringify({ title: 'New Note' })
-    });
-    if (!payload.ok) throw new Error(payload.error || 'new notes display note failed');
-    state.notesDisplay.currentId = payload.id;
-    await loadNotesDisplayNotes();
-    toast('已新建笔记显示内容');
-  };
-
-  byId('saveNotesDisplayBtn').onclick = () => saveCurrentNotesDisplayNote().catch((e) => toast(`保存失败: ${e.message}`));
-
-  byId('deleteNotesDisplayBtn').onclick = async () => {
-    const id = state.notesDisplay.currentId;
-    if (!id) return;
-    if (!confirm('确认删除当前笔记显示内容吗？')) return;
-    if (!confirm('二次确认：删除后不可恢复，继续吗？')) return;
-
-    const payload = await api('/api/notes-display/delete', {
-      method: 'POST',
-      body: JSON.stringify({ id })
-    });
-    if (!payload.ok) throw new Error(payload.error || 'delete notes display note failed');
-
-    state.notesDisplay.currentId = '';
-    state.notesDisplay.dirty = false;
-    setDirty(false, 'notes_display');
-    await loadNotesDisplayNotes();
-    toast('笔记显示内容已删除');
-  };
+  });
 
   renderNotesDisplayHotkeyExplain();
   renderNotesDisplayPreview();

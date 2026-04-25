@@ -83,52 +83,9 @@
     <section id="notesDisplayView" class="view hidden">
       <section class="panel notes-display-layout">
         <div id="notesDisplayHotkeyExplain" class="assistant-hotkey-explain"></div>
-        <div class="notes-display-hero">
-          <div>
-            <h2>笔记显示悬浮窗</h2>
-            <p>
-              核心：通过 <strong>F4</strong> 呼出笔记显示悬浮窗，左侧显示 Markdown 自动目录，右侧显示正文；
-              这是独立模块，和“笔记”模块分离维护，使用自己的内容源。
-            </p>
-          </div>
-          <div class="notes-display-hotkey-card">
-            <span>当前快捷键</span>
-            <strong id="notesDisplayHotkeyValue">F4</strong>
-          </div>
-        </div>
-
-        <div class="notes-display-grid">
-          <section class="notes-display-card">
-            <h3>当前状态</h3>
-            <div id="notesDisplayStatus" class="notes-display-status"></div>
-          </section>
-
-          <section class="notes-display-card">
-            <h3>核心逻辑</h3>
-            <div class="notes-display-points">
-              <div>1. “笔记”负责编辑与保存；“笔记显示”负责悬浮展示与保护，两者不是同一个模块。</div>
-              <div>2. 在本模块写入 Markdown 后，会自动解析标题并生成目录。</div>
-              <div>3. 点击目录后，正文预览区会自动跳转到对应位置。</div>
-              <div>4. 保护优先级不低于截图问答悬浮窗，新增功能不能牺牲核心保护。</div>
-            </div>
-          </section>
-        </div>
-
-        <section class="notes-layout">
-          <div class="notes-left">
-            <div class="notes-actions">
-              <button id="newNotesDisplayBtn" class="btn">新建内容</button>
-              <button id="deleteNotesDisplayBtn" class="btn danger">删除内容</button>
-            </div>
-            <div id="notesDisplayList" class="notes-list"></div>
-          </div>
-          <div class="notes-right">
-            <label>标题<input id="notesDisplayTitle" type="text" /></label>
+        <section class="notes-layout notes-display-shell">
+          <div class="notes-right notes-display-right">
             <label>内容（Markdown）<textarea id="notesDisplayContent"></textarea></label>
-            <div class="notes-actions">
-              <button id="saveNotesDisplayBtn" class="btn primary">保存笔记显示内容</button>
-            </div>
-
             <section class="notes-display-preview">
               <div class="notes-display-preview-toc">
                 <div class="notes-display-preview-head">目录</div>
@@ -344,7 +301,7 @@
       </section>
     </section>
 
-    <div id="toast" class="toast"></div>
+    <section id="toastHost" class="toast-host" aria-live="polite" aria-atomic="false"></section>
   </div>
 
   <script type="module" src="/app-main.js"></script>

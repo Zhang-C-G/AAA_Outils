@@ -129,37 +129,6 @@ function bindModePanelDrag() {
   }
 }
 
-function renderNotesDisplayView() {
-  const hotkeyDef = (state.hotkeyDefs || []).find((item) => item.id === 'notes_display_overlay');
-  const hotkey = state.hotkeys.notes_display_overlay || hotkeyDef?.default || 'F4';
-  const hotkeyEl = byId('notesDisplayHotkeyValue');
-  const statusEl = byId('notesDisplayStatus');
-
-  if (hotkeyEl) {
-    hotkeyEl.textContent = hotkey;
-  }
-
-  if (!statusEl) return;
-
-  const latestNote = state.notesDisplay.list?.[0];
-  if (!latestNote) {
-    statusEl.innerHTML = `
-      <div class="notes-display-empty">当前还没有可供展示的笔记显示内容。先在本模块中创建并保存内容，再按 ${hotkey} 呼出笔记显示悬浮窗。</div>
-    `;
-    return;
-  }
-
-  const currentTitle = latestNote.title || 'Untitled';
-  const total = Array.isArray(state.notesDisplay.list) ? state.notesDisplay.list.length : 0;
-  statusEl.innerHTML = `
-    <div class="notes-display-meta-row"><span>模块身份</span><strong>独立于笔记模块</strong></div>
-    <div class="notes-display-meta-row"><span>默认呼出对象</span><strong>${currentTitle}</strong></div>
-    <div class="notes-display-meta-row"><span>当前笔记总数</span><strong>${total}</strong></div>
-    <div class="notes-display-meta-row"><span>呼出方式</span><strong>按下 ${hotkey}</strong></div>
-    <div class="notes-display-tip">笔记显示是独立模块。当前页中的内容编辑、Markdown 解析、目录生成与悬浮展示，都只属于笔记显示模块自身。</div>
-  `;
-}
-
 function saveShortcutsDraft() {
   try {
     const draft = {
@@ -246,7 +215,6 @@ async function switchMode(mode) {
       await loadNotes();
     } else {
       await loadNotesDisplayNotes();
-      renderNotesDisplayView();
     }
   }
   if (mode === 'capture') {
@@ -305,7 +273,6 @@ function bindHeaderActions() {
         } else if (state.app.active_mode === 'notes_display') {
           await saveCurrentNotesDisplayNote();
           await loadNotesDisplayNotes();
-          renderNotesDisplayView();
         } else if (state.app.active_mode === 'capture') {
           byId('capSaveSettingsBtn').click();
         } else if (state.app.active_mode === 'resume') {

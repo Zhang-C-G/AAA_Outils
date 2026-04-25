@@ -3,8 +3,6 @@
 gNotesOverlayGui := ""
 gNotesOverlayVisible := false
 gNotesOverlayPlaced := false
-gNotesOverlayTitleText := ""
-gNotesOverlayStatusText := ""
 gNotesOverlayTocList := ""
 gNotesOverlayContentEdit := ""
 gNotesOverlayCurrentNoteId := ""
@@ -16,18 +14,46 @@ gNotesOverlayAffinityActive := false
 gNotesOverlayLastAppliedAffinity := 0
 gNotesOverlayTempHidden := false
 gNotesOverlayTempRestoreMs := 0
+gNotesOverlayTempRestoreToken := 0
 gNotesOverlayProtectionGuardRunning := false
+gNotesOverlayManualCloseLock := false
+gNotesOverlayAutoRestoreEnabled := false
+
+WriteNotesOverlayStateLog(action, details := "") {
+    global gNotesOverlayVisible, gNotesOverlayTempHidden, gNotesOverlayTempRestoreMs
+    global gNotesOverlayTempRestoreToken, gNotesOverlayProtectionGuardRunning
+    global gNotesOverlayManualCloseLock, gNotesOverlayAutoRestoreEnabled
+    global gNotesOverlayAffinityActive, gNotesOverlayCurrentNoteId
+
+    snapshot := "visible=" (gNotesOverlayVisible ? 1 : 0)
+        . " temp_hidden=" (gNotesOverlayTempHidden ? 1 : 0)
+        . " restore_ms=" Integer(gNotesOverlayTempRestoreMs)
+        . " restore_token=" Integer(gNotesOverlayTempRestoreToken)
+        . " guard=" (gNotesOverlayProtectionGuardRunning ? 1 : 0)
+        . " manual_lock=" (gNotesOverlayManualCloseLock ? 1 : 0)
+        . " auto_restore=" (gNotesOverlayAutoRestoreEnabled ? 1 : 0)
+        . " affinity=" (gNotesOverlayAffinityActive ? 1 : 0)
+        . " note_id=" Trim(gNotesOverlayCurrentNoteId)
+    if (details != "") {
+        snapshot .= " " details
+    }
+    WriteLog(action, snapshot)
+}
 
 ToggleNotesDisplayOverlay(showNotice := true) {
-    global gNotesOverlayVisible
+    global gNotesOverlayVisible, gNotesOverlayManualCloseLock
     if gNotesOverlayVisible {
+        gNotesOverlayManualCloseLock := true
         HideNotesDisplayOverlay()
         return Map("ok", 1, "hidden", 1)
     }
+    gNotesOverlayManualCloseLock := false
     return StartNotesDisplayOverlay(showNotice)
 }
 
 StartNotesDisplayOverlay(showNotice := true) {
+    global gNotesOverlayManualCloseLock
+    gNotesOverlayManualCloseLock := false
     note := LoadLatestNoteForOverlay()
     if !IsObject(note) || Trim(note["id"]) = "" {
         msg := "No note is available to display."
@@ -38,12 +64,13 @@ StartNotesDisplayOverlay(showNotice := true) {
     }
 
     ShowNotesDisplayOverlay(note)
-    WriteLog("notes_overlay_open", "id=" note["id"])
+    WriteNotesOverlayStateLog("notes_overlay_open", "id=" note["id"])
     return Map("ok", 1, "id", note["id"], "title", note["title"])
 }
 
 HideNotesDisplayOverlay() {
     global gNotesOverlayGui, gNotesOverlayVisible, gNotesOverlayTempHidden
+    CancelNotesOverlayTempRestore()
     if IsObject(gNotesOverlayGui) {
         try gNotesOverlayGui.Hide()
     }
@@ -51,6 +78,7 @@ HideNotesDisplayOverlay() {
     gNotesOverlayTempHidden := false
     StopNotesOverlayProtectionGuard()
     DisableNotesOverlayCaptureProtection("hide")
+    WriteNotesOverlayStateLog("notes_overlay_hide", "")
 }
 
 LoadLatestNoteForOverlay() {
@@ -63,9 +91,10 @@ LoadLatestNoteForOverlay() {
 }
 
 ShowNotesDisplayOverlay(note) {
-    global gNotesOverlayVisible, gNotesOverlayPlaced
+    global gNotesOverlayVisible, gNotesOverlayPlaced, gNotesOverlayManualCloseLock
     global gNotesOverlayCurrentNoteId, gNotesOverlayCurrentTitle, gNotesOverlayCurrentContent
 
+    gNotesOverlayManualCloseLock := false
     EnsureNotesOverlayGui()
     parsed := BuildNotesOverlayDocument(note)
     gNotesOverlayCurrentNoteId := note["id"]
@@ -73,8 +102,6 @@ ShowNotesDisplayOverlay(note) {
     gNotesOverlayCurrentContent := parsed["display_text"]
 
     SetNotesOverlayDocument(parsed)
-    UpdateNotesOverlayStatus("Status: showing note")
-
     showOpts := "NA w700 h500"
     if !gNotesOverlayPlaced {
         x := Max(0, A_ScreenWidth - 730)
@@ -101,10 +128,11 @@ ShowNotesDisplayOverlay(note) {
     NormalizeNotesOverlayWindowStyles()
     EnableNotesOverlayCaptureProtection("show")
     StartNotesOverlayProtectionGuard()
+    WriteNotesOverlayStateLog("notes_overlay_show", "placed=" (gNotesOverlayPlaced ? 1 : 0))
 }
 
 EnsureNotesOverlayGui() {
-    global gNotesOverlayGui, gNotesOverlayTitleText, gNotesOverlayStatusText
+    global gNotesOverlayGui
     global gNotesOverlayTocList, gNotesOverlayContentEdit, gAppName, gTheme
 
     if IsObject(gNotesOverlayGui) {
@@ -115,17 +143,10 @@ EnsureNotesOverlayGui() {
     gNotesOverlayGui.BackColor := gTheme["bg_app"]
     gNotesOverlayGui.SetFont("s10", "Microsoft YaHei UI")
 
-    gNotesOverlayTitleText := gNotesOverlayGui.AddText("x16 y12 w668 h24 c" gTheme["text_primary"], "Notes Display")
-    gNotesOverlayTitleText.SetFont("s12 w700", "Segoe UI")
-
-    gNotesOverlayStatusText := gNotesOverlayGui.AddText("x16 y40 w668 h20 c" gTheme["text_hint"], "Status: idle")
-    gNotesOverlayGui.AddText("x16 y66 w180 h18 c" gTheme["text_hint"], "Outline")
-    gNotesOverlayGui.AddText("x208 y66 w476 h18 c" gTheme["text_hint"], "Content")
-
-    gNotesOverlayTocList := gNotesOverlayGui.AddListBox("x16 y88 w180 h382 AltSubmit")
+    gNotesOverlayTocList := gNotesOverlayGui.AddListBox("x16 y16 w180 h454 AltSubmit")
     gNotesOverlayTocList.OnEvent("Change", NotesOverlayOnTocChange)
 
-    gNotesOverlayContentEdit := gNotesOverlayGui.AddEdit("x208 y88 w476 h382 +Multi ReadOnly -VScroll c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
+    gNotesOverlayContentEdit := gNotesOverlayGui.AddEdit("x208 y16 w476 h454 +Multi ReadOnly -VScroll c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
     gNotesOverlayContentEdit.SetFont("s10", "Consolas")
 
     gNotesOverlayGui.OnEvent("Close", OnNotesOverlayClose)
@@ -211,12 +232,9 @@ FormatNotesOverlayLine(line, inFence := false) {
 }
 
 SetNotesOverlayDocument(parsed) {
-    global gNotesOverlayTitleText, gNotesOverlayContentEdit, gNotesOverlayTocList
+    global gNotesOverlayContentEdit, gNotesOverlayTocList
     global gNotesOverlayCurrentToc, gNotesOverlayTocLineMap
 
-    if IsObject(gNotesOverlayTitleText) {
-        gNotesOverlayTitleText.Text := "Notes Display: " parsed["title"]
-    }
     if IsObject(gNotesOverlayContentEdit) {
         gNotesOverlayContentEdit.Value := parsed["display_text"]
     }
@@ -240,13 +258,6 @@ SetNotesOverlayDocument(parsed) {
         }
         gNotesOverlayTocList.Add(labels)
         gNotesOverlayTocList.Choose(1)
-    }
-}
-
-UpdateNotesOverlayStatus(text) {
-    global gNotesOverlayStatusText
-    if IsObject(gNotesOverlayStatusText) {
-        gNotesOverlayStatusText.Text := text
     }
 }
 
@@ -315,9 +326,9 @@ EnableNotesOverlayCaptureProtection(reason := "") {
     gNotesOverlayAffinityActive := (ok != 0)
     gNotesOverlayLastAppliedAffinity := gNotesOverlayAffinityActive ? 0x11 : 0
     if gNotesOverlayAffinityActive {
-        WriteLog("notes_overlay_protect_on", "reason=" reason)
+        WriteNotesOverlayStateLog("notes_overlay_protect_on", "reason=" reason)
     } else {
-        WriteLog("notes_overlay_protect_failed", "reason=" reason " last_error=" A_LastError)
+        WriteNotesOverlayStateLog("notes_overlay_protect_failed", "reason=" reason " last_error=" A_LastError)
     }
     return gNotesOverlayAffinityActive
 }
@@ -346,7 +357,7 @@ DisableNotesOverlayCaptureProtection(reason := "") {
     gNotesOverlayAffinityActive := false
     gNotesOverlayLastAppliedAffinity := 0
     if (reason != "") {
-        WriteLog("notes_overlay_protect_off", "reason=" reason)
+        WriteNotesOverlayStateLog("notes_overlay_protect_off", "reason=" reason)
     }
 }
 
@@ -356,7 +367,8 @@ IsNotesOverlayVisible() {
 }
 
 TemporarilyHideNotesOverlay(durationMs := 1800) {
-    global gNotesOverlayGui, gNotesOverlayVisible, gNotesOverlayTempHidden, gNotesOverlayTempRestoreMs
+    global gNotesOverlayGui, gNotesOverlayVisible, gNotesOverlayTempHidden, gNotesOverlayTempRestoreMs, gNotesOverlayTempRestoreToken
+    global gNotesOverlayAutoRestoreEnabled
     if !gNotesOverlayVisible || !IsObject(gNotesOverlayGui) {
         return false
     }
@@ -364,19 +376,35 @@ TemporarilyHideNotesOverlay(durationMs := 1800) {
     gNotesOverlayVisible := false
     gNotesOverlayTempHidden := true
     gNotesOverlayTempRestoreMs := Max(300, Abs(Integer(durationMs)))
-    SetTimer(NotesOverlayRestoreAfterTempHide, -gNotesOverlayTempRestoreMs)
-    WriteLog("notes_overlay_temp_hide", "duration_ms=" gNotesOverlayTempRestoreMs)
+    gNotesOverlayTempRestoreToken := 0
+    gNotesOverlayAutoRestoreEnabled := false
+    WriteNotesOverlayStateLog("notes_overlay_temp_hide", "duration_ms=" gNotesOverlayTempRestoreMs " auto_restore=off")
     return true
 }
 
 NotesOverlayRestoreAfterTempHide(*) {
-    global gNotesOverlayTempHidden
+    global gNotesOverlayTempHidden, gNotesOverlayTempRestoreToken, gNotesOverlayManualCloseLock, gNotesOverlayAutoRestoreEnabled
+    currentToken := gNotesOverlayTempRestoreToken
     if !gNotesOverlayTempHidden {
         return
     }
+    if !gNotesOverlayAutoRestoreEnabled {
+        CancelNotesOverlayTempRestore()
+        WriteNotesOverlayStateLog("notes_overlay_temp_restore_blocked", "source=timer reason=auto_restore_disabled")
+        return
+    }
+    if (currentToken <= 0) {
+        return
+    }
+    if gNotesOverlayManualCloseLock {
+        CancelNotesOverlayTempRestore()
+        WriteNotesOverlayStateLog("notes_overlay_temp_restore_blocked", "source=timer reason=manual_close_lock")
+        return
+    }
     gNotesOverlayTempHidden := false
+    gNotesOverlayTempRestoreToken := 0
     ShowNotesOverlayFromCache()
-    WriteLog("notes_overlay_temp_restore", "source=timer")
+    WriteNotesOverlayStateLog("notes_overlay_temp_restore", "source=timer")
 }
 
 HideNotesOverlayForCapture() {
@@ -391,14 +419,36 @@ HideNotesOverlayForCapture() {
 }
 
 RestoreNotesOverlayAfterCapture(wasHidden) {
+    global gNotesOverlayManualCloseLock, gNotesOverlayAutoRestoreEnabled
     if !wasHidden {
+        return
+    }
+    if !gNotesOverlayAutoRestoreEnabled {
+        WriteNotesOverlayStateLog("notes_overlay_capture_restore_blocked", "reason=auto_restore_disabled")
+        return
+    }
+    if gNotesOverlayManualCloseLock {
+        WriteNotesOverlayStateLog("notes_overlay_capture_restore_blocked", "reason=manual_close_lock")
         return
     }
     ShowNotesOverlayFromCache()
 }
 
+CancelNotesOverlayTempRestore() {
+    global gNotesOverlayTempHidden, gNotesOverlayTempRestoreMs, gNotesOverlayTempRestoreToken, gNotesOverlayAutoRestoreEnabled
+    gNotesOverlayTempHidden := false
+    gNotesOverlayTempRestoreMs := 0
+    gNotesOverlayTempRestoreToken := 0
+    gNotesOverlayAutoRestoreEnabled := false
+    SetTimer(NotesOverlayRestoreAfterTempHide, 0)
+}
+
 ShowNotesOverlayFromCache() {
-    global gNotesOverlayCurrentNoteId
+    global gNotesOverlayCurrentNoteId, gNotesOverlayManualCloseLock
+    if gNotesOverlayManualCloseLock {
+        WriteNotesOverlayStateLog("notes_overlay_restore_blocked", "reason=manual_close_lock")
+        return
+    }
     if (Trim(gNotesOverlayCurrentNoteId) = "") {
         note := LoadLatestNoteForOverlay()
     } else {
@@ -410,8 +460,10 @@ ShowNotesOverlayFromCache() {
 }
 
 OnNotesOverlayClose(*) {
+    global gNotesOverlayManualCloseLock
+    gNotesOverlayManualCloseLock := true
     HideNotesDisplayOverlay()
-    WriteLog("notes_overlay_close", "")
+    WriteNotesOverlayStateLog("notes_overlay_close", "source=close_event")
 }
 
 StartNotesOverlayProtectionGuard() {
