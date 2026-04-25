@@ -9,6 +9,7 @@ gLogFile := A_ScriptDir "\\action.log"
 gUsageFile := A_ScriptDir "\\usage.ini"
 gAssistantRateFile := A_ScriptDir "\\assistant_rate.ini"
 gNotesDir := A_ScriptDir "\\notes"
+gNotesDisplayDir := A_ScriptDir "\\notes_display"
 gCaptureDir := A_ScriptDir "\\captures"
 gCaptureBridgeScript := A_Temp "\\raccourci_capture_bridge.ps1"
 gCaptureBridgePidFile := A_Temp "\\raccourci_capture_bridge.pid"
@@ -19,7 +20,7 @@ gWebConfigPidFile := A_Temp "\\raccourci_web_config_server.pid"
 gWebConfigActionFile := A_Temp "\\raccourci_web_config_action.json"
 gWebConfigDesiredFile := A_Temp "\\raccourci_web_config_desired.flag"
 gResumeProfileFile := A_ScriptDir "\\resume_profile.json"
-gAppName := "ZCG-Raccourci Control"
+gAppName := "靠北！Raccourci Control"
 
 gPanelGui := ""
 gConfigGui := ""
@@ -66,6 +67,7 @@ Init() {
     EnsureUsageFile()
     EnsureAssistantRateFile()
     EnsureNotesStore()
+    EnsureNotesDisplayStore()
     gAppSettings := LoadAppSettings()
     if (gAppSettings.Has("capture_dir") && Trim(gAppSettings["capture_dir"]) != "") {
         gCaptureDir := gAppSettings["capture_dir"]

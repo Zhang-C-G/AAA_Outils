@@ -27,7 +27,7 @@ RestoreWebConfigServerIfNeeded() {
 
 StartWebConfigServer(port := 8798) {
     global gWebConfigPort, gWebConfigPidFile, gWebConfigServerFile
-    global gDataFile, gUsageFile, gSnapshotFile, gWebConfigActionFile, gNotesDir, gCaptureDir, gLogFile
+    global gDataFile, gUsageFile, gSnapshotFile, gWebConfigActionFile, gNotesDir, gNotesDisplayDir, gCaptureDir, gLogFile
     global gCaptureBridgeScript, gCaptureBridgePidFile, gCaptureBridgeStatusFile, gResumeProfileFile
 
     gWebConfigPort := port
@@ -63,6 +63,7 @@ StartWebConfigServer(port := 8798) {
         . ' -ActionFile "' gWebConfigActionFile '"'
         . ' -PidFile "' gWebConfigPidFile '"'
         . ' -NotesDir "' gNotesDir '"'
+        . ' -NotesDisplayDir "' gNotesDisplayDir '"'
         . ' -CaptureDir "' gCaptureDir '"'
         . ' -BridgeScript "' gCaptureBridgeScript '"'
         . ' -BridgePidFile "' gCaptureBridgePidFile '"'

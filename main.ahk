@@ -7,6 +7,7 @@
 #Include src\helpers.ahk
 #Include src\storage.ahk
 #Include src\assistant_overlay.ahk
+#Include src\notes_overlay.ahk
 #Include src\web_config.ahk
 #Include src\hotkeys.ahk
 #Include src\strategy.ahk

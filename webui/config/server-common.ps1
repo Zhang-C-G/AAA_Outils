@@ -193,8 +193,45 @@ function Get-CategorySection {
 function Normalize-Mode {
   param([string]$Mode)
   $m = ($Mode + '').Trim().ToLowerInvariant()
-  if ($m -in @('shortcuts', 'notes', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')) { return $m }
+  if ($m -in @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')) { return $m }
   return 'shortcuts'
+}
+
+function Get-DefaultModeOrder {
+  return @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')
+}
+
+function Normalize-ModeOrder {
+  param($RawOrder)
+
+  $defaults = Get-DefaultModeOrder
+  $ordered = New-Object System.Collections.Generic.List[string]
+
+  $items = @()
+  if ($RawOrder -is [System.Array]) {
+    $items = @($RawOrder)
+  } else {
+    $text = ([string]$RawOrder).Trim()
+    if ($text -ne '') {
+      $items = @($text -split ',')
+    }
+  }
+
+  foreach ($item in $items) {
+    $mode = Normalize-Mode ([string]$item)
+    if ($mode -eq 'shortcuts' -and ([string]$item).Trim().ToLowerInvariant() -ne 'shortcuts') { continue }
+    if (-not $ordered.Contains($mode)) {
+      $ordered.Add($mode) | Out-Null
+    }
+  }
+
+  foreach ($mode in $defaults) {
+    if (-not $ordered.Contains($mode)) {
+      $ordered.Add($mode) | Out-Null
+    }
+  }
+
+  return @($ordered)
 }
 
 function Get-HotkeyDefs {
@@ -207,6 +244,8 @@ function Get-HotkeyDefs {
     [ordered]@{ id='move_down'; label='下移候选'; default='Down'; group='shared'; group_label='公共快捷键'; scope='panel' },
     [ordered]@{ id='assistant_capture'; label='启动问答悬浮窗'; default='!+a'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
     [ordered]@{ id='assistant_capture_now'; label='截图并问答'; default='F1'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
+    [ordered]@{ id='assistant_voice_input'; label='按住语音输入'; default='F3'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
+    [ordered]@{ id='notes_display_overlay'; label='启动笔记显示悬浮窗'; default='F4'; group='notes_display'; group_label='笔记显示特有'; scope='notes_display' },
     [ordered]@{ id='assistant_overlay_up'; label='问答悬浮上移'; default='!Up'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
     [ordered]@{ id='assistant_overlay_down'; label='问答悬浮下移'; default='!Down'; group='assistant'; group_label='截图问答特有'; scope='assistant' }
   )

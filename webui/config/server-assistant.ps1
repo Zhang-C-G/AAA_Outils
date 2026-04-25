@@ -128,6 +128,49 @@ function Extract-AssistantText {
   return $text
 }
 
+function Extract-AssistantReasoning {
+  param($Response, [bool]$IsResponses)
+
+  $reasoning = ''
+  if ($IsResponses) {
+    if ($null -ne $Response.reasoning_content -and ![string]::IsNullOrWhiteSpace([string]$Response.reasoning_content)) {
+      $reasoning = [string]$Response.reasoning_content
+    }
+    if ([string]::IsNullOrWhiteSpace($reasoning) -and $null -ne $Response.output) {
+      foreach ($o in $Response.output) {
+        if ($null -eq $o.content) { continue }
+        foreach ($c in $o.content) {
+          $ctype = [string](Get-Prop $c 'type' '')
+          if ($ctype -match 'reasoning') {
+            $text = [string](Get-Prop $c 'text' '')
+            if ([string]::IsNullOrWhiteSpace($text)) {
+              $text = [string](Get-Prop $c 'summary' '')
+            }
+            if ([string]::IsNullOrWhiteSpace($text) -and $null -ne (Get-Prop $c 'summary' $null)) {
+              $summary = Get-Prop $c 'summary' $null
+              if ($summary -is [System.Array]) {
+                foreach ($item in $summary) {
+                  $piece = [string](Get-Prop $item 'text' '')
+                  if ($piece) { $reasoning += $piece + "`n" }
+                }
+              }
+            } elseif ($text) {
+              $reasoning += $text + "`n"
+            }
+          }
+        }
+      }
+    }
+  } else {
+    if ($null -ne $Response.choices -and $Response.choices.Count -gt 0) {
+      $msg = $Response.choices[0].message
+      $reasoning = [string](Get-Prop $msg 'reasoning_content' '')
+    }
+  }
+
+  return $reasoning.Trim()
+}
+
 function Invoke-AssistantByImage {
   param([string]$ImagePath, $Settings)
   try {
@@ -189,10 +232,11 @@ function Invoke-AssistantByImage {
     $json = $payload | ConvertTo-Json -Depth 30
     $res = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -ContentType 'application/json' -Body $json
     $text = Extract-AssistantText -Response $res -IsResponses $isResponses
+    $reasoning = Extract-AssistantReasoning -Response $res -IsResponses $isResponses
 
-    return [ordered]@{ ok=$true; text=$text; error='' }
+    return [ordered]@{ ok=$true; text=$text; reasoning=$reasoning; streamed=$false; error='' }
   } catch {
-    return [ordered]@{ ok=$false; text=''; error=$_.Exception.Message }
+    return [ordered]@{ ok=$false; text=''; reasoning=''; streamed=$false; error=$_.Exception.Message }
   }
 }
 
@@ -275,6 +319,327 @@ function Get-AssistantBenchmarkState {
   }
 }
 
+function Get-AssistantBenchmarkRunRoot {
+  $dir = Join-Path ([IO.Path]::GetTempPath()) 'raccourci_assistant_benchmark_runs'
+  Ensure-Dir $dir
+  return $dir
+}
+
+function New-AssistantBenchmarkRunId {
+  return ([guid]::NewGuid().ToString('N'))
+}
+
+function Get-AssistantBenchmarkRunStatePath {
+  param([string]$RunId)
+  return (Join-Path (Get-AssistantBenchmarkRunRoot) ($RunId + '.json'))
+}
+
+function Get-AssistantBenchmarkRunScriptPath {
+  param([string]$RunId)
+  return (Join-Path (Get-AssistantBenchmarkRunRoot) ($RunId + '.ps1'))
+}
+
+function Get-AssistantBenchmarkStatePreview {
+  param([string]$Text)
+  $preview = [string]$Text
+  if ($preview.Length -gt 220) {
+    $preview = $preview.Substring(0, 220) + '...'
+  }
+  return $preview
+}
+
+function Start-AssistantBenchmarkStreamRun {
+  param($Payload = $null)
+
+  $settings = Get-AssistantSettings
+  $requestedModel = ([string](Get-Prop $Payload 'model' '')).Trim()
+  if ($requestedModel -ne '') {
+    $settings.model = Resolve-AssistantModel -Requested $requestedModel -Fallback ([string]$settings.model)
+  }
+
+  $imagePath = Ensure-AssistantBenchmarkImage
+  $runId = New-AssistantBenchmarkRunId
+  $statePath = Get-AssistantBenchmarkRunStatePath -RunId $runId
+  $scriptPath = Get-AssistantBenchmarkRunScriptPath -RunId $runId
+  $startedAt = Get-Date
+
+  $endpoint = ([string](Get-Prop $settings 'api_endpoint' 'https://ark.cn-beijing.volces.com/api/v3/responses')).Trim()
+  if ($endpoint -eq '') { $endpoint = 'https://ark.cn-beijing.volces.com/api/v3/responses' }
+  $apiKey = Resolve-AssistantApiKey -Settings $settings
+  $model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' 'doubao-seed-2-0-lite-260215')) -Fallback 'doubao-seed-2-0-lite-260215'
+  $prompt = ([string](Get-AssistantPromptByTemplate -Settings $settings)).Trim()
+  if ($prompt -eq '') { $prompt = Get-AssistantDefaultPrompt }
+
+  $initial = [ordered]@{
+    ok = $true
+    run_id = $runId
+    status = 'running'
+    benchmark = (Get-AssistantBenchmarkState)
+    model = $model
+    started_at = $startedAt.ToString('yyyy-MM-dd HH:mm:ss')
+    prompt_preview = $prompt
+    answer = ''
+    answer_preview = ''
+    reasoning = ''
+    streamed = $true
+    perf = [ordered]@{
+      read_ms = 0
+      base64_ms = 0
+      json_ms = 0
+      request_ms = 0
+      parse_ms = 0
+      total_ms = 0
+      image_kb = 0
+      payload_kb = 0
+    }
+  }
+  [IO.File]::WriteAllText($statePath, (To-JsonNoBom $initial 20), [Text.Encoding]::UTF8)
+
+  $script = @"
+`$ErrorActionPreference = 'Stop'
+`$statePath = '$([string]($statePath -replace "'", "''"))'
+`$imagePath = '$([string]($imagePath -replace "'", "''"))'
+`$endpoint = '$([string]($endpoint -replace "'", "''"))'
+`$apiKey = '$([string]($apiKey -replace "'", "''"))'
+`$model = '$([string]($model -replace "'", "''"))'
+`$prompt = '$([string]($prompt -replace "'", "''"))'
+`$startedAt = '$($startedAt.ToString('yyyy-MM-dd HH:mm:ss'))'
+
+function Write-State {
+  param(
+    [string]`$Status,
+    [string]`$Answer,
+    [string]`$Reasoning,
+    [bool]`$Streamed,
+    [hashtable]`$Perf,
+    [string]`$ErrorMessage = ''
+  )
+
+  `$preview = [string]`$Answer
+  if (`$preview.Length -gt 220) {
+    `$preview = `$preview.Substring(0, 220) + '...'
+  }
+
+  `$obj = [ordered]@{
+    ok = ([string]::IsNullOrWhiteSpace(`$ErrorMessage))
+    run_id = '$runId'
+    status = `$Status
+    benchmark = [ordered]@{
+      image_name = '$( [IO.Path]::GetFileName($imagePath) )'
+      image_path = '$([string]($imagePath -replace "'", "''"))'
+      image_kb = [math]::Round(([IO.FileInfo]::new(`$imagePath)).Length / 1KB, 2)
+      image_url = '/api/assistant/benchmark-image'
+      note = 'Fixed baseline image for measuring image-to-answer API latency only.'
+    }
+    model = `$model
+    started_at = `$startedAt
+    prompt_preview = `$prompt
+    answer = [string]`$Answer
+    answer_preview = `$preview
+    reasoning = [string]`$Reasoning
+    streamed = `$Streamed
+    perf = `$Perf
+    error = `$ErrorMessage
+  }
+  [IO.File]::WriteAllText(`$statePath, (`$obj | ConvertTo-Json -Depth 20), [Text.Encoding]::UTF8)
+}
+
+function Get-DeltaText(`$evt) {
+  `$text = ''
+  if (`$null -ne `$evt.delta) {
+    if (`$evt.delta -is [string]) { `$text = [string]`$evt.delta }
+    elseif (`$null -ne `$evt.delta.text) { `$text = [string]`$evt.delta.text }
+  }
+  if ([string]::IsNullOrWhiteSpace(`$text) -and `$null -ne `$evt.part) {
+    if (`$null -ne `$evt.part.text) { `$text = [string]`$evt.part.text }
+    elseif (`$null -ne `$evt.part.summary) {
+      if (`$evt.part.summary -is [System.Array]) {
+        foreach (`$piece in `$evt.part.summary) {
+          `$p = [string]`$piece.text
+          if (`$p) { `$text += `$p + [Environment]::NewLine }
+        }
+      } else {
+        `$text = [string]`$evt.part.summary
+      }
+    }
+  }
+  if ([string]::IsNullOrWhiteSpace(`$text) -and `$null -ne `$evt.text) { `$text = [string]`$evt.text }
+  return `$text
+}
+
+function Get-EventKind(`$evt) {
+  `$type = [string]`$evt.type
+  if ([string]::IsNullOrWhiteSpace(`$type) -or (`$type -notmatch 'delta')) { return '' }
+  if (`$type -match 'reasoning') { return 'reasoning' }
+  if (`$type -match 'output_text') { return 'answer' }
+  if (`$null -ne `$evt.part) {
+    `$partType = [string]`$evt.part.type
+    if (`$partType -match 'reasoning') { return 'reasoning' }
+    if (`$partType -match 'output_text') { return 'answer' }
+  }
+  return ''
+}
+
+try {
+  `$swTotal = [System.Diagnostics.Stopwatch]::StartNew()
+
+  `$sw = [System.Diagnostics.Stopwatch]::StartNew()
+  `$bytes = [IO.File]::ReadAllBytes(`$imagePath)
+  `$sw.Stop()
+  `$readMs = `$sw.ElapsedMilliseconds
+
+  `$sw.Restart()
+  `$b64 = [Convert]::ToBase64String(`$bytes)
+  `$imgUrl = 'data:image/png;base64,' + `$b64
+  `$sw.Stop()
+  `$base64Ms = `$sw.ElapsedMilliseconds
+
+  `$sw.Restart()
+  `$payload = [ordered]@{
+    model = `$model
+    stream = `$true
+    input = @(
+      [ordered]@{
+        role = 'user'
+        content = @(
+          [ordered]@{ type='input_image'; image_url=`$imgUrl },
+          [ordered]@{ type='input_text'; text=`$prompt }
+        )
+      }
+    )
+  }
+  `$json = `$payload | ConvertTo-Json -Depth 30
+  `$sw.Stop()
+  `$jsonMs = `$sw.ElapsedMilliseconds
+
+  `$perf = [ordered]@{
+    read_ms = `$readMs
+    base64_ms = `$base64Ms
+    json_ms = `$jsonMs
+    request_ms = 0
+    parse_ms = 0
+    total_ms = 0
+    image_kb = [math]::Round(`$bytes.Length / 1KB, 2)
+    payload_kb = [math]::Round(`$json.Length / 1KB, 2)
+  }
+
+  Write-State -Status 'running' -Answer '' -Reasoning '' -Streamed `$true -Perf `$perf
+
+  `$headers = @{ Accept = 'text/event-stream' }
+  if (`$apiKey -ne '') { `$headers['Authorization'] = 'Bearer ' + `$apiKey }
+
+  `$requestSw = [System.Diagnostics.Stopwatch]::StartNew()
+  `$request = [System.Net.HttpWebRequest]::Create(`$endpoint)
+  `$request.Method = 'POST'
+  `$request.Accept = 'text/event-stream'
+  `$request.ContentType = 'application/json'
+  `$request.Timeout = 180000
+  `$request.ReadWriteTimeout = 180000
+  foreach (`$key in `$headers.Keys) {
+    if (`$key -eq 'Accept') { continue }
+    `$request.Headers[`$key] = `$headers[`$key]
+  }
+  `$bodyBytes = [Text.Encoding]::UTF8.GetBytes(`$json)
+  `$request.ContentLength = `$bodyBytes.Length
+  `$requestStream = `$request.GetRequestStream()
+  `$requestStream.Write(`$bodyBytes, 0, `$bodyBytes.Length)
+  `$requestStream.Close()
+
+  `$response = `$request.GetResponse()
+  `$reader = New-Object IO.StreamReader(`$response.GetResponseStream(), [Text.Encoding]::UTF8)
+  `$eventLines = New-Object 'System.Collections.Generic.List[string]'
+  `$answerSb = New-Object System.Text.StringBuilder
+  `$reasoningSb = New-Object System.Text.StringBuilder
+
+  while ((`$line = `$reader.ReadLine()) -ne `$null) {
+    if ([string]::IsNullOrWhiteSpace(`$line)) {
+      if (`$eventLines.Count -gt 0) {
+        `$payloadText = [string]::Join([Environment]::NewLine, `$eventLines)
+        `$eventLines.Clear()
+        if (`$payloadText -eq '[DONE]') { break }
+        try { `$evt = `$payloadText | ConvertFrom-Json } catch { continue }
+        `$kind = Get-EventKind `$evt
+        `$delta = Get-DeltaText `$evt
+        if (`$kind -eq 'reasoning' -and `$delta) {
+          [void]`$reasoningSb.Append(`$delta)
+        } elseif (`$kind -eq 'answer' -and `$delta) {
+          [void]`$answerSb.Append(`$delta)
+        }
+        `$perf.request_ms = `$requestSw.ElapsedMilliseconds
+        `$perf.total_ms = `$swTotal.ElapsedMilliseconds
+        Write-State -Status 'running' -Answer `$answerSb.ToString() -Reasoning `$reasoningSb.ToString() -Streamed `$true -Perf `$perf
+      }
+      continue
+    }
+    if (`$line.StartsWith('data:')) {
+      `$eventLines.Add(`$line.Substring(5).TrimStart())
+    }
+  }
+
+  `$reader.Close()
+  `$response.Close()
+  `$requestSw.Stop()
+
+  `$parseSw = [System.Diagnostics.Stopwatch]::StartNew()
+  `$answerText = `$answerSb.ToString()
+  `$reasoningText = `$reasoningSb.ToString()
+  `$parseSw.Stop()
+
+  `$perf.request_ms = `$requestSw.ElapsedMilliseconds
+  `$perf.parse_ms = `$parseSw.ElapsedMilliseconds
+  `$perf.total_ms = `$swTotal.ElapsedMilliseconds
+  Write-State -Status 'done' -Answer `$answerText -Reasoning `$reasoningText -Streamed `$true -Perf `$perf
+} catch {
+  `$perf = [ordered]@{
+    read_ms = 0
+    base64_ms = 0
+    json_ms = 0
+    request_ms = 0
+    parse_ms = 0
+    total_ms = 0
+    image_kb = 0
+    payload_kb = 0
+  }
+  Write-State -Status 'error' -Answer '' -Reasoning '' -Streamed `$true -Perf `$perf -ErrorMessage `$_.Exception.Message
+}
+"@
+
+  [IO.File]::WriteAllText($scriptPath, $script, [Text.Encoding]::UTF8)
+  Start-Process powershell -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $scriptPath) | Out-Null
+  Write-AppLog 'assistant_benchmark_stream_start' ('run_id=' + $runId + ' model=' + $model)
+
+  return [ordered]@{
+    ok = $true
+    run_id = $runId
+    state = $initial
+  }
+}
+
+function Get-AssistantBenchmarkStreamState {
+  param([string]$RunId)
+
+  $run = ([string]$RunId).Trim()
+  if ([string]::IsNullOrWhiteSpace($run)) {
+    return [ordered]@{ ok = $false; error = 'missing run_id' }
+  }
+
+  $statePath = Get-AssistantBenchmarkRunStatePath -RunId $run
+  if (!(Test-Path -LiteralPath $statePath)) {
+    return [ordered]@{ ok = $false; error = 'run not found'; run_id = $run }
+  }
+
+  try {
+    $raw = [IO.File]::ReadAllText($statePath, [Text.Encoding]::UTF8)
+    $obj = if ([string]::IsNullOrWhiteSpace($raw)) { $null } else { $raw | ConvertFrom-Json }
+    if ($null -eq $obj) {
+      return [ordered]@{ ok = $false; error = 'empty run state'; run_id = $run }
+    }
+    return $obj
+  } catch {
+    return [ordered]@{ ok = $false; error = $_.Exception.Message; run_id = $run }
+  }
+}
+
 function Invoke-AssistantByImageWithPerf {
   param([string]$ImagePath, $Settings)
   try {
@@ -294,6 +659,8 @@ function Invoke-AssistantByImageWithPerf {
       return [ordered]@{
         ok = $true
         text = $text
+        reasoning = ''
+        streamed = $false
         error = ''
         perf = [ordered]@{
           read_ms = 0
@@ -368,6 +735,7 @@ function Invoke-AssistantByImageWithPerf {
 
     $sw.Restart()
     $text = Extract-AssistantText -Response $res -IsResponses $isResponses
+    $reasoning = Extract-AssistantReasoning -Response $res -IsResponses $isResponses
     $sw.Stop()
     $parseMs = $sw.ElapsedMilliseconds
 
@@ -375,6 +743,8 @@ function Invoke-AssistantByImageWithPerf {
     return [ordered]@{
       ok = $true
       text = $text
+      reasoning = $reasoning
+      streamed = $false
       error = ''
       perf = [ordered]@{
         read_ms = $readMs
@@ -388,7 +758,7 @@ function Invoke-AssistantByImageWithPerf {
       }
     }
   } catch {
-    return [ordered]@{ ok=$false; text=''; error=$_.Exception.Message }
+    return [ordered]@{ ok=$false; text=''; reasoning=''; streamed=$false; error=$_.Exception.Message }
   }
 }
 
@@ -427,6 +797,8 @@ function Invoke-AssistantBenchmarkRun {
     prompt_preview = ([string](Get-AssistantPromptByTemplate -Settings $settings))
     perf = $perf
     answer = [string]$result.text
+    reasoning = [string]$result.reasoning
+    streamed = [bool](Get-Prop $result 'streamed' $false)
     answer_preview = $preview
   }
 }

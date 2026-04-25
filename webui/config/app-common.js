@@ -4,7 +4,10 @@
   hotkeys: {},
   hotkeyDefs: [],
   behavior: { auto_refresh_enabled: 1, refresh_every_uses: 3, refresh_every_minutes: 5 },
-  app: { active_mode: 'shortcuts' },
+  app: {
+    active_mode: 'shortcuts',
+    mode_order: ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing']
+  },
   assistant: {
     enabled: 1,
     api_endpoint: 'https://ark.cn-beijing.volces.com/api/v3/responses',
@@ -13,7 +16,8 @@
     model: 'doubao-seed-2-0-lite-260215',
     model_options: [
       { id: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite (Vision)', enabled: 1 },
-      { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 }
+      { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 },
+      { id: 'doubao-seed-2-0-mini-260215', name: 'Doubao Seed 2.0 Mini (ASR Fast | 语音识别特别快)', enabled: 1 }
     ],
     prompt: '编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。',
     active_template: 'default_template',
@@ -24,6 +28,7 @@
     overlay_opacity: 75,
     enhanced_capture_mode: 0,
     disable_copy: 1,
+    voice_input_enabled: 0,
     rate_limit_enabled: 1,
     rate_limit_per_hour: 100,
     capture_dir: '',
@@ -42,6 +47,7 @@
   protectedCategoryIds: new Set(['fields', 'prompts', 'quick_fields']),
   dirty: false,
   notes: { list: [], currentId: '', dirty: false },
+  notesDisplay: { list: [], currentId: '', dirty: false },
   capture: { phoneUrl: '' },
   resume: {
     profile: { version: 1, updated_at: '', sections: [] },
@@ -59,6 +65,8 @@ export const fallbackHotkeyDefs = [
   { id: 'move_down', label: '下移候选', default: 'Down', group: 'shared', group_label: '公共快捷键', scope: 'panel' },
   { id: 'assistant_capture', label: '启动问答悬浮窗', default: '!+a', group: 'assistant', group_label: '截图问答特有', scope: 'assistant' },
   { id: 'assistant_capture_now', label: '截图并问答', default: 'F1', group: 'assistant', group_label: '截图问答特有', scope: 'assistant' },
+  { id: 'assistant_voice_input', label: '按住语音输入', default: 'F3', group: 'assistant', group_label: '截图问答特有', scope: 'assistant' },
+  { id: 'notes_display_overlay', label: '启动笔记显示悬浮窗', default: 'F4', group: 'notes_display', group_label: '笔记显示特有', scope: 'notes_display' },
   { id: 'assistant_overlay_up', label: '问答悬浮上移', default: '!Up', group: 'assistant', group_label: '截图问答特有', scope: 'assistant' },
   { id: 'assistant_overlay_down', label: '问答悬浮下移', default: '!Down', group: 'assistant', group_label: '截图问答特有', scope: 'assistant' }
 ];
@@ -79,10 +87,12 @@ export function setDirty(v, mode = 'shortcuts') {
     state.dirty = !!v;
   } else if (mode === 'notes') {
     state.notes.dirty = !!v;
+  } else if (mode === 'notes_display') {
+    state.notesDisplay.dirty = !!v;
   }
 
   const sub = byId('subTitle');
-  if (state.dirty || state.notes.dirty) {
+  if (state.dirty || state.notes.dirty || state.notesDisplay.dirty) {
     sub.textContent = '已修改，系统将自动保存';
     sub.classList.add('dirty-tip');
   } else {
@@ -152,9 +162,11 @@ export function setModeUi(mode) {
   const isHotkeys = mode === 'hotkeys';
   const isResume = mode === 'resume';
   const isTesting = mode === 'testing';
+  const isNotesDisplay = mode === 'notes_display';
 
   byId('modeShortcutsBtn').classList.toggle('active', isShortcuts);
   byId('modeNotesBtn').classList.toggle('active', mode === 'notes');
+  byId('modeNotesDisplayBtn').classList.toggle('active', isNotesDisplay);
   byId('modeCaptureBtn').classList.toggle('active', mode === 'capture');
   byId('modeAssistantBtn').classList.toggle('active', mode === 'assistant');
   byId('modeResumeBtn').classList.toggle('active', isResume);
@@ -164,6 +176,7 @@ export function setModeUi(mode) {
   byId('shortcutsView').classList.toggle('hidden', !isShortcuts);
   byId('hotkeysView').classList.toggle('hidden', !isHotkeys);
   byId('notesView').classList.toggle('hidden', mode !== 'notes');
+  byId('notesDisplayView').classList.toggle('hidden', !isNotesDisplay);
   byId('captureView').classList.toggle('hidden', mode !== 'capture');
   byId('assistantView').classList.toggle('hidden', mode !== 'assistant');
   byId('resumeView').classList.toggle('hidden', !isResume);

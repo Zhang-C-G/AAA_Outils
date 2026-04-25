@@ -1,5 +1,5 @@
 SaveData() {
-    global gDataFile, gData, gHotkeys, gHotkeyDefs, gBehavior, gCategories, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings, gCaptureDir
+    global gDataFile, gData, gHotkeys, gHotkeyDefs, gBehavior, gCategories, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings, gCaptureDir, gAppSettings
     try ProcessWebConfigActionFile()
 
     EnsureAssistantTemplates(gAssistantSettings)
@@ -43,6 +43,7 @@ SaveData() {
     lines.Push("")
     lines.Push("[App]")
     lines.Push("active_mode=" NormalizeModeId(gActiveMode))
+    lines.Push("mode_order=" (gAppSettings.Has("mode_order") ? NormalizeModeOrderCsv(gAppSettings["mode_order"]) : GetDefaultModeOrderCsv()))
     lines.Push("capture_dir=" gCaptureDir)
 
     lines.Push("")
@@ -63,8 +64,12 @@ SaveData() {
     lines.Push("overlay_opacity=" gAssistantSettings["overlay_opacity"])
     lines.Push("enhanced_capture_mode=" (gAssistantSettings.Has("enhanced_capture_mode") ? gAssistantSettings["enhanced_capture_mode"] : 0))
     lines.Push("disable_copy=" (gAssistantSettings.Has("disable_copy") ? gAssistantSettings["disable_copy"] : 1))
+    lines.Push("voice_input_enabled=" (gAssistantSettings.Has("voice_input_enabled") ? gAssistantSettings["voice_input_enabled"] : 0))
     lines.Push("rate_limit_enabled=" gAssistantSettings["rate_limit_enabled"])
     lines.Push("rate_limit_per_hour=" gAssistantSettings["rate_limit_per_hour"])
+    lines.Push("voice_input_provider=" (gAssistantSettings.Has("voice_input_provider") ? gAssistantSettings["voice_input_provider"] : "local_windows"))
+    lines.Push("voice_input_endpoint=" (gAssistantSettings.Has("voice_input_endpoint") ? gAssistantSettings["voice_input_endpoint"] : ""))
+    lines.Push("voice_input_model=" (gAssistantSettings.Has("voice_input_model") ? gAssistantSettings["voice_input_model"] : ""))
 
     lines.Push("")
     lines.Push("[Resume]")

@@ -125,3 +125,42 @@ UriEncode(str) {
     }
     return out
 }
+
+Base64DecodeUtf8(text) {
+    encoded := Trim(text)
+    if (encoded = "") {
+        return ""
+    }
+
+    charsNeeded := 0
+    if !DllCall(
+        "Crypt32\CryptStringToBinaryW",
+        "Str", encoded,
+        "UInt", 0,
+        "UInt", 0x1,
+        "Ptr", 0,
+        "UInt*", charsNeeded,
+        "Ptr", 0,
+        "Ptr", 0,
+        "Int"
+    ) {
+        return ""
+    }
+
+    buf := Buffer(charsNeeded, 0)
+    if !DllCall(
+        "Crypt32\CryptStringToBinaryW",
+        "Str", encoded,
+        "UInt", 0,
+        "UInt", 0x1,
+        "Ptr", buf,
+        "UInt*", charsNeeded,
+        "Ptr", 0,
+        "Ptr", 0,
+        "Int"
+    ) {
+        return ""
+    }
+
+    return StrGet(buf, charsNeeded, "UTF-8")
+}

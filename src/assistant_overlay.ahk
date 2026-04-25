@@ -18,7 +18,7 @@ gAssistantOverlayRiskRestoreStatus := "状态：悬浮窗已恢复"
 gAssistantOverlaySensitiveHidden := false
 gAssistantOverlaySensitiveRestoreText := ""
 gAssistantOverlaySensitiveRestoreStatus := "状态：处理中..."
-gAssistantOverlayLastStatus := "状态：待命"
+gAssistantOverlayLastStatus := "状态：待命：未设置模型"
 gAssistantOverlayCaptureGuardEnabled := true
 gAssistantOverlayCaptureGuardRunning := false
 gAssistantOverlayInSensitivePhase := false
@@ -40,6 +40,9 @@ gAssistantOverlayProtectionRearmReason := ""
 gAssistantOverlayFullText := ""
 gAssistantOverlayRenderedLines := []
 gAssistantOverlayScrollOffset := 1
+gAssistantOverlayLastRenderedText := ""
+gAssistantOverlayLastRenderedHint := ""
+gAssistantOverlayLastWheelTick := 0
 gAssistantOverlayLastAppliedOpacity := -1
 gAssistantOverlayRecordingProtectionActive := false
 gAssistantOverlayOpenGraceUntilTick := 0
@@ -47,6 +50,14 @@ gAssistantOverlayAffinityRepairFailures := 0
 gAssistantOverlayAffinityRepairCooldownUntilTick := 0
 gAssistantOverlayCaptureRiskLastSeenTick := 0
 gAssistantOverlayEnhancedProtectGapSinceTick := 0
+gAssistantThinkingHasStreamData := false
+gAssistantOverlayInputSummary := ""
+gAssistantVoiceInputActive := false
+gAssistantVoiceSession := ""
+
+BuildAssistantOverlayIdleStatus() {
+    return "状态：待命：" GetAssistantCurrentModelLabel()
+}
 
 ResetAssistantOverlayProtectionStability() {
     global gAssistantOverlayAffinityRepairFailures, gAssistantOverlayAffinityRepairCooldownUntilTick
@@ -388,12 +399,15 @@ StartAssistantOverlayOnly(showNotice := true) {
     }
 
     ShowAssistantOverlay(text)
+    UpdateAssistantOverlayStatus(BuildAssistantOverlayIdleStatus())
     WriteLog("assistant_overlay_open", "source=manual")
     return Map("ok", 1, "text", text, "error", "", "path", "")
 }
 
 StartAssistantCaptureFlow(showNotice := true) {
-    global gAssistantSettings, gAssistantLastResult, gCaptureLastPath, gAssistantOverlayVisible
+    global gAssistantSettings, gAssistantLastResult, gCaptureLastPath, gAssistantOverlayVisible, gAssistantOverlayInputSummary
+    flowStartTick := A_TickCount
+    gAssistantOverlayInputSummary := ""
 
     if (!gAssistantSettings.Has("enabled") || gAssistantSettings["enabled"] = 0) {
         msg := "助手功能当前已禁用，请在 Assistant 模块中启用。"
@@ -455,7 +469,7 @@ StartAssistantCaptureFlow(showNotice := true) {
     if wasOverlayVisible {
         UpdateAssistantOverlayStatus("状态：截图完毕 | 模型：" modelLabel)
     }
-    EnterAssistantSensitivePhase("状态：正在分析（0秒） | 模型：" modelLabel)
+    EnterAssistantSensitivePhase("状态：正在生成回答（0秒） | 模型：" modelLabel)
     StartAssistantThinkingTicker()
 
     progressCb := ""
@@ -469,6 +483,12 @@ StartAssistantCaptureFlow(showNotice := true) {
 
     if !IsObject(res) {
         res := Map("ok", 0, "text", "", "error", "assistant response invalid")
+    }
+    if !res.Has("reasoning") {
+        res["reasoning"] := ""
+    }
+    if !res.Has("streamed") {
+        res["streamed"] := 0
     }
     StopAssistantThinkingTicker()
     res["path"] := path
@@ -488,14 +508,169 @@ StartAssistantCaptureFlow(showNotice := true) {
     }
 
     ExitAssistantSensitivePhase(true)
-    gAssistantLastResult := res["text"]
+    displayText := BuildAssistantOverlayDisplayText(res["text"])
+    totalElapsedSec := Max(0, Ceil((A_TickCount - flowStartTick) / 1000))
+    gAssistantLastResult := displayText
     if gAssistantOverlayVisible {
-        SetAssistantOverlayText(res["text"])
+        SetAssistantOverlayText(displayText)
     } else {
-        ShowAssistantOverlay(res["text"])
+        ShowAssistantOverlay(displayText)
     }
-    UpdateAssistantOverlayStatus("状态：回答完成 | 模型：" modelLabel)
-    WriteLog("assistant_answer_show", "chars=" StrLen(res["text"]))
+    UpdateAssistantOverlayStatus((res["streamed"] ? "状态：流式回答完成" : "状态：回答完成") "（总耗时：" totalElapsedSec "秒） | 模型：" modelLabel)
+    WriteLog("assistant_answer_show", "chars=" StrLen(res["text"]) " streamed=" res["streamed"] " total_elapsed_sec=" totalElapsedSec)
+    return res
+}
+
+StartAssistantVoiceInputHold(showNotice := true) {
+    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult
+
+    if gAssistantVoiceInputActive {
+        return Map("ok", 1, "error", "")
+    }
+    if (!gAssistantSettings.Has("enabled") || gAssistantSettings["enabled"] = 0) {
+        msg := "助手功能当前已禁用，请在 Assistant 模块中启用。"
+        if showNotice {
+            MsgBox(msg)
+        }
+        return Map("ok", 0, "error", msg)
+    }
+    if (!gAssistantSettings.Has("voice_input_enabled") || gAssistantSettings["voice_input_enabled"] = 0) {
+        msg := "语音识别功能当前未开启，请先在高级设置中开启。"
+        if showNotice {
+            MsgBox(msg)
+        }
+        return Map("ok", 0, "error", msg)
+    }
+
+    text := Trim(gAssistantLastResult)
+    if (text = "") {
+        text := "截图问答悬浮窗已启动。`n按 F1 截图问答，按住 F3 语音输入。"
+    }
+    ShowAssistantOverlay(text)
+    gAssistantOverlayInputSummary := ""
+    providerLabel := GetAssistantVoiceProviderLabel(gAssistantSettings)
+    session := StartAssistantVoiceRecognitionSession(gAssistantSettings)
+    if !session["ok"] {
+        UpdateAssistantOverlayStatus("状态：语音识别启动失败 | 识别：" providerLabel)
+        SetAssistantOverlayText("语音识别启动失败：`n" session["error"])
+        WriteLog("assistant_voice_input_start_failed", "error=" session["error"])
+        if showNotice {
+            MsgBox("语音识别启动失败：" session["error"])
+        }
+        return session
+    }
+
+    gAssistantVoiceSession := session
+    gAssistantVoiceInputActive := true
+    SetAssistantOverlayText("正在监听输入...`n按住热键说话，松开后自动提交。")
+    UpdateAssistantOverlayStatus("状态：正在监听输入 | 识别：" providerLabel)
+    WriteLog("assistant_voice_input_start", "provider=" session["provider"])
+    return Map("ok", 1, "error", "")
+}
+
+StopAssistantVoiceInputHold(showNotice := true) {
+    global gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantSettings
+    if !gAssistantVoiceInputActive {
+        return Map("ok", 1, "error", "")
+    }
+
+    gAssistantVoiceInputActive := false
+    providerLabel := GetAssistantVoiceProviderLabel(gAssistantSettings)
+    UpdateAssistantOverlayStatus("状态：正在结束监听 | 识别：" providerLabel)
+    result := StopAssistantVoiceRecognitionSession(gAssistantVoiceSession)
+    gAssistantVoiceSession := ""
+
+    if !result["ok"] {
+        SetAssistantOverlayText("语音识别失败：`n" result["error"])
+        UpdateAssistantOverlayStatus("状态：语音识别失败 | 识别：" providerLabel)
+        WriteLog("assistant_voice_input_stop_failed", "error=" result["error"])
+        if showNotice {
+            MsgBox("语音识别失败：" result["error"])
+        }
+        return result
+    }
+
+    transcript := Trim(result["text"])
+    if (transcript = "") {
+        SetAssistantOverlayText("未识别到语音内容。`n请按住热键后重新说话。")
+        UpdateAssistantOverlayStatus("状态：未识别到语音内容 | 识别：" providerLabel)
+        WriteLog("assistant_voice_input_empty", "provider=" providerLabel)
+        return Map("ok", 0, "text", "", "error", "voice input empty")
+    }
+
+    WriteLog("assistant_voice_input_text", "chars=" StrLen(transcript))
+    return StartAssistantTextQueryFlow(transcript, showNotice)
+}
+
+StartAssistantTextQueryFlow(queryText, showNotice := true) {
+    global gAssistantSettings, gAssistantLastResult, gAssistantOverlayVisible, gAssistantOverlayInputSummary
+    query := Trim(queryText)
+    flowStartTick := A_TickCount
+    if (query = "") {
+        return Map("ok", 0, "text", "", "error", "assistant text query is empty")
+    }
+    if (!gAssistantSettings.Has("enabled") || gAssistantSettings["enabled"] = 0) {
+        msg := "助手功能当前已禁用，请在 Assistant 模块中启用。"
+        if showNotice {
+            MsgBox(msg)
+        }
+        return Map("ok", 0, "text", "", "error", msg)
+    }
+
+    EnsureAssistantOverlayGui()
+    modelLabel := GetAssistantCurrentModelLabel()
+    ShowAssistantOverlay("语音输入：`n" query "`n`n正在生成回答...")
+    gAssistantOverlayInputSummary := query
+
+    rateRes := ConsumeAssistantRateLimit(gAssistantSettings)
+    if !rateRes["ok"] {
+        UpdateAssistantOverlayStatus("状态：限流触发 | 模型：" modelLabel)
+        if showNotice {
+            MsgBox(rateRes["error"])
+        }
+        return Map("ok", 0, "text", "", "error", rateRes["error"])
+    }
+
+    EnterAssistantSensitivePhase("状态：正在生成回答（0秒） | 模型：" modelLabel)
+    StartAssistantThinkingTicker()
+
+    progressCb := ""
+    try progressCb := Func("OnAssistantThinkingProgress")
+    try {
+        res := RequestAssistantAnswerFromText(query, gAssistantSettings, progressCb)
+    } catch as err {
+        res := Map("ok", 0, "text", "", "error", err.Message)
+    }
+
+    if !IsObject(res) {
+        res := Map("ok", 0, "text", "", "error", "assistant response invalid")
+    }
+    if !res.Has("reasoning") {
+        res["reasoning"] := ""
+    }
+    if !res.Has("streamed") {
+        res["streamed"] := 0
+    }
+    StopAssistantThinkingTicker()
+
+    if !res["ok"] {
+        ExitAssistantSensitivePhase(true)
+        SetAssistantOverlayText("语音输入：`n" query "`n`n模型调用失败：`n" res["error"])
+        UpdateAssistantOverlayStatus("状态：调用失败 | 模型：" modelLabel)
+        WriteLog("assistant_text_answer_failed", "err=" res["error"])
+        if showNotice {
+            MsgBox("模型调用失败：" res["error"])
+        }
+        return res
+    }
+
+    ExitAssistantSensitivePhase(true)
+    displayText := BuildAssistantOverlayDisplayText(res["text"])
+    totalElapsedSec := Max(0, Ceil((A_TickCount - flowStartTick) / 1000))
+    gAssistantLastResult := displayText
+    SetAssistantOverlayText(displayText)
+    UpdateAssistantOverlayStatus((res["streamed"] ? "状态：流式回答完成" : "状态：回答完成") "（总耗时：" totalElapsedSec "秒） | 模型：" modelLabel)
+    WriteLog("assistant_text_answer_show", "chars=" StrLen(res["text"]) " streamed=" res["streamed"] " total_elapsed_sec=" totalElapsedSec)
     return res
 }
 
@@ -563,10 +738,10 @@ EnsureAssistantOverlayGui() {
     gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x332 y18 w170 h28", "截图问答")
     gAssistantOverlayCaptureBtn.OnEvent("Click", OnAssistantOverlayCaptureButton)
 
-    gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" gTheme["text_hint"], "状态：待命")
+    gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" gTheme["text_hint"], BuildAssistantOverlayIdleStatus())
 
     gAssistantOverlayTextHint := gAssistantOverlayGui.AddText("x330 y88 w172 h14 Right c" gTheme["text_hint"], "Alt+Up / Alt+Down 滚动")
-    gAssistantOverlayText := gAssistantOverlayGui.AddText("x16 y104 w486 h342 Border c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
+    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y104 w486 h342 +Multi ReadOnly -VScroll c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
     gAssistantOverlayText.SetFont("s10", "Consolas")
 
     gAssistantOverlayGui.OnEvent("Close", OnAssistantOverlayClose)
@@ -629,12 +804,15 @@ ShowAssistantOverlay(answerText) {
 
 SetAssistantOverlayText(answerText) {
     global gAssistantOverlayText, gAssistantOverlayFullText, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
+    global gAssistantOverlayLastRenderedText, gAssistantOverlayLastRenderedHint
     if !IsObject(gAssistantOverlayText) {
         return
     }
     gAssistantOverlayFullText := FormatAssistantOverlayText(answerText)
-    gAssistantOverlayRenderedLines := WrapAssistantOverlayText(gAssistantOverlayFullText)
+    gAssistantOverlayRenderedLines := []
     gAssistantOverlayScrollOffset := 1
+    gAssistantOverlayLastRenderedText := ""
+    gAssistantOverlayLastRenderedHint := ""
     RenderAssistantOverlayText()
 }
 
@@ -647,17 +825,52 @@ UpdateAssistantOverlayStatus(text) {
 }
 
 OnAssistantThinkingProgress(stage, elapsedSec := 0) {
-    global gAssistantThinkingActive, gAssistantThinkingStartTick
+    global gAssistantThinkingActive, gAssistantThinkingStartTick, gAssistantThinkingHasStreamData
     modelLabel := GetAssistantCurrentModelLabel()
     if (stage = "thinking") {
         if (gAssistantThinkingActive && gAssistantThinkingStartTick > 0) {
             elapsedSec := Floor((A_TickCount - gAssistantThinkingStartTick) / 1000)
             elapsedSec := Max(0, elapsedSec)
         }
-        UpdateAssistantOverlayStatus("状态：正在分析（" elapsedSec "秒） | 模型：" modelLabel)
+        if gAssistantThinkingHasStreamData {
+            UpdateAssistantOverlayStatus("状态：正在流式输出（" elapsedSec "秒） | 模型：" modelLabel)
+        } else {
+            UpdateAssistantOverlayStatus("状态：正在生成回答（" elapsedSec "秒） | 模型：" modelLabel)
+        }
+    } else if (stage = "stream_snapshot") {
+        snapshot := IsObject(elapsedSec) ? elapsedSec : Map()
+        answer := snapshot.Has("answer") ? snapshot["answer"] : ""
+        gAssistantThinkingHasStreamData := true
+        SetAssistantOverlayText(BuildAssistantOverlayDisplayText(answer, true))
+        UpdateAssistantOverlayStatus("状态：正在流式输出 | 模型：" modelLabel)
     } else if (stage = "request_done") {
-        UpdateAssistantOverlayStatus("状态：思考完成，正在整理答案... | 模型：" modelLabel)
+        UpdateAssistantOverlayStatus(gAssistantThinkingHasStreamData ? "状态：流式输出完成，正在整理答案... | 模型：" modelLabel : "状态：回答生成完成，正在整理答案... | 模型：" modelLabel)
     }
+}
+
+BuildAssistantOverlayDisplayText(answerText, isStreaming := false) {
+    global gAssistantOverlayInputSummary
+    answer := Trim(answerText)
+    inputSummary := Trim(gAssistantOverlayInputSummary)
+    parts := []
+
+    if (inputSummary != "") {
+        parts.Push("语音输入：")
+        parts.Push(inputSummary)
+        parts.Push("")
+        parts.Push(isStreaming ? "回答生成中：" : "回答：")
+    }
+
+    if (answer != "") {
+        parts.Push(answer)
+    } else if isStreaming {
+        parts.Push("正在生成回答...")
+    }
+
+    if (parts.Length = 0) {
+        return isStreaming ? "正在等待模型返回..." : ""
+    }
+    return StrJoin(parts, "`n")
 }
 
 FormatAssistantOverlayText(answerText) {
@@ -705,9 +918,6 @@ SetAssistantOverlayOpacity(opacity) {
     if (val >= 100) {
         try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
         gAssistantOverlayLastAppliedOpacity := val
-        if gAssistantOverlayVisible {
-            RefreshAssistantOverlayWindow(false)
-        }
         return
     }
 
@@ -715,13 +925,6 @@ SetAssistantOverlayOpacity(opacity) {
     alpha := Min(255, Max(1, alpha))
     try WinSetTransparent(alpha, "ahk_id " gAssistantOverlayGui.Hwnd)
     gAssistantOverlayLastAppliedOpacity := val
-    if gAssistantOverlayVisible {
-        SetTimer(AssistantOverlayRefreshAfterOpacityChange, -20)
-    }
-}
-
-AssistantOverlayRefreshAfterOpacityChange(*) {
-    RefreshAssistantOverlayWindow(false)
 }
 
 GetAssistantOverlayCurrentDisplayAffinity() {
@@ -874,7 +1077,7 @@ AssistantOverlayOnMouseDown(wParam, lParam, msg, hwnd) {
 }
 
 AssistantOverlayOnMouseWheel(wParam, lParam, msg, hwnd) {
-    global gAssistantOverlayText, gAssistantOverlayGui, gAssistantOverlayVisible
+    global gAssistantOverlayText, gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayLastWheelTick
     if !gAssistantOverlayVisible || !IsObject(gAssistantOverlayText) || !IsObject(gAssistantOverlayGui) {
         return
     }
@@ -890,7 +1093,14 @@ AssistantOverlayOnMouseWheel(wParam, lParam, msg, hwnd) {
         delta -= 0x10000
     }
 
-    step := (Abs(delta) >= 240) ? 6 : 4
+    nowTick := A_TickCount
+    if ((nowTick - gAssistantOverlayLastWheelTick) < 70) {
+        return 0
+    }
+    gAssistantOverlayLastWheelTick := nowTick
+
+    ; 单行级别滚动，避免高精滚轮/触控板在一个手势里跳太多。
+    step := 1
     if (delta > 0) {
         ScrollAssistantOverlay(-step)
     } else if (delta < 0) {
@@ -903,8 +1113,12 @@ OnAssistantOverlayClose(*) {
     global gAssistantOverlayGui, gAssistantOverlayVisible, gAssistantOverlayRiskHidden, gAssistantOverlayInSensitivePhase
     global gAssistantOverlayProtectionRearmPending, gAssistantOverlayProtectionRearmReason, gAssistantOverlayRecordingProtectionActive
     global gAssistantOverlayOpenGraceUntilTick, gAssistantOverlayProtectionGapHidden, gAssistantOverlayEnhancedProtectGapSinceTick
+    global gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantOverlayInputSummary
     if IsObject(gAssistantOverlayGui) {
         gAssistantOverlayGui.Hide()
+    }
+    if gAssistantVoiceInputActive {
+        try StopAssistantVoiceRecognitionSession(gAssistantVoiceSession)
     }
     gAssistantOverlayVisible := false
     gAssistantOverlayRiskHidden := false
@@ -915,6 +1129,9 @@ OnAssistantOverlayClose(*) {
     gAssistantOverlayProtectionRearmPending := false
     gAssistantOverlayProtectionRearmReason := ""
     gAssistantOverlayOpenGraceUntilTick := 0
+    gAssistantVoiceInputActive := false
+    gAssistantVoiceSession := ""
+    gAssistantOverlayInputSummary := ""
     ResetAssistantOverlayProtectionStability()
     StopAssistantOverlayCaptureGuard()
     StopAssistantThinkingTicker()
@@ -955,15 +1172,14 @@ AssistantOverlayPerformProtectionRearm(*) {
 }
 
 ScrollAssistantOverlay(lines) {
-    global gAssistantOverlayVisible, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
+    global gAssistantOverlayVisible, gAssistantOverlayText
     if !gAssistantOverlayVisible || !IsObject(gAssistantOverlayText) {
         return
     }
-    visibleLines := GetAssistantOverlayVisibleLineCount()
-    maxOffset := Max(1, gAssistantOverlayRenderedLines.Length - visibleLines + 1)
-    nextOffset := gAssistantOverlayScrollOffset + Integer(lines)
-    gAssistantOverlayScrollOffset := Min(maxOffset, Max(1, nextOffset))
-    RenderAssistantOverlayText()
+    ; EM_LINESCROLL: let the native edit control handle scrolling instead of
+    ; rewriting the visible text block on every wheel tick.
+    SendMessage(0x00B6, 0, Integer(lines), , "ahk_id " gAssistantOverlayText.Hwnd)
+    UpdateAssistantOverlayTextHint()
 }
 
 AssistantOverlayScrollUp(*) {
@@ -1067,9 +1283,10 @@ StopAssistantOverlayCaptureGuard() {
 }
 
 StartAssistantThinkingTicker() {
-    global gAssistantThinkingActive, gAssistantThinkingStartTick
+    global gAssistantThinkingActive, gAssistantThinkingStartTick, gAssistantThinkingHasStreamData
     gAssistantThinkingStartTick := A_TickCount
     gAssistantThinkingActive := true
+    gAssistantThinkingHasStreamData := false
     SetTimer(AssistantThinkingTick, 1000)
     AssistantThinkingTick()
 }
@@ -1084,14 +1301,18 @@ StopAssistantThinkingTicker() {
 }
 
 AssistantThinkingTick(*) {
-    global gAssistantThinkingActive, gAssistantThinkingStartTick, gAssistantOverlayInSensitivePhase
+    global gAssistantThinkingActive, gAssistantThinkingStartTick, gAssistantOverlayInSensitivePhase, gAssistantThinkingHasStreamData
     if !gAssistantThinkingActive || !gAssistantOverlayInSensitivePhase {
         return
     }
     elapsed := Floor((A_TickCount - gAssistantThinkingStartTick) / 1000)
     elapsed := Max(0, elapsed)
     modelLabel := GetAssistantCurrentModelLabel()
-    UpdateAssistantOverlayStatus("状态：正在分析（" elapsed "秒） | 模型：" modelLabel)
+    if gAssistantThinkingHasStreamData {
+        UpdateAssistantOverlayStatus("状态：正在流式输出（" elapsed "秒） | 模型：" modelLabel)
+    } else {
+        UpdateAssistantOverlayStatus("状态：正在生成回答（" elapsed "秒） | 模型：" modelLabel)
+    }
 }
 
 CheckAssistantCaptureRisk(*) {
@@ -1214,36 +1435,52 @@ GetAssistantOverlayVisibleLineCount() {
     return 19
 }
 
+AssistantOverlayScrollToTop() {
+    global gAssistantOverlayText
+    if !IsObject(gAssistantOverlayText) {
+        return
+    }
+    ; WM_VSCROLL + SB_TOP
+    SendMessage(0x0115, 6, 0, , "ahk_id " gAssistantOverlayText.Hwnd)
+}
+
+UpdateAssistantOverlayTextHint() {
+    global gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayLastRenderedHint
+    if !IsObject(gAssistantOverlayTextHint) || !IsObject(gAssistantOverlayText) {
+        return
+    }
+
+    ; EM_GETFIRSTVISIBLELINE / EM_GETLINECOUNT
+    firstVisible := SendMessage(0x00CE, 0, 0, , "ahk_id " gAssistantOverlayText.Hwnd)
+    lineCount := SendMessage(0x00BA, 0, 0, , "ahk_id " gAssistantOverlayText.Hwnd)
+    visibleLines := GetAssistantOverlayVisibleLineCount()
+
+    totalLines := Max(1, Integer(lineCount))
+    startLine := Max(1, Integer(firstVisible) + 1)
+    endLine := Min(totalLines, startLine + visibleLines - 1)
+    hintText := (totalLines <= visibleLines) ? "" : "第 " startLine "-" endLine " / " totalLines " 行"
+
+    if (hintText != gAssistantOverlayLastRenderedHint) {
+        gAssistantOverlayTextHint.Text := hintText
+        gAssistantOverlayLastRenderedHint := hintText
+    }
+}
+
 RenderAssistantOverlayText() {
     global gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
+    global gAssistantOverlayFullText
+    global gAssistantOverlayLastRenderedText, gAssistantOverlayLastRenderedHint
     if !IsObject(gAssistantOverlayText) {
         return
     }
 
-    if !IsObject(gAssistantOverlayRenderedLines) || (gAssistantOverlayRenderedLines.Length = 0) {
-        gAssistantOverlayRenderedLines := [""]
+    renderedText := gAssistantOverlayFullText
+    if (renderedText != gAssistantOverlayLastRenderedText) {
+        gAssistantOverlayText.Value := renderedText
+        gAssistantOverlayLastRenderedText := renderedText
     }
-
-    visibleLines := GetAssistantOverlayVisibleLineCount()
-    maxOffset := Max(1, gAssistantOverlayRenderedLines.Length - visibleLines + 1)
-    gAssistantOverlayScrollOffset := Min(maxOffset, Max(1, gAssistantOverlayScrollOffset))
-
-    startLine := gAssistantOverlayScrollOffset
-    endLine := Min(gAssistantOverlayRenderedLines.Length, startLine + visibleLines - 1)
-    lines := []
-    Loop endLine - startLine + 1 {
-        idx := startLine + A_Index - 1
-        lines.Push(gAssistantOverlayRenderedLines[idx])
-    }
-    gAssistantOverlayText.Text := StrJoin(lines, "`r`n")
-
-    if IsObject(gAssistantOverlayTextHint) {
-        if (gAssistantOverlayRenderedLines.Length <= visibleLines) {
-            gAssistantOverlayTextHint.Text := ""
-        } else {
-            gAssistantOverlayTextHint.Text := "第 " startLine "-" endLine " / " gAssistantOverlayRenderedLines.Length " 行"
-        }
-    }
+    AssistantOverlayScrollToTop()
+    UpdateAssistantOverlayTextHint()
 }
 
 WrapAssistantOverlayText(text) {

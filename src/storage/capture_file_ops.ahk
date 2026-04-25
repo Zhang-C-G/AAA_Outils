@@ -33,6 +33,13 @@ PublishLatestCapture(sourcePath) {
 }
 
 CaptureFullScreen(path) {
+    notesHiddenForCapture := false
+    try {
+        if IsNotesOverlayVisible() {
+            notesHiddenForCapture := HideNotesOverlayForCapture()
+        }
+    }
+
     psPath := A_Temp "\\raccourci_capture.ps1"
     script := "$ErrorActionPreference='Stop'`n"
         . "Add-Type -AssemblyName System.Drawing`n"
@@ -52,8 +59,10 @@ CaptureFullScreen(path) {
     try {
         RunWait('powershell -NoProfile -ExecutionPolicy Bypass -File "' psPath '"', , "Hide")
     } catch {
+        try RestoreNotesOverlayAfterCapture(notesHiddenForCapture)
         return false
     }
+    try RestoreNotesOverlayAfterCapture(notesHiddenForCapture)
     return FileExist(path)
 }
 

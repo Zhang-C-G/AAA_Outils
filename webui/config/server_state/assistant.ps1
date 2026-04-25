@@ -17,6 +17,14 @@ function Get-AssistantModelCatalog {
       provider = 'volcengine-ark'
       vision = 1
       enabled = 1
+    },
+    [ordered]@{
+      id = 'doubao-seed-2-0-mini-260215'
+      name = 'Doubao Seed 2.0 Mini (ASR Fast)'
+      note = '语音识别专用，速度特别快'
+      provider = 'volcengine-ark'
+      vision = 1
+      enabled = 1
     }
   )
 }
@@ -69,6 +77,7 @@ function Get-AssistantDefaults {
     overlay_opacity = 75
     enhanced_capture_mode = 0
     disable_copy = 1
+    voice_input_enabled = 0
     rate_limit_enabled = 1
     rate_limit_per_hour = 100
   }
@@ -230,6 +239,7 @@ function Convert-ToAssistantSettings {
   $settings.overlay_opacity = Clamp-AssistantOpacity (Get-Prop $PayloadAssistant 'overlay_opacity' (Get-Prop $Fallback 'overlay_opacity' 100))
   $settings.enhanced_capture_mode = if ([string](Get-Prop $PayloadAssistant 'enhanced_capture_mode' (Get-Prop $Fallback 'enhanced_capture_mode' 0)) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $PayloadAssistant 'disable_copy' (Get-Prop $Fallback 'disable_copy' 1)) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_enabled = if ([string](Get-Prop $PayloadAssistant 'voice_input_enabled' (Get-Prop $Fallback 'voice_input_enabled' 0)) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_enabled = if ([string](Get-Prop $PayloadAssistant 'rate_limit_enabled' (Get-Prop $Fallback 'rate_limit_enabled' 1)) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 100))
 
@@ -302,6 +312,9 @@ function Get-AssistantSettings {
     if ($sec.Contains('disable_copy')) {
       $settings.disable_copy = if ([string]$sec['disable_copy'] -eq '0') { 0 } else { 1 }
     }
+    if ($sec.Contains('voice_input_enabled')) {
+      $settings.voice_input_enabled = if ([string]$sec['voice_input_enabled'] -eq '0') { 0 } else { 1 }
+    }
     if ($sec.Contains('rate_limit_enabled')) {
       $settings.rate_limit_enabled = if ([string]$sec['rate_limit_enabled'] -eq '0') { 0 } else { 1 }
     }
@@ -336,6 +349,7 @@ function Get-AssistantSettings {
   $settings.model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' '')) -Fallback 'doubao-seed-2-0-lite-260215'
   $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_enabled = if ([string](Get-Prop $settings 'voice_input_enabled' 0) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour $settings.rate_limit_per_hour
   return $settings
 }
@@ -381,6 +395,7 @@ function Save-AssistantSettings {
   $ini['Assistant']['overlay_opacity'] = [string]$settings.overlay_opacity
   $ini['Assistant']['enhanced_capture_mode'] = [string]$settings.enhanced_capture_mode
   $ini['Assistant']['disable_copy'] = [string]$settings.disable_copy
+  $ini['Assistant']['voice_input_enabled'] = [string]$settings.voice_input_enabled
   $ini['Assistant']['rate_limit_enabled'] = [string]$settings.rate_limit_enabled
   $ini['Assistant']['rate_limit_per_hour'] = [string]$settings.rate_limit_per_hour
 

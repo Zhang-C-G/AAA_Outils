@@ -50,7 +50,8 @@ function defaults() {
     model: 'doubao-seed-2-0-lite-260215',
     model_options: [
       { id: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite (Vision)', enabled: 1 },
-      { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 }
+      { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 },
+      { id: 'doubao-seed-2-0-mini-260215', name: 'Doubao Seed 2.0 Mini (ASR Fast | 语音识别特别快)', enabled: 1 }
     ],
     prompt: DEFAULT_PROMPT,
     active_template: 'default_template',
@@ -58,6 +59,7 @@ function defaults() {
     overlay_opacity: 75,
     enhanced_capture_mode: 0,
     disable_copy: 1,
+    voice_input_enabled: 0,
     rate_limit_enabled: 1,
     rate_limit_per_hour: 100,
     capture_dir: '',
@@ -130,9 +132,10 @@ function renderHotkeyExplain() {
   if (!el) return;
   const hkOpen = hotkeyToFriendly(state.hotkeys?.assistant_capture || '!+A');
   const hkRun = hotkeyToFriendly(state.hotkeys?.assistant_capture_now || 'F1');
+  const hkVoice = hotkeyToFriendly(state.hotkeys?.assistant_voice_input || 'F3');
   const hkUp = hotkeyToFriendly(state.hotkeys?.assistant_overlay_up || '!Up');
   const hkDown = hotkeyToFriendly(state.hotkeys?.assistant_overlay_down || '!Down');
-  el.textContent = `\u5feb\u6377\u952e\u8bf4\u660e\uff08\u81ea\u52a8\u540c\u6b65\u914d\u7f6e\uff09\uff1a\u542f\u52a8\u60ac\u6d6e\u7a97 ${hkOpen}\uff1b\u622a\u56fe\u5e76\u95ee\u7b54 ${hkRun}\uff1b\u7b54\u6848\u4e0a\u6eda ${hkUp}\uff1b\u7b54\u6848\u4e0b\u6eda ${hkDown}\u3002`;
+  el.textContent = `\u5feb\u6377\u952e\u8bf4\u660e\uff08\u81ea\u52a8\u540c\u6b65\u914d\u7f6e\uff09\uff1a\u542f\u52a8\u60ac\u6d6e\u7a97 ${hkOpen}\uff1b\u622a\u56fe\u5e76\u95ee\u7b54 ${hkRun}\uff1b\u6309\u4f4f\u8bed\u97f3\u8f93\u5165 ${hkVoice}\uff1b\u7b54\u6848\u4e0a\u6eda ${hkUp}\uff1b\u7b54\u6848\u4e0b\u6eda ${hkDown}\u3002`;
 }
 
 function setAssistantOpacityChoice(value) {
@@ -317,6 +320,7 @@ export function applyAssistantState(payload) {
   state.assistant.templates = normalizeTemplates(incoming.templates || state.assistant.templates, fallback.prompt);
   state.assistant.overlay_opacity = normalizeOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
   state.assistant.enhanced_capture_mode = Number(incoming.enhanced_capture_mode ?? state.assistant.enhanced_capture_mode ?? 0) === 0 ? 0 : 1;
+  state.assistant.voice_input_enabled = Number(incoming.voice_input_enabled ?? state.assistant.voice_input_enabled ?? 0) === 0 ? 0 : 1;
   state.assistant.enabled = 1;
   ensureActiveTemplate();
 
@@ -324,6 +328,7 @@ export function applyAssistantState(payload) {
   byId('assistantApiKey').value = Number(state.assistant.has_api_key || 0) !== 0 ? API_KEY_MASK : '';
   byId('assistantDisableCopy').checked = Number(state.assistant.disable_copy ?? 1) !== 0;
   byId('assistantEnhancedCaptureMode').checked = Number(state.assistant.enhanced_capture_mode ?? 0) !== 0;
+  byId('assistantVoiceEnabled').checked = Number(state.assistant.voice_input_enabled ?? 0) !== 0;
   byId('assistantApiKey').placeholder = Number(state.assistant.has_api_key || 0) !== 0
     ? '\u5df2\u4fdd\u5b58\u5bc6\u94a5\uff08\u4fdd\u6301\u661f\u53f7\u8868\u793a\u4e0d\u53d8\uff09'
     : '\u8bf7\u8f93\u5165 API Key';
@@ -345,6 +350,7 @@ function readAssistantFromUi() {
   state.assistant.model = (byId('assistantModel').value || '').trim() || 'doubao-seed-2-0-lite-260215';
   state.assistant.enhanced_capture_mode = byId('assistantEnhancedCaptureMode').checked ? 1 : 0;
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
+  state.assistant.voice_input_enabled = byId('assistantVoiceEnabled').checked ? 1 : 0;
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
   state.assistant.rate_limit_per_hour = Math.min(10000, Math.max(1, Math.round(Number(byId('assistantRatePerHour').value || 100))));
   state.assistant.api_endpoint = (state.assistant.api_endpoint || defaults().api_endpoint).trim() || defaults().api_endpoint;
@@ -491,6 +497,8 @@ export function initAssistantHandlers() {
   if (disableCopy) disableCopy.onchange = () => scheduleAssistantAutoSave(true);
   const enhancedCaptureMode = byId('assistantEnhancedCaptureMode');
   if (enhancedCaptureMode) enhancedCaptureMode.onchange = () => scheduleAssistantAutoSave(true);
+  const voiceEnabled = byId('assistantVoiceEnabled');
+  if (voiceEnabled) voiceEnabled.onchange = () => scheduleAssistantAutoSave(true);
   const apiKey = byId('assistantApiKey');
   if (apiKey) apiKey.onchange = () => scheduleAssistantAutoSave(true);
   const rateEnabled = byId('assistantRateEnabled');

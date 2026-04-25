@@ -7,6 +7,8 @@ InitHotkeyDefs() {
         Map("id", "open_config", "label", "打开主界面", "default", "!+q", "scope", "global"),
         Map("id", "assistant_capture", "label", "启动问答悬浮窗", "default", "!+a", "scope", "global"),
         Map("id", "assistant_capture_now", "label", "截图并问答", "default", "F1", "scope", "global"),
+        Map("id", "assistant_voice_input", "label", "按住语音输入", "default", "F3", "scope", "global"),
+        Map("id", "notes_display_overlay", "label", "启动笔记显示悬浮窗", "default", "F4", "scope", "global"),
         Map("id", "assistant_overlay_up", "label", "助手悬浮窗上移", "default", "!Up", "scope", "assistant_overlay"),
         Map("id", "assistant_overlay_down", "label", "助手悬浮窗下移", "default", "!Down", "scope", "assistant_overlay"),
         Map("id", "close_panel", "label", "关闭悬浮窗", "default", "Esc", "scope", "panel"),
@@ -24,6 +26,11 @@ PanelHotkeyCondition(*) {
 AssistantOverlayHotkeyCondition(*) {
     global gAssistantOverlayVisible
     return gAssistantOverlayVisible
+}
+
+ProtectedOverlayHotkeyCondition(*) {
+    global gAssistantOverlayVisible, gNotesOverlayVisible
+    return gAssistantOverlayVisible || gNotesOverlayVisible
 }
 
 RegisterHotkeys() {
@@ -54,12 +61,17 @@ RegisterHotkeys() {
         try {
             Hotkey(key, handler, "On")
             gRegisteredHotkeys.Push(Map("key", key, "handler", handler, "scope", def["scope"]))
+            if (id = "assistant_voice_input") {
+                upKey := key " Up"
+                Hotkey(upKey, HotkeyAssistantVoiceInputUp, "On")
+                gRegisteredHotkeys.Push(Map("key", upKey, "handler", HotkeyAssistantVoiceInputUp, "scope", def["scope"]))
+            }
         } catch as err {
             WriteLog("hotkey_register_failed", "id=" id " key=" key " err=" err.Message)
         }
     }
 
-    RegisterAssistantCaptureGuardHotkeys()
+    RegisterProtectedOverlayCaptureGuardHotkeys()
     HotIf()
 }
 
@@ -70,6 +82,8 @@ UnregisterHotkeys() {
             HotIf(PanelHotkeyCondition)
         } else if (item["scope"] = "assistant_overlay") {
             HotIf(AssistantOverlayHotkeyCondition)
+        } else if (item["scope"] = "protected_overlay") {
+            HotIf(ProtectedOverlayHotkeyCondition)
         } else {
             HotIf()
         }
@@ -79,13 +93,13 @@ UnregisterHotkeys() {
     gRegisteredHotkeys := []
 }
 
-RegisterAssistantCaptureGuardHotkeys() {
+RegisterProtectedOverlayCaptureGuardHotkeys() {
     global gRegisteredHotkeys
-    HotIf(AssistantOverlayHotkeyCondition)
+    HotIf(ProtectedOverlayHotkeyCondition)
     for keyName in ["PrintScreen", "#+s", "^!a"] {
         try {
             Hotkey(keyName, HotkeyAssistantExternalCaptureGuard, "On")
-            gRegisteredHotkeys.Push(Map("key", keyName, "handler", HotkeyAssistantExternalCaptureGuard, "scope", "assistant_overlay"))
+            gRegisteredHotkeys.Push(Map("key", keyName, "handler", HotkeyAssistantExternalCaptureGuard, "scope", "protected_overlay"))
         }
     }
     HotIf()
@@ -101,6 +115,10 @@ GetHotkeyHandler(id) {
             return HotkeyAssistantCapture
         case "assistant_capture_now":
             return HotkeyAssistantCaptureNow
+        case "assistant_voice_input":
+            return HotkeyAssistantVoiceInputDown
+        case "notes_display_overlay":
+            return HotkeyNotesDisplayOverlay
         case "assistant_overlay_up":
             return HotkeyAssistantOverlayUp
         case "assistant_overlay_down":
@@ -133,6 +151,18 @@ HotkeyAssistantCaptureNow(*) {
     StartAssistantCaptureFlow()
 }
 
+HotkeyAssistantVoiceInputDown(*) {
+    StartAssistantVoiceInputHold(false)
+}
+
+HotkeyAssistantVoiceInputUp(*) {
+    StopAssistantVoiceInputHold(false)
+}
+
+HotkeyNotesDisplayOverlay(*) {
+    ToggleNotesDisplayOverlay(false)
+}
+
 HotkeyAssistantOverlayUp(*) {
     AssistantOverlayScrollUp()
 }
@@ -146,7 +176,16 @@ HotkeyAssistantExternalCaptureGuard(*) {
     useTempHide := true
     try useTempHide := ShouldAssistantTempHideForCapture()
     if useTempHide {
-        TemporarilyHideAssistantOverlay(1800)
+        try {
+            if IsNotesOverlayVisible() {
+                TemporarilyHideNotesOverlay(1800)
+            }
+        }
+        try {
+            if gAssistantOverlayVisible {
+                TemporarilyHideAssistantOverlay(1800)
+            }
+        }
         Sleep(90)
     }
 
