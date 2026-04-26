@@ -92,3 +92,15 @@
   - `docs/CHANGE_ACTIVITY_LOG.md`
 - 是否触发 git：`否`
 - 备注：当前连续计数更新为 `1`
+
+#### 第 8 次改动
+
+- 时间：`2026-04-26`
+- 内容：继续修正规则文档，明确默认远端目标应为 `origin/main`，只有主分支拒绝直推时才退回工作分支
+- 影响文件：
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/AI_HANDOFF.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+- 是否触发 git：`是`
+- git 检查点：`docs: default git target is origin/main`
+- 备注：本次提前执行 git，并实际按新规则直推 `origin/main`；后续计数从 `0` 重新开始
