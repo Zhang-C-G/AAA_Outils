@@ -186,8 +186,7 @@ ProcessWebConfigActionFile(*) {
         WriteLog("web_config_reload", "applied from web ui")
     }
     if InStr(raw, "assistant_overlay_open") {
-        StartAssistantOverlayOnly(false)
-        WriteLog("assistant_overlay_open", "source=web_action")
+        ToggleAssistantOverlay(false, "web_action")
     }
     if InStr(raw, "assistant_capture_now") {
         StartAssistantCaptureFlow(false)

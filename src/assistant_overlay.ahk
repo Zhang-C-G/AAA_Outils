@@ -406,6 +406,22 @@ StartAssistantOverlayOnly(showNotice := true) {
     return Map("ok", 1, "text", text, "error", "", "path", "")
 }
 
+ToggleAssistantOverlay(showNotice := true, source := "manual") {
+    global gAssistantOverlayVisible
+
+    if gAssistantOverlayVisible {
+        OnAssistantOverlayClose()
+        WriteLog("assistant_overlay_close", "source=" source)
+        return Map("ok", 1, "text", "", "error", "", "path", "", "closed", 1)
+    }
+
+    result := StartAssistantOverlayOnly(showNotice)
+    if !result.Has("closed") {
+        result["closed"] := 0
+    }
+    return result
+}
+
 StartAssistantCaptureFlow(showNotice := true) {
     global gAssistantSettings, gAssistantLastResult, gCaptureLastPath, gAssistantOverlayVisible, gAssistantOverlayInputSummary
     flowStartTick := A_TickCount

@@ -159,7 +159,7 @@ HotkeyShowConfig(*) {
 }
 
 HotkeyAssistantCapture(*) {
-    StartAssistantOverlayOnly()
+    ToggleAssistantOverlay()
 }
 
 HotkeyAssistantCaptureNow(*) {

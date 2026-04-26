@@ -47,3 +47,15 @@
   - 语法校验：PowerShell Parser 成功解析 `webui/config/server_state/assistant.ps1`
   - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
 - 测试结果：`通过`
+
+### 2026-04-26 / 悬浮窗再次点击可关闭
+- 改动内容：
+  - E 模块悬浮窗新增 `ToggleAssistantOverlay()` 入口
+  - 用户再次点击同一唤起入口时，若悬浮窗已显示，则直接关闭
+  - 热键入口与 Web 操作入口统一改为 toggle；内部截图、语音、恢复显示等强制展示链路保持原逻辑
+- 测试：
+  - 代码校验：确认 `HotkeyAssistantCapture()` 已改为调用 `ToggleAssistantOverlay()`
+  - 代码校验：确认 `src/web_config.ahk` 中 `assistant_overlay_open` 已改为调用 `ToggleAssistantOverlay(false, "web_action")`
+  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
+  - 进程校验：确认当前仅存在 1 个绑定 `main.ahk` 的 AutoHotkey 进程
+- 测试结果：`通过`
