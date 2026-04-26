@@ -566,15 +566,20 @@ function validateBeforeSave() {
   }
 
   const defs = state.hotkeyDefs.length ? state.hotkeyDefs : fallbackHotkeyDefs;
-  const hotkeySeen = new Set();
+  const hotkeySeenByScope = new Map();
   for (const def of defs) {
     const txt = String(state.hotkeys[def.id] ?? '').trim();
     if (!txt) throw new Error(`快捷键不能为空：${def.label || def.id}`);
     const ahk = friendlyToAhk(txt);
     if (!ahk) throw new Error(`快捷键格式不支持：${txt}`);
+    const scope = String(def.scope || 'shared').trim().toLowerCase() || 'shared';
+    if (!hotkeySeenByScope.has(scope)) {
+      hotkeySeenByScope.set(scope, new Set());
+    }
+    const scopedSeen = hotkeySeenByScope.get(scope);
     const low = ahk.toLowerCase();
-    if (hotkeySeen.has(low)) throw new Error(`快捷键冲突：${txt}`);
-    hotkeySeen.add(low);
+    if (scopedSeen.has(low)) throw new Error(`快捷键冲突：${txt}`);
+    scopedSeen.add(low);
     state.hotkeys[def.id] = ahk;
   }
 

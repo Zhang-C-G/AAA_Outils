@@ -38,12 +38,12 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-04-26-A模块持久化与加载修复`
+- 当前轮次：`2026-04-26-A模块持久化复盘与AHK重启修正`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`3`
 - 下一次强制 git 阈值：`3`
-- 上一个 git 检查点：`checkpoint: lazy load web config modules`
-- 当前计数说明：`本轮已完成 3 次改动：A 模块结构改动立即保存、A 模块首屏预取、AHK SaveData 磁盘新版本保护；现应立即执行 checkpoint git`
+- 上一个 git 检查点：`checkpoint: harden a-module persistence and startup load`
+- 当前计数说明：`新一轮前 3 次改动已完成：1) 新增 restart_main_ahk.ps1；2) 已确认并恢复 A 模块字段未加载的直接原因——现用 config.ini 数据段被写空；3) 已修复新增栏目保存失败的直接原因——前端快捷键冲突校验过严。现应执行 checkpoint git`
 
 ## 5. 维护方式
 
