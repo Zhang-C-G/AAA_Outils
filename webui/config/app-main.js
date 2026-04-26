@@ -8,6 +8,7 @@ import { initResumeHandlers, applyResumeState, saveResumeProfile } from './app-r
 import { initTestingHandlers, runOverlayRecordTest, refreshTestingState } from './app-testing.js';
 
 let capturePollTimer = 0;
+const loadedModes = new Set();
 const SHORTCUTS_DRAFT_KEY = 'raccourci.shortcutsDraft';
 const SHORTCUTS_DRAFT_RESTORE_KEY = 'raccourci.shortcutsDraftRestorePending';
 const NOTES_DRAFT_KEY = 'raccourci.notesDraft';
@@ -28,6 +29,14 @@ const MODE_BUTTON_IDS = {
   testing: 'modeTestingBtn'
 };
 let draggingModeId = '';
+
+function markModeLoaded(mode) {
+  loadedModes.add(mode);
+}
+
+function hasModeLoaded(mode) {
+  return loadedModes.has(mode);
+}
 
 function markShortcutsDraftRestorePending() {
   try {
@@ -347,15 +356,91 @@ function persistAllDraftsForHardRefresh() {
   persistResumeDraftForHardRefresh();
 }
 
-async function switchMode(mode) {
+function applyAppShellState(payload) {
+  state.hotkeys = payload.hotkeys || state.hotkeys;
+  state.hotkeyDefs = payload.hotkey_defs || state.hotkeyDefs;
+  state.app = {
+    ...state.app,
+    ...(payload.app || {})
+  };
+  state.app.mode_order = normalizeModeOrder(state.app?.mode_order);
+  applyModeButtonOrder();
+}
+
+async function ensureModeLoaded(mode, options = {}) {
+  const forceReload = !!options.forceReload;
+  const effectiveMode = mode === 'hotkeys' ? 'shortcuts' : mode;
+
+  if (!forceReload && hasModeLoaded(effectiveMode)) {
+    return;
+  }
+
+  if (effectiveMode === 'shortcuts') {
+    const payload = await api('/api/state');
+    applyShortcutsState(payload);
+    applyAppShellState(payload);
+    markModeLoaded('shortcuts');
+    markModeLoaded('hotkeys');
+    return;
+  }
+
+  if (effectiveMode === 'notes') {
+    await loadNotes();
+    markModeLoaded('notes');
+    return;
+  }
+
+  if (effectiveMode === 'notes_display') {
+    await loadNotesDisplayNotes();
+    markModeLoaded('notes_display');
+    return;
+  }
+
+  if (effectiveMode === 'capture') {
+    await refreshCaptureState();
+    markModeLoaded('capture');
+    return;
+  }
+
+  if (effectiveMode === 'assistant') {
+    const payload = await api('/api/assistant/state');
+    const assistantState = payload.state || {};
+    applyAssistantState({
+      assistant: {
+        ...(assistantState.settings || {}),
+        benchmark: assistantState.benchmark || state.assistant.benchmark,
+        latest_capture: assistantState.latest_capture || state.assistant.latest_capture || ''
+      }
+    });
+    markModeLoaded('assistant');
+    return;
+  }
+
+  if (effectiveMode === 'resume') {
+    const payload = await api('/api/resume/state');
+    applyResumeState({ resume: payload.state || state.resume });
+    markModeLoaded('resume');
+    return;
+  }
+
+  if (effectiveMode === 'testing') {
+    await ensureModeLoaded('assistant', options);
+    await refreshTestingState();
+    markModeLoaded('testing');
+  }
+}
+
+async function switchModeInternal(mode, options = {}) {
+  const persist = options.persist !== false;
+  const forceReload = !!options.forceReload;
   if (!['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing'].includes(mode)) {
     mode = 'shortcuts';
   }
 
-  if (state.app.active_mode === 'notes' && mode !== 'notes' && state.notes.dirty) {
+  if (hasModeLoaded('notes') && state.app.active_mode === 'notes' && mode !== 'notes' && state.notes.dirty) {
     await saveCurrentNote();
   }
-  if (state.app.active_mode === 'notes_display' && mode !== 'notes_display' && state.notesDisplay.dirty) {
+  if (hasModeLoaded('notes_display') && state.app.active_mode === 'notes_display' && mode !== 'notes_display' && state.notesDisplay.dirty) {
     await saveCurrentNotesDisplayNote();
   }
 
@@ -375,27 +460,27 @@ async function switchMode(mode) {
   }
 
   const persistedMode = (mode === 'hotkeys' || mode === 'testing') ? 'shortcuts' : mode;
-  await api('/api/app/mode', {
-    method: 'POST',
-    body: JSON.stringify({ active_mode: persistedMode })
-  });
+  if (persist) {
+    await api('/api/app/mode', {
+      method: 'POST',
+      body: JSON.stringify({ active_mode: persistedMode })
+    });
+  }
 
   if (capturePollTimer) {
     clearInterval(capturePollTimer);
     capturePollTimer = 0;
   }
 
-  if (mode === 'notes' || mode === 'notes_display') {
-    if (mode === 'notes') {
-      await loadNotes();
-      tryRestoreNotesDraft();
-    } else {
-      await loadNotesDisplayNotes();
-      tryRestoreNotesDisplayDraft();
-    }
+  await ensureModeLoaded(mode, { forceReload });
+
+  if (mode === 'notes') {
+    tryRestoreNotesDraft();
+  }
+  if (mode === 'notes_display') {
+    tryRestoreNotesDisplayDraft();
   }
   if (mode === 'capture') {
-    await refreshCaptureState();
     capturePollTimer = setInterval(() => {
       refreshCaptureState().catch(() => {});
     }, 1500);
@@ -412,17 +497,15 @@ async function switchMode(mode) {
   }
 }
 
+async function switchMode(mode) {
+  return switchModeInternal(mode, { persist: true, forceReload: false });
+}
+
 async function reloadAll() {
-  const [payload, resumePayload] = await Promise.all([
-    api('/api/state'),
-    api('/api/resume/state')
-  ]);
-  applyShortcutsState(payload);
-  applyAssistantState(payload);
-  applyResumeState({ resume: resumePayload.state || state.resume });
-  state.app.mode_order = normalizeModeOrder(state.app?.mode_order);
-  applyModeButtonOrder();
-  await switchMode(payload.app?.active_mode || 'shortcuts');
+  loadedModes.clear();
+  const payload = await api('/api/app/state');
+  applyAppShellState(payload);
+  await switchModeInternal(payload.app?.active_mode || 'shortcuts', { persist: false, forceReload: true });
 }
 
 async function waitForServerReady(maxAttempts = 20, delayMs = 500) {
@@ -544,7 +627,9 @@ async function bootstrap() {
   await waitForServerReady();
   await reloadAll();
   setDirty(false, 'shortcuts');
-  tryRestoreShortcutsDraft();
+  if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
+    tryRestoreShortcutsDraft();
+  }
 }
 
 bootstrap().catch(e => {

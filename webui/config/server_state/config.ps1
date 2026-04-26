@@ -253,6 +253,42 @@ function Get-ConfigState {
   }
 }
 
+function Get-AppShellState {
+  $ini = Read-Ini $DataFile
+
+  $hotkeys = [ordered]@{}
+  if ($ini.Contains('Hotkeys')) {
+    foreach ($k in $ini['Hotkeys'].Keys) {
+      $hotkeys[[string]$k] = [string]$ini['Hotkeys'][$k]
+    }
+  }
+  foreach ($def in (Get-HotkeyDefs)) {
+    $defId = [string](Get-Prop $def 'id' '')
+    $defVal = [string](Get-Prop $def 'default' '')
+    if ($defId -eq '') { continue }
+    if (-not $hotkeys.Contains($defId) -or [string]::IsNullOrWhiteSpace([string]$hotkeys[$defId])) {
+      $hotkeys[$defId] = $defVal
+    }
+  }
+
+  $app = [ordered]@{
+    active_mode = 'shortcuts'
+    mode_order = (Get-DefaultModeOrder)
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
+    $app['active_mode'] = Normalize-Mode([string]$ini['App']['active_mode'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('mode_order')) {
+    $app['mode_order'] = Normalize-ModeOrder([string]$ini['App']['mode_order'])
+  }
+
+  return [ordered]@{
+    hotkeys = $hotkeys
+    hotkey_defs = (Get-HotkeyDefs)
+    app = $app
+  }
+}
+
 function Write-ConfigState {
   param($Payload)
 

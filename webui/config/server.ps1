@@ -51,6 +51,9 @@ while ($true) {
     elseif ($path -eq '/api/state' -and $method -eq 'GET') {
       Send-Json $res (Get-ConfigState)
     }
+    elseif ($path -eq '/api/app/state' -and $method -eq 'GET') {
+      Send-Json $res (Get-AppShellState)
+    }
     elseif ($path -eq '/api/save' -and $method -eq 'POST') {
       $payload = Read-BodyJson $req
       $catCount = @((Get-Prop $payload 'categories' @())).Count

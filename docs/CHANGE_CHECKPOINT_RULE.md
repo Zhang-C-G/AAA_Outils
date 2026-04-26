@@ -55,8 +55,8 @@
 - 每 3 次改动强制 git：`是`
 - 当前连续改动次数：`0`
 - 下一次强制 git 阈值：`3`
-- 上一个 git 检查点：`A 模块栏目双击改名链路修复检查点`
-- 上一个 git 检查点说明：`checkpoint: fix a-module tab double-click rename`
+- 上一个 git 检查点：`Web 配置前端按模块懒加载检查点`
+- 上一个 git 检查点说明：`checkpoint: lazy load web config modules`
 - 当前计数起点说明：`当前轮次第 3 次改动已完成并通过测试，已按规则执行 git；后续从 0 重新累计`
 
 ## 5. 维护方式

@@ -313,7 +313,7 @@ function renderTabs() {
         if (name && name !== cat.name) {
           cat.name = name;
           setDirty(true, 'shortcuts');
-          scheduleAutoSave();
+          scheduleAutoSave(true);
         }
         renderTabs();
       };
