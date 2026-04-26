@@ -234,12 +234,19 @@ function Get-ConfigState {
   $app = [ordered]@{
     active_mode = 'shortcuts'
     mode_order = (Get-DefaultModeOrder)
+    shortcuts_selected_category = 'fields'
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
     $app['active_mode'] = Normalize-Mode([string]$ini['App']['active_mode'])
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('mode_order')) {
     $app['mode_order'] = Normalize-ModeOrder([string]$ini['App']['mode_order'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shortcuts_selected_category')) {
+    $selectedCategory = ([string]$ini['App']['shortcuts_selected_category']).Trim()
+    if (-not [string]::IsNullOrWhiteSpace($selectedCategory)) {
+      $app['shortcuts_selected_category'] = $selectedCategory
+    }
   }
 
   return [ordered]@{
@@ -274,12 +281,19 @@ function Get-AppShellState {
   $app = [ordered]@{
     active_mode = 'shortcuts'
     mode_order = (Get-DefaultModeOrder)
+    shortcuts_selected_category = 'fields'
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
     $app['active_mode'] = Normalize-Mode([string]$ini['App']['active_mode'])
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('mode_order')) {
     $app['mode_order'] = Normalize-ModeOrder([string]$ini['App']['mode_order'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shortcuts_selected_category')) {
+    $selectedCategory = ([string]$ini['App']['shortcuts_selected_category']).Trim()
+    if (-not [string]::IsNullOrWhiteSpace($selectedCategory)) {
+      $app['shortcuts_selected_category'] = $selectedCategory
+    }
   }
 
   $result = [ordered]@{
@@ -390,16 +404,29 @@ function Write-ConfigState {
   $lines.Add('[App]')
   $currentMode = 'shortcuts'
   $currentOrder = Get-DefaultModeOrder
+  $currentSelectedCategory = 'fields'
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('active_mode')) {
     $currentMode = Normalize-Mode([string]$currentIni['App']['active_mode'])
   }
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('mode_order')) {
     $currentOrder = Normalize-ModeOrder([string]$currentIni['App']['mode_order'])
   }
-  $mode = Normalize-Mode([string](Get-Prop (Get-Prop $Payload 'app' $null) 'active_mode' $currentMode))
-  $modeOrder = Normalize-ModeOrder((Get-Prop (Get-Prop $Payload 'app' $null) 'mode_order' $currentOrder))
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('shortcuts_selected_category')) {
+    $selectedCategory = ([string]$currentIni['App']['shortcuts_selected_category']).Trim()
+    if (-not [string]::IsNullOrWhiteSpace($selectedCategory)) {
+      $currentSelectedCategory = $selectedCategory
+    }
+  }
+  $appPayload = Get-Prop $Payload 'app' $null
+  $mode = Normalize-Mode([string](Get-Prop $appPayload 'active_mode' $currentMode))
+  $modeOrder = Normalize-ModeOrder((Get-Prop $appPayload 'mode_order' $currentOrder))
+  $selectedCategory = ([string](Get-Prop $appPayload 'shortcuts_selected_category' $currentSelectedCategory)).Trim()
+  if ([string]::IsNullOrWhiteSpace($selectedCategory)) {
+    $selectedCategory = $currentSelectedCategory
+  }
   $lines.Add('active_mode=' + $mode)
   $lines.Add('mode_order=' + [string]::Join(',', $modeOrder))
+  $lines.Add('shortcuts_selected_category=' + $selectedCategory)
 
   $capture = Get-CaptureSettings
   $lines.Add('')
@@ -549,6 +576,34 @@ function Set-AppModeOrder {
 
   [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
   Write-AppLog 'mode_order_save' ('mode_order=' + $ini['App']['mode_order'])
+}
+
+function Set-AppShortcutsSelectedCategory {
+  param([string]$CategoryId)
+
+  $selectedCategory = ([string]$CategoryId).Trim()
+  if ([string]::IsNullOrWhiteSpace($selectedCategory)) {
+    $selectedCategory = 'fields'
+  }
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+  $ini['App']['shortcuts_selected_category'] = $selectedCategory
+  Write-Ini $ini
+
+  Write-AppLog 'shortcuts_category_save' ('shortcuts_selected_category=' + $selectedCategory)
 }
 
 

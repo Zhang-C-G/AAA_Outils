@@ -37,6 +37,19 @@ function saveShortcutsNowOnStructureChange(message) {
   });
 }
 
+async function persistSelectedCategory(categoryId) {
+  const nextId = String(categoryId || '').trim() || 'fields';
+  state.app ||= {};
+  if (state.app.shortcuts_selected_category === nextId) {
+    return;
+  }
+  state.app.shortcuts_selected_category = nextId;
+  await api('/api/app/shortcuts-category', {
+    method: 'POST',
+    body: JSON.stringify({ shortcuts_selected_category: nextId })
+  });
+}
+
 function ahkToFriendly(hk) {
   const raw = String(hk || '').trim();
   if (!raw) return '';
@@ -283,6 +296,7 @@ function renderTabs() {
           return;
         }
         state.selectedCategoryId = cat.id;
+        void persistSelectedCategory(state.selectedCategoryId);
         renderTabs();
         renderRows();
       }, 220);
@@ -294,6 +308,7 @@ function renderTabs() {
         tabClickTimer = 0;
       }
       state.selectedCategoryId = cat.id;
+      void persistSelectedCategory(state.selectedCategoryId);
       tab.classList.add('active');
       renderRows();
       const rect = tab.getBoundingClientRect();
@@ -524,10 +539,14 @@ export function applyShortcutsState(payload) {
     state.data.quick_fields ||= [];
   }
 
-  if (!state.selectedCategoryId || !state.categories.find(c => c.id === state.selectedCategoryId)) {
+  const persistedSelectedCategory = String(state.app?.shortcuts_selected_category || '').trim();
+  if (persistedSelectedCategory && state.categories.find((c) => c.id === persistedSelectedCategory)) {
+    state.selectedCategoryId = persistedSelectedCategory;
+  } else if (!state.selectedCategoryId || !state.categories.find(c => c.id === state.selectedCategoryId)) {
     state.selectedCategoryId = state.categories[0]?.id || null;
   }
   ensureVisibleSelectedCategory();
+  state.app.shortcuts_selected_category = state.selectedCategoryId || 'fields';
 
   state.behavior.auto_refresh_enabled = isTruthy(state.behavior.auto_refresh_enabled) ? 1 : 0;
   state.behavior.refresh_every_uses = toInt(state.behavior.refresh_every_uses, 3, 1, 1000);
@@ -592,6 +611,8 @@ export async function saveShortcuts(options = {}) {
   const silent = !!options.silent;
   validateBeforeSave();
   const sanitizedData = buildSanitizedData();
+  state.app ||= {};
+  state.app.shortcuts_selected_category = state.selectedCategoryId || 'fields';
 
   await api('/api/save', {
     method: 'POST',
@@ -622,6 +643,7 @@ export function initShortcutsHandlers() {
     state.categories.push({ id, name: '新栏目', builtin: 0 });
     state.data[id] = [];
     state.selectedCategoryId = id;
+    state.app.shortcuts_selected_category = id;
     setDirty(true, 'shortcuts');
     renderTabs();
     renderRows();
@@ -640,6 +662,7 @@ export function initShortcutsHandlers() {
     state.categories = state.categories.filter(c => c.id !== cat.id);
     delete state.data[cat.id];
     state.selectedCategoryId = state.categories[0]?.id || null;
+    state.app.shortcuts_selected_category = state.selectedCategoryId || 'fields';
     setDirty(true, 'shortcuts');
     renderTabs();
     renderRows();

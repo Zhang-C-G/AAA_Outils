@@ -214,6 +214,7 @@ LoadAppSettings() {
     settings := Map(
         "active_mode", "shortcuts",
         "mode_order", GetDefaultModeOrderCsv(),
+        "shortcuts_selected_category", "fields",
         "capture_dir", A_ScriptDir "\\captures"
     )
     raw := LoadSection(gDataFile, "App")
@@ -222,6 +223,11 @@ LoadAppSettings() {
             settings["active_mode"] := NormalizeModeId(row["value"])
         } else if (row["key"] = "mode_order") {
             settings["mode_order"] := NormalizeModeOrderCsv(row["value"])
+        } else if (row["key"] = "shortcuts_selected_category") {
+            selected := Trim(row["value"])
+            if (selected != "") {
+                settings["shortcuts_selected_category"] := selected
+            }
         } else if (row["key"] = "capture_dir") {
             dir := Trim(row["value"])
             if (dir != "") {

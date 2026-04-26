@@ -45,6 +45,7 @@ SaveData() {
     lines.Push("[App]")
     lines.Push("active_mode=" NormalizeModeId(gActiveMode))
     lines.Push("mode_order=" (gAppSettings.Has("mode_order") ? NormalizeModeOrderCsv(gAppSettings["mode_order"]) : GetDefaultModeOrderCsv()))
+    lines.Push("shortcuts_selected_category=" (gAppSettings.Has("shortcuts_selected_category") ? gAppSettings["shortcuts_selected_category"] : "fields"))
     lines.Push("capture_dir=" gCaptureDir)
     lines.Push("notes_overlay_x=" (gAppSettings.Has("notes_overlay_x") ? gAppSettings["notes_overlay_x"] : ""))
     lines.Push("notes_overlay_y=" (gAppSettings.Has("notes_overlay_y") ? gAppSettings["notes_overlay_y"] : ""))
