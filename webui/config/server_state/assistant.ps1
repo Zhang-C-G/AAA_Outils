@@ -3,7 +3,10 @@
 }
 
 function Get-AssistantVoiceInputScriptPath {
-  $moduleRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+  $moduleRoot = $PSScriptRoot
+  if ([string]::IsNullOrWhiteSpace($moduleRoot)) {
+    $moduleRoot = Join-Path (Split-Path -Parent $DataFile) 'webui\config\server_state'
+  }
   $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $moduleRoot))
   return Join-Path $repoRoot 'scripts\assistant_voice_input.ps1'
 }

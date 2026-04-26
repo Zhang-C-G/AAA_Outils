@@ -241,7 +241,7 @@ while ($true) {
       Send-Json $res ([ordered]@{ ok=$true; state=(Get-AssistantState) })
     }
     elseif ($path -eq '/api/assistant/audio-input-devices' -and $method -eq 'GET') {
-      Send-Json $res ([ordered]@{ ok=$true; devices=(Get-AssistantAudioInputDevices) })
+      Send-Json $res ([ordered]@{ ok=$true; devices=@(Get-AssistantAudioInputDevices) })
     }
     elseif ($path -eq '/api/assistant/benchmark-state' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; benchmark=(Get-AssistantBenchmarkState) })

@@ -214,6 +214,8 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-04-23`：新增 AI 交接总文档 `docs/AI_HANDOFF.md`，并将其纳入组件总览与文档更新清单，要求后续改动同步维护当前状态、优先级与风险。
 - `2026-04-23`：补充文档治理提醒：明确 AHK 开发态默认启用源码自动热重载，要求后续 AI 在交接与排障时显式考虑该行为。
 - `2026-04-23`：简历自动填写推进为第一版可用模块：新增 `resume_profile.json` 本地简历存储、`server-resume.ps1` 接口、Web 分区式编辑页，以及浏览器插件骨架 `browser_extension/resume_autofill/`。
+- `2026-04-26`：恢复助手麦克风链路：重新接回设备检测/设备选择/实时转写预览提交，并修正 `Get-AssistantVoiceInputScriptPath` 路径解析与 `/api/assistant/audio-input-devices` 数组返回格式。
+- `2026-04-26`：按现有故障文档机制归档麦克风链路问题，新增 `docs/incidents/RESOLVED_2026-04-26_assistant_microphone_chain.md`。
 
 ## 维护约定
 
