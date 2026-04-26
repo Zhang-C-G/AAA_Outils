@@ -46,6 +46,8 @@
 3. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
 4. 如涉及悬浮窗，继续读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
 5. 对应模块文档 `docs/modules/*.md`
+6. 如进入第一阶段，还要读 `docs/extension/全局私人偏好文档.md` 与相关 UI 类偏好子文档
+7. 如进入第二阶段真实闭环开发，还要读 `docs/incidents/STAGE2_RISK_KB.md`
 
 ## 5. 强制开发入口规则
 
@@ -118,6 +120,9 @@
   - 后端读取与保存
   - 本地默认值与持久化
   - 运行时真正生效
+- 每次当前任务完成后，Codex 可以提出与当前任务强相关的优化建议
+- 对 Codex 自己提出的优化建议，必须先做自评；只有在“强相关、低风险、不改变当前任务目标、不需要新的产品方向决策、且可在当前轮完成实现测试记录”时，才允许直接继续执行
+- 不满足上述条件的优化建议，只保留为后续建议，不自动扩展成本轮任务
 
 ## 7. 当前模块状态摘要
 
@@ -221,4 +226,20 @@
 2. 这次没有实现什么
 3. 当前可回滚锚点是什么
 4. 下一步从哪里继续最安全
+
+## 12. 模块修改过程文档机制
+
+从 `2026-04-26` 起，所有主模块都必须维护自己的“修改过程文档”。
+
+当前入口如下：
+
+- 规则：`docs/modules/CHANGELOG_RULE.md`
+- 索引：`docs/modules/changelog/README.md`
+- 模板：`docs/templates/MODULE_CHANGELOG_TEMPLATE.md`
+
+执行要求：
+
+1. 只要某次改动涉及某个模块，并且测试通过，就要同步写入该模块自己的修改过程文档
+2. 该文档是长期记录，不因 3 次改动后的 git checkpoint 而清空
+3. 总流水 `docs/CHANGE_ACTIVITY_LOG.md` 继续只负责当前这一轮的 1-3 次改动
 
