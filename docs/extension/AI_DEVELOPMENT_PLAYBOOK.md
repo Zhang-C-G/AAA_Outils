@@ -349,3 +349,9 @@
 - `docs/shared/03_storage_contract.md`
 - `docs/shared/04_logging_contract.md`
 - `docs/AI_HANDOFF.md`
+
+## Git 检查点强制规则
+
+- 每次正式进入第一阶段之前，必须先创建 git 检查点。
+- 每次正式进入第二阶段之前，必须再创建一个新的 git 检查点。
+- 目的：防止开发过程中系统或链路“嗝屁”后，没有稳定回退点。

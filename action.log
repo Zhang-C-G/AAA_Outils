@@ -1682,3 +1682,76 @@
 2026-04-23 23:04:05 | web_config_reload | applied from web ui
 2026-04-23 23:04:06 | mode_switch | active_mode=resume
 2026-04-23 23:04:07 | web_config_reload | applied from web ui
+2026-04-26 15:14:18 | dev_auto_reload | source_changed -> reload
+2026-04-26 15:14:18 | web_config_stop | pid=17740
+2026-04-26 15:14:19 | web_config_start | port=8798
+2026-04-26 15:14:19 | startup | script initialized
+2026-04-26 15:14:19 | web_config_start | port=8798
+2026-04-26 15:14:29 | startup | script initialized
+2026-04-26 15:15:11 | mode_switch | active_mode=resume
+2026-04-26 15:15:12 | web_config_reload | applied from web ui
+2026-04-26 15:15:14 | mode_switch | active_mode=shortcuts
+2026-04-26 15:15:15 | web_config_reload | applied from web ui
+2026-04-26 15:15:15 | mode_switch | active_mode=shortcuts
+2026-04-26 15:15:16 | web_config_reload | applied from web ui
+2026-04-26 15:15:17 | mode_switch | active_mode=notes_display
+2026-04-26 15:15:17 | notes_display_new | id=20260426151517
+2026-04-26 15:15:17 | notes_display_select | id=20260426151517
+2026-04-26 15:15:18 | mode_switch | active_mode=capture
+2026-04-26 15:15:18 | web_config_reload | applied from web ui
+2026-04-26 15:15:18 | mode_switch | active_mode=assistant
+2026-04-26 15:15:19 | mode_switch | active_mode=assistant
+2026-04-26 15:15:20 | web_config_reload | applied from web ui
+2026-04-26 15:16:24 | startup | script initialized
+2026-04-26 15:21:19 | dev_auto_reload | source_changed -> reload
+2026-04-26 15:23:12 | web_config_start | port=8798
+2026-04-26 15:23:47 | assistant_audio_input_devices_failed | Cannot validate argument on parameter 'ArgumentList'. The argument is null, empty, or an element of the argument collection contains a null value. Supply a collection that does not contain any null values and then try the command again.
+2026-04-26 15:23:49 | mode_switch | active_mode=assistant
+2026-04-26 15:23:52 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-26 15:23:57 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-26 15:23:57 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-26 15:23:58 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-26 15:24:20 | web_config_start | port=8798
+2026-04-26 15:25:06 | mode_switch | active_mode=assistant
+2026-04-26 15:25:09 | mode_switch | active_mode=capture
+2026-04-26 15:25:11 | mode_switch | active_mode=capture
+2026-04-26 15:25:12 | mode_switch | active_mode=assistant
+2026-04-26 15:25:17 | mode_switch | active_mode=resume
+2026-04-26 15:25:17 | mode_switch | active_mode=assistant
+2026-04-26 15:25:18 | mode_switch | active_mode=capture
+2026-04-26 15:25:19 | mode_switch | active_mode=notes_display
+2026-04-26 15:25:19 | notes_display_select | id=20260426151517
+2026-04-26 15:25:20 | mode_switch | active_mode=notes
+2026-04-26 15:25:20 | notes_select | id=20260420172621
+2026-04-26 15:25:20 | mode_switch | active_mode=shortcuts
+2026-04-26 15:25:21 | mode_switch | active_mode=notes
+2026-04-26 15:25:21 | notes_select | id=20260420172621
+2026-04-26 15:25:21 | mode_switch | active_mode=shortcuts
+2026-04-26 15:25:22 | mode_switch | active_mode=notes
+2026-04-26 15:25:22 | notes_select | id=20260420172621
+2026-04-26 15:25:23 | mode_switch | active_mode=resume
+2026-04-26 15:26:10 | mode_switch | active_mode=resume
+2026-04-26 15:26:23 | mode_switch | active_mode=shortcuts
+2026-04-26 15:26:27 | mode_switch | active_mode=capture
+2026-04-26 15:26:36 | mode_switch | active_mode=resume
+2026-04-26 15:26:36 | mode_switch | active_mode=assistant
+2026-04-26 15:26:37 | mode_order_save | mode_order=shortcuts,notes,notes_display,assistant,resume,hotkeys,capture,testing
+2026-04-26 15:26:38 | mode_switch | active_mode=notes
+2026-04-26 15:26:38 | notes_select | id=20260420172621
+2026-04-26 15:26:39 | mode_switch | active_mode=notes_display
+2026-04-26 15:26:39 | notes_display_select | id=20260426151517
+2026-04-26 15:26:41 | mode_switch | active_mode=notes_display
+2026-04-26 15:26:41 | notes_display_select | id=20260426151517
+2026-04-26 15:26:41 | mode_switch | active_mode=notes
+2026-04-26 15:26:41 | notes_select | id=20260420172621
+2026-04-26 15:26:44 | mode_order_save | mode_order=shortcuts,notes_display,assistant,resume,hotkeys,notes,capture,testing
+2026-04-26 15:27:50 | mode_switch | active_mode=shortcuts
+2026-04-26 15:27:51 | mode_switch | active_mode=resume
+2026-04-26 15:27:51 | mode_switch | active_mode=shortcuts
+2026-04-26 15:27:52 | mode_switch | active_mode=resume
+2026-04-26 15:27:53 | mode_switch | active_mode=assistant
+2026-04-26 15:27:53 | mode_switch | active_mode=assistant
+2026-04-26 15:28:27 | mode_switch | active_mode=assistant
+2026-04-26 15:32:47 | mode_switch | active_mode=assistant
+2026-04-26 15:32:49 | mode_switch | active_mode=resume
+2026-04-26 15:32:50 | mode_switch | active_mode=assistant

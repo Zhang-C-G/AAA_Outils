@@ -40,3 +40,5 @@ Track documentation-only updates.
 ## 2026-04-26
 - Added resolved incident archive for assistant microphone chain recovery: `docs/incidents/RESOLVED_2026-04-26_assistant_microphone_chain.md`.
 - Synced `docs/ACTION_LOG.md` with microphone chain restoration, service restart diagnosis, and final interface verification.
+- Added document-creation governance set: `docs/extension/DOC_CREATION_GUIDE.md` plus `docs/templates/STAGE1_DOC_TEMPLATE.md`, `docs/templates/STAGE2_CAPABILITY_TEMPLATE.md`, and `docs/templates/INCIDENT_TEMPLATE.md`.
+- Updated `docs/extension/README.md` to expose the new document-creation guide entry.

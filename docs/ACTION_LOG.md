@@ -216,6 +216,7 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-04-23`：简历自动填写推进为第一版可用模块：新增 `resume_profile.json` 本地简历存储、`server-resume.ps1` 接口、Web 分区式编辑页，以及浏览器插件骨架 `browser_extension/resume_autofill/`。
 - `2026-04-26`：恢复助手麦克风链路：重新接回设备检测/设备选择/实时转写预览提交，并修正 `Get-AssistantVoiceInputScriptPath` 路径解析与 `/api/assistant/audio-input-devices` 数组返回格式。
 - `2026-04-26`：按现有故障文档机制归档麦克风链路问题，新增 `docs/incidents/RESOLVED_2026-04-26_assistant_microphone_chain.md`。
+- `2026-04-26`：补齐文档创建指南体系：新增第一阶段文档、第二阶段能力说明、故障文档模板，并新增 `docs/extension/DOC_CREATION_GUIDE.md` 作为统一入口。
 
 ## 维护约定
 
