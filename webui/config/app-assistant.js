@@ -55,10 +55,9 @@ function defaults() {
       { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 },
       { id: 'doubao-seed-2-0-mini-260215', name: 'Doubao Seed 2.0 Mini (ASR Fast | 语音识别特别快)', enabled: 1 }
     ],
-    voice_model: 'doubao-seed-2-0-mini-260215',
+    voice_model: 'xunfei_websocket_asr',
     voice_model_options: [
-      { id: 'doubao-seed-2-0-mini-260215', name: 'Doubao Seed 2.0 Mini (Voice)', enabled: 1 },
-      { id: 'whisper-1', name: 'Whisper 1 (Voice)', enabled: 1 }
+      { id: 'xunfei_websocket_asr', name: '讯飞 WebSocket 语音识别', enabled: 1 }
     ],
     voice_model_enabled: 0,
     voice_model_api_key: '',
@@ -238,7 +237,7 @@ function renderModelOptions(selectedModel) {
 
 function renderVoiceModelOptions(selectedModel) {
   const list = normalizeVoiceModelOptions(state.assistant.voice_model_options);
-  state.assistant.voice_model = renderSelectOptions('assistantVoiceModel', list, selectedModel, 'doubao-seed-2-0-mini-260215');
+  state.assistant.voice_model = renderSelectOptions('assistantVoiceModel', list, selectedModel, 'xunfei_websocket_asr');
 }
 
 function isBrokenPrompt(text) {
@@ -434,7 +433,7 @@ export function applyAssistantState(payload) {
   ensureActiveTemplate();
 
   renderModelOptions(state.assistant.model || 'doubao-seed-2-0-lite-260215');
-  renderVoiceModelOptions(state.assistant.voice_model || 'doubao-seed-2-0-mini-260215');
+  renderVoiceModelOptions(state.assistant.voice_model || 'xunfei_websocket_asr');
   byId('assistantApiKey').value = Number(state.assistant.has_api_key || 0) !== 0 ? API_KEY_MASK : '';
   byId('assistantVoiceApiKey').value = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? API_KEY_MASK : '';
   byId('assistantDisableCopy').checked = Number(state.assistant.disable_copy ?? 1) !== 0;
@@ -467,7 +466,7 @@ function readAssistantFromUi() {
   state.assistant.enabled = 1;
   state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 75);
   state.assistant.model = (byId('assistantModel').value || '').trim() || 'doubao-seed-2-0-lite-260215';
-  state.assistant.voice_model = (byId('assistantVoiceModel').value || '').trim() || 'doubao-seed-2-0-mini-260215';
+  state.assistant.voice_model = (byId('assistantVoiceModel').value || '').trim() || 'xunfei_websocket_asr';
   state.assistant.enhanced_capture_mode = byId('assistantEnhancedCaptureMode').checked ? 1 : 0;
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
   state.assistant.voice_input_enabled = byId('assistantVoiceEnabled').checked ? 1 : 0;

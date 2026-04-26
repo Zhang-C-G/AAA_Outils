@@ -33,7 +33,7 @@ BuildPanelGui() {
     gMatchList.ModifyCol(1, 320)
     gMatchList.ModifyCol(2, 52)
 
-    gHintText := gPanelGui.AddText("xm y+8 w" panelInnerW " h20 c" gTheme["text_hint"], "Tip: 空搜索默认展示字段 Top 10，↑/↓ 切换候选，Enter 插入")
+    gHintText := gPanelGui.AddText("xm y+8 w" panelInnerW " h20 c" gTheme["text_hint"], "Tip: 空搜索默认展示 A 模块 Top 10，↑/↓ 切换候选，Enter 插入")
     gHintText.SetFont("s8", "Microsoft YaHei UI")
 
     gPanelGui.OnEvent("Close", (*) => HidePanel())
@@ -136,19 +136,25 @@ RefreshMatches(query) {
     q := Trim(StrLower(query))
     matches := []
     fieldCount := 0
+    promptCount := 0
+    quickFieldCount := 0
 
     if (q = "") {
         ranked := []
         idx := 0
 
-        if !gData.Has("fields") {
-            gData["fields"] := []
-        }
-        for row in gData["fields"] {
-            idx += 1
-            key := row["key"]
-            count := (gUsage.Has("fields") && gUsage["fields"].Has(key)) ? gUsage["fields"][key] : 0
-            ranked.Push(Map("index", idx, "count", count, "row", row))
+        for cat in gCategories {
+            catId := cat["id"]
+            catName := cat["name"]
+            if !gData.Has(catId) {
+                continue
+            }
+            for row in gData[catId] {
+                idx += 1
+                key := row["key"]
+                count := (gUsage.Has(catId) && gUsage[catId].Has(key)) ? gUsage[catId][key] : 0
+                ranked.Push(Map("index", idx, "count", count, "row", row, "cat_id", catId, "type", catName))
+            }
         }
 
         loop ranked.Length - 1 {
@@ -166,17 +172,22 @@ RefreshMatches(query) {
 
         maxN := Min(10, ranked.Length)
         loop maxN {
-            row := ranked[A_Index]["row"]
-            matches.Push(Map("type", "字段", "cat_id", "fields", "key", row["key"], "value", row["value"]))
+            item := ranked[A_Index]
+            row := item["row"]
+            catId := item["cat_id"]
+            matches.Push(Map("type", item["type"], "cat_id", catId, "key", row["key"], "value", row["value"]))
+            if (catId = "fields") {
+                fieldCount += 1
+            } else if (catId = "prompts") {
+                promptCount += 1
+            } else if (catId = "quick_fields") {
+                quickFieldCount += 1
+            }
         }
-        fieldCount := matches.Length
     } else {
         for cat in gCategories {
             catId := cat["id"]
             catName := cat["name"]
-            if (catId != "fields") {
-                continue
-            }
             if !gData.Has(catId) {
                 continue
             }
@@ -185,6 +196,10 @@ RefreshMatches(query) {
                     matches.Push(Map("type", catName, "cat_id", catId, "key", row["key"], "value", row["value"]))
                     if (catId = "fields") {
                         fieldCount += 1
+                    } else if (catId = "prompts") {
+                        promptCount += 1
+                    } else if (catId = "quick_fields") {
+                        quickFieldCount += 1
                     }
                 }
             }
@@ -205,9 +220,9 @@ RefreshMatches(query) {
     }
 
     if (q = "") {
-        gStatusText.Value := "默认展示：字段 Top " matches.Length "（按使用频率）"
+        gStatusText.Value := "默认展示：A 模块 Top " matches.Length "（按使用频率）"
     } else {
-        gStatusText.Value := "找到 " matches.Length " 个字段匹配项"
+        gStatusText.Value := "找到 " matches.Length " 个匹配项  ·  字段 " fieldCount "  ·  提示词 " promptCount "  ·  快捷字段 " quickFieldCount
     }
 }
 
