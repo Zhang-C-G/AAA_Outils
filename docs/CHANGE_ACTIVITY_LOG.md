@@ -104,3 +104,41 @@
 - 是否触发 git：`是`
 - git 检查点：`docs: default git target is origin/main`
 - 备注：本次提前执行 git，并实际按新规则直推 `origin/main`；后续计数从 `0` 重新开始
+
+#### 第 9 次改动
+
+- 时间：`2026-04-26`
+- 内容：把 A 模块栏目框的“双击改名时保持框大小不变、仅外圈边框切白”写入全局私人偏好三层文档
+- 影响文件：
+  - `docs/extension/global_preferences/00_通用偏好结论.md`
+  - `docs/extension/global_preferences/03_同构结构偏好.md`
+  - `docs/extension/global_preferences/components/10_栏目框偏好.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+- 是否触发 git：`否`
+- 备注：当前连续计数更新为 `1`
+
+#### 第 10 次改动
+
+- 时间：`2026-04-26`
+- 内容：补充 git 检查点规则，明确连续 3 次改动期间必须分别记录“每次改了什么”，以便回退到上一个 git 后仍能根据流水继续开发
+- 影响文件：
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/AI_HANDOFF.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+- 是否触发 git：`否`
+- 备注：当前连续计数更新为 `2`
+
+#### 第 11 次改动
+
+- 时间：`2026-04-26`
+- 内容：实现 A 模块栏目双击改名编辑态；进入编辑时保持栏目框尺寸不变，仅用白色外圈提示编辑状态，不使用放大、外扩或加粗描边
+- 影响文件：
+  - `webui/config/app-shortcuts.js`
+  - `webui/config/styles.css`
+  - `docs/modules/02_field_prompt_quickfield.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 是否触发 git：`是`
+- git 检查点：`checkpoint: a-module tab rename editing ui`
+- 备注：这是当前连续第 3 次改动；与第 9 次、第 10 次共同构成一轮完整施工，完成后立即 git 并推送远端

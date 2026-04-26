@@ -270,14 +270,26 @@ function renderTabs() {
     };
 
     tab.ondblclick = () => {
+      const rect = tab.getBoundingClientRect();
       const input = document.createElement('input');
+      let canceled = false;
+      tab.classList.add('editing');
+      tab.style.width = `${Math.ceil(rect.width)}px`;
+      tab.style.height = `${Math.ceil(rect.height)}px`;
       input.value = cat.name;
+      input.className = 'tab-inline-input';
       tab.innerHTML = '';
       tab.appendChild(input);
       input.focus();
-      input.select();
+      input.setSelectionRange(input.value.length, input.value.length);
       const commit = () => {
+        if (canceled) {
+          return;
+        }
         const name = input.value.trim();
+        tab.classList.remove('editing');
+        tab.style.width = '';
+        tab.style.height = '';
         if (name && name !== cat.name) {
           cat.name = name;
           setDirty(true, 'shortcuts');
@@ -290,6 +302,15 @@ function renderTabs() {
         if (e.key === 'Enter') {
           e.preventDefault();
           commit();
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          canceled = true;
+          tab.classList.remove('editing');
+          tab.style.width = '';
+          tab.style.height = '';
+          renderTabs();
         }
       };
     };
