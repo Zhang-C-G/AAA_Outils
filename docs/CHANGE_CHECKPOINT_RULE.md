@@ -17,11 +17,15 @@
 
 1. 每完成 1 次明确改动，计数 `+1`
 2. 每累计满 `3` 次改动，无论大小，必须立即创建 1 个 git 检查点
-3. 创建 git 检查点后，连续改动计数清零
-4. 如遇高风险改动，可在未满 3 次前提前 git
-5. 进入第一阶段前，仍然必须先 git
-6. 进入第二阶段前，仍然必须再 git
-7. 涉及用户明确要求的回退时，仍以 `docs/AI_HANDOFF.md` 中的回退机制为准
+3. 本项目语境里的 `git`，默认不是只做本地 commit，而是：
+   - 本地 `commit`
+   - 推送到当前工作分支对应的远端分支
+4. 只有当远端 push 成功后，这次 git 检查点才算真正完成
+5. 创建 git 检查点并成功 push 后，连续改动计数清零
+6. 如遇高风险改动，可在未满 3 次前提前 git
+7. 进入第一阶段前，仍然必须先 git
+8. 进入第二阶段前，仍然必须再 git
+9. 涉及用户明确要求的回退时，仍以 `docs/AI_HANDOFF.md` 中的回退机制为准
 
 ## 3. 什么算 1 次改动
 
@@ -64,3 +68,13 @@
 - `checkpoint: assistant stage1 ui round 1`
 - `archive: before resume stage2 wiring`
 - `checkpoint: after 3 incremental changes`
+
+## 7. 远端要求
+
+- 默认远端：`origin`
+- 默认目标：当前工作分支对应的远端分支
+- 如果 push 失败，不能口头视为“已 git”
+- 必须在结果说明里明确：
+  - commit hash
+  - 当前分支名
+  - push 是否成功

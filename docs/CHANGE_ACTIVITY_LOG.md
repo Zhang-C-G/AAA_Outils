@@ -81,3 +81,14 @@
 - 是否触发 git：`是`
 - git 检查点：`checkpoint: restructure global preference docs`
 - 备注：这是当前连续第 3 次改动，按规则本次改动完成后立即 git，后续计数从 `0` 重新开始
+
+#### 第 7 次改动
+
+- 时间：`2026-04-26`
+- 内容：修正规则文档中对 `git` 的定义，明确本项目语境里的 git 默认指“本地 commit + push 到远端分支”，并补充远端结果说明要求
+- 影响文件：
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/AI_HANDOFF.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+- 是否触发 git：`否`
+- 备注：当前连续计数更新为 `1`
