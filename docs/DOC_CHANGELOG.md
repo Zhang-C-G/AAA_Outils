@@ -30,3 +30,15 @@ Track documentation-only updates.
 - Synced hotkey panel docs after removing `1-9` / `Numpad1-9` quick-insert behavior from the floating panel.
 - Added cross-entry documentation note that AHK source edits trigger automatic hot reload during development, so future AI handoffs and debugging account for it.
 - Documented the first usable resume-autofill module: Web resume editor, local resume API, `resume_profile.json`, and browser extension skeleton.
+
+## 2026-04-25
+- Reorganized documentation topology clarifications: rewrote `docs/DOC_SYSTEM.md`, `docs/modules/README.md`, `docs/shared/README.md`, and added `docs/architecture/README.md`.
+- Added `docs/extension/README.md` and normalized extension governance docs (`AI_DEVELOPMENT_PLAYBOOK.md`, `OVERLAY_STAGE2_GUIDE.md`, `NEW_MODE_CHECKLIST.md`).
+- Rewrote `docs/AI_HANDOFF.md` into a clean UTF-8 handoff entry focused on stable product core, current module status, hard constraints, and safe recovery path.
+- Updated `docs/UPDATE_CHECKLIST.md` so each development round must first read the extension playbook, and overlay work must also read the overlay stage-2 guide.
+
+## 2026-04-26
+- Added resolved incident archive for assistant microphone chain recovery: `docs/incidents/RESOLVED_2026-04-26_assistant_microphone_chain.md`.
+- Synced `docs/ACTION_LOG.md` with microphone chain restoration, service restart diagnosis, and final interface verification.
+- Added document-creation governance set: `docs/extension/DOC_CREATION_GUIDE.md` plus `docs/templates/STAGE1_DOC_TEMPLATE.md`, `docs/templates/STAGE2_CAPABILITY_TEMPLATE.md`, and `docs/templates/INCIDENT_TEMPLATE.md`.
+- Updated `docs/extension/README.md` to expose the new document-creation guide entry.

@@ -27,6 +27,8 @@ const AHK_TO_KEY = {
 let autoSaveTimer = 0;
 let autoSaveInFlight = false;
 let autoSaveQueued = false;
+let activeHotkeyRecorder = null;
+const HIDDEN_SHORTCUT_CATEGORY_IDS = new Set(['prompts', 'quick_fields']);
 
 function ahkToFriendly(hk) {
   const raw = String(hk || '').trim();
@@ -103,6 +105,90 @@ function friendlyToAhk(hk) {
   return validateHotkeyText(ahk) ? ahk : '';
 }
 
+function eventKeyToFriendly(event) {
+  const raw = String(event?.key || '').trim();
+  if (!raw) return '';
+  const low = raw.toLowerCase();
+  if (low === 'control' || low === 'shift' || low === 'alt' || low === 'meta') {
+    return '';
+  }
+  if (/^f([1-9]|1[0-9]|2[0-4])$/i.test(raw)) {
+    return raw.toUpperCase();
+  }
+  if (KEY_TO_AHK[low]) {
+    return AHK_TO_KEY[KEY_TO_AHK[low].toLowerCase()] || KEY_TO_AHK[low];
+  }
+  if (/^[a-z0-9]$/i.test(raw)) {
+    return raw.toUpperCase();
+  }
+  return '';
+}
+
+function isAllowedSingleHotkeyKey(key) {
+  const txt = String(key || '').trim();
+  if (!txt) return false;
+  return /^(F([1-9]|1[0-9]|2[0-4])|Esc|Enter|Tab|Space|Up|Down|Left|Right|Home|End|PgUp|PgDn|Ins|Del)$/i.test(txt);
+}
+
+function buildAhkFromKeyboardEvent(event) {
+  const key = eventKeyToFriendly(event);
+  if (!key) {
+    return '';
+  }
+
+  const mods = [];
+  if (event.ctrlKey) mods.push('Ctrl');
+  if (event.altKey) mods.push('Alt');
+  if (event.shiftKey) mods.push('Shift');
+  if (event.metaKey) mods.push('Win');
+
+  if (!mods.length && !isAllowedSingleHotkeyKey(key)) {
+    return '';
+  }
+
+  return friendlyToAhk([...mods, key].join('+'));
+}
+
+function stopHotkeyRecording(commit = false, nextValue = '') {
+  if (!activeHotkeyRecorder) return;
+  const { input, hotkeyId, previousValue } = activeHotkeyRecorder;
+  input.classList.remove('hotkey-recording', 'hotkey-recorded');
+
+  if (commit && nextValue) {
+    const displayValue = ahkToFriendly(nextValue);
+    state.hotkeys[hotkeyId] = nextValue;
+    input.value = displayValue;
+    input.dataset.value = displayValue;
+    input.classList.add('hotkey-recorded');
+    window.setTimeout(() => input.classList.remove('hotkey-recorded'), 900);
+    setDirty(true, 'shortcuts');
+    scheduleAutoSave(true);
+    toast(`录入成功：${displayValue}`);
+  } else {
+    input.value = input.dataset.value || ahkToFriendly(previousValue);
+  }
+
+  activeHotkeyRecorder = null;
+}
+
+function startHotkeyRecording(input, hotkeyId) {
+  if (!input) return;
+  if (activeHotkeyRecorder?.input === input) return;
+  stopHotkeyRecording(false);
+
+  activeHotkeyRecorder = {
+    input,
+    hotkeyId,
+    previousValue: state.hotkeys[hotkeyId] ?? ''
+  };
+
+  input.classList.remove('hotkey-recorded');
+  input.classList.add('hotkey-recording');
+  input.value = '录入中...';
+  input.focus();
+  input.select();
+}
+
 function scheduleAutoSave(immediate = false) {
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer);
@@ -150,11 +236,28 @@ function buildSanitizedData() {
   return out;
 }
 
+function getVisibleShortcutCategories() {
+  return state.categories.filter((cat) => !HIDDEN_SHORTCUT_CATEGORY_IDS.has(String(cat?.id || '').trim()));
+}
+
+function ensureVisibleSelectedCategory() {
+  const visible = getVisibleShortcutCategories();
+  if (!visible.length) {
+    state.selectedCategoryId = null;
+    return;
+  }
+
+  if (!visible.find((cat) => cat.id === state.selectedCategoryId)) {
+    state.selectedCategoryId = visible[0].id;
+  }
+}
+
 function renderTabs() {
   const tabsEl = byId('tabs');
   tabsEl.innerHTML = '';
+  ensureVisibleSelectedCategory();
 
-  for (const cat of state.categories) {
+  for (const cat of getVisibleShortcutCategories()) {
     const tab = document.createElement('div');
     tab.className = `tab ${cat.id === state.selectedCategoryId ? 'active' : ''}`;
     tab.textContent = cat.name;
@@ -265,7 +368,7 @@ function renderHotkeys() {
     grouped.get(group).items.push(def);
   }
 
-  const groupOrder = ['shared', 'assistant'];
+  const groupOrder = ['shared', 'assistant', 'notes_display'];
   const entries = [...grouped.entries()].sort((a, b) => {
     const ia = groupOrder.indexOf(a[0]);
     const ib = groupOrder.indexOf(b[0]);
@@ -287,6 +390,8 @@ function renderHotkeys() {
     desc.className = 'hotkey-group-desc';
     desc.textContent = groupId === 'assistant'
       ? '只作用于截图问答模块'
+      : groupId === 'notes_display'
+        ? '只作用于笔记显示模块'
       : '所有模块共享可用';
     block.appendChild(desc);
 
@@ -300,12 +405,43 @@ function renderHotkeys() {
       const wrap = document.createElement('label');
       wrap.innerHTML = `
         <span>${escapeHtml(def.label || id)}</span>
-        <input type="text" value="${escapeHtml(displayValue)}" placeholder="${escapeHtml(displayPlaceholder)}" />
+        <input type="text" value="${escapeHtml(displayValue)}" placeholder="${escapeHtml(displayPlaceholder)}" readonly />
       `;
-      wrap.querySelector('input').oninput = (e) => {
-        state.hotkeys[id] = e.target.value;
-        setDirty(true, 'shortcuts');
-        scheduleAutoSave();
+      const input = wrap.querySelector('input');
+      input.dataset.value = displayValue;
+      input.title = '点击后直接按组合键录入';
+      input.onfocus = () => startHotkeyRecording(input, id);
+      input.onclick = () => startHotkeyRecording(input, id);
+      input.onblur = () => {
+        window.setTimeout(() => {
+          if (activeHotkeyRecorder?.input === input) {
+            stopHotkeyRecording(false);
+          }
+        }, 30);
+      };
+      input.onkeydown = (e) => {
+        if (activeHotkeyRecorder?.input !== input) {
+          startHotkeyRecording(input, id);
+        }
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.key === 'Escape') {
+          stopHotkeyRecording(false);
+          return;
+        }
+
+        const ahk = buildAhkFromKeyboardEvent(e);
+        if (!ahk) {
+          input.value = '请按组合键';
+          window.setTimeout(() => {
+            if (activeHotkeyRecorder?.input === input) {
+              input.value = '录入中...';
+            }
+          }, 500);
+          return;
+        }
+        stopHotkeyRecording(true, ahk);
       };
       grid.appendChild(wrap);
     }
@@ -344,6 +480,7 @@ export function applyShortcutsState(payload) {
   if (!state.selectedCategoryId || !state.categories.find(c => c.id === state.selectedCategoryId)) {
     state.selectedCategoryId = state.categories[0]?.id || null;
   }
+  ensureVisibleSelectedCategory();
 
   state.behavior.auto_refresh_enabled = isTruthy(state.behavior.auto_refresh_enabled) ? 1 : 0;
   state.behavior.refresh_every_uses = toInt(state.behavior.refresh_every_uses, 3, 1, 1000);
@@ -440,6 +577,7 @@ export function initShortcutsHandlers() {
   };
 
   byId('deleteTabBtn').onclick = () => {
+    ensureVisibleSelectedCategory();
     const cat = state.categories.find(c => c.id === state.selectedCategoryId);
     if (!cat) return;
     if (state.protectedCategoryIds.has(cat.id)) {
@@ -457,6 +595,7 @@ export function initShortcutsHandlers() {
   };
 
   byId('addRowBtn').onclick = () => {
+    ensureVisibleSelectedCategory();
     const catId = state.selectedCategoryId;
     if (!catId) return;
     state.data[catId] ||= [];

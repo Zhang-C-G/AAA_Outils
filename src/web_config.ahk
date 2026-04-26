@@ -3,7 +3,8 @@
 gWebConfigTimerEnabled := false
 
 ShowWebConfigWindow() {
-    global gWebConfigPort
+    global gWebConfigPort, gWebConfigDesiredFile
+    try FileAppend("", gWebConfigDesiredFile, "UTF-8")
     ok := StartWebConfigServer(gWebConfigPort)
     if !ok {
         MsgBox("Web UI start failed, fallback to legacy window.")
@@ -16,12 +17,29 @@ ShowWebConfigWindow() {
     return true
 }
 
+RestoreWebConfigServerIfNeeded() {
+    global gWebConfigDesiredFile, gWebConfigPort
+    if !FileExist(gWebConfigDesiredFile) {
+        return
+    }
+    try StartWebConfigServer(gWebConfigPort)
+}
+
 StartWebConfigServer(port := 8798) {
     global gWebConfigPort, gWebConfigPidFile, gWebConfigServerFile
-    global gDataFile, gUsageFile, gSnapshotFile, gWebConfigActionFile, gNotesDir, gCaptureDir, gLogFile
+    global gDataFile, gUsageFile, gSnapshotFile, gWebConfigActionFile, gNotesDir, gNotesDisplayDir, gCaptureDir, gLogFile
     global gCaptureBridgeScript, gCaptureBridgePidFile, gCaptureBridgeStatusFile, gResumeProfileFile
 
     gWebConfigPort := port
+    if IsWebConfigServerAlive() {
+        if WebConfigServerNeedsRestart() {
+            StopWebConfigServer()
+        } else {
+            EnsureWebConfigActionWatcher()
+            return true
+        }
+    }
+
     if IsWebConfigServerAlive() {
         EnsureWebConfigActionWatcher()
         return true
@@ -45,6 +63,7 @@ StartWebConfigServer(port := 8798) {
         . ' -ActionFile "' gWebConfigActionFile '"'
         . ' -PidFile "' gWebConfigPidFile '"'
         . ' -NotesDir "' gNotesDir '"'
+        . ' -NotesDisplayDir "' gNotesDisplayDir '"'
         . ' -CaptureDir "' gCaptureDir '"'
         . ' -BridgeScript "' gCaptureBridgeScript '"'
         . ' -BridgePidFile "' gCaptureBridgePidFile '"'
@@ -75,6 +94,40 @@ StartWebConfigServer(port := 8798) {
         WriteLog("web_config_start_failed", "pid not alive")
     }
     return alive
+}
+
+WebConfigServerNeedsRestart() {
+    global gWebConfigPidFile
+    if !FileExist(gWebConfigPidFile) {
+        return false
+    }
+
+    try pidInfo := FileGetTime(gWebConfigPidFile, "M")
+    catch
+        return false
+
+    latest := GetWebConfigSourceLatestWriteTime()
+    if (latest = "") {
+        return false
+    }
+    return latest > pidInfo
+}
+
+GetWebConfigSourceLatestWriteTime() {
+    root := A_ScriptDir "\\webui\\config"
+    latest := ""
+
+    Loop Files, root "\\server*.ps1", "F" {
+        if (latest = "" || A_LoopFileTimeModified > latest) {
+            latest := A_LoopFileTimeModified
+        }
+    }
+    Loop Files, root "\\server_state\\*.ps1", "F" {
+        if (latest = "" || A_LoopFileTimeModified > latest) {
+            latest := A_LoopFileTimeModified
+        }
+    }
+    return latest
 }
 
 EnsureWebConfigActionWatcher() {
@@ -111,7 +164,7 @@ ProcessWebConfigActionFile(*) {
 }
 
 ReloadAppStateFromDisk() {
-    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings
+    global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings, gCaptureDir
 
     gCategories := LoadCategories()
     gData := LoadDataByCategories(gCategories)
@@ -119,12 +172,16 @@ ReloadAppStateFromDisk() {
     gHotkeys := LoadHotkeys()
     gBehavior := LoadBehavior()
     gAppSettings := LoadAppSettings()
+    if (gAppSettings.Has("capture_dir") && Trim(gAppSettings["capture_dir"]) != "") {
+        gCaptureDir := gAppSettings["capture_dir"]
+    }
     gCaptureSettings := LoadCaptureSettings()
     gAssistantSettings := LoadAssistantSettings()
     gActiveMode := gAppSettings["active_mode"]
 
     RegisterHotkeys()
     RestartAutoRefreshTimer()
+    try SyncAssistantOverlayAfterSettingsChange()
     try RebuildConfigWindow()
 }
 
@@ -161,5 +218,9 @@ IsWebConfigServerAlive() {
 }
 
 OnAppExit(reason, code) {
+    global gWebConfigDesiredFile
+    if (reason != "Reload") {
+        try FileDelete(gWebConfigDesiredFile)
+    }
     StopWebConfigServer()
 }

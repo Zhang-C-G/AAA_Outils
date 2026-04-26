@@ -199,6 +199,20 @@ function New-ResumeProfileDefault {
   }
 }
 
+function Get-ResumeDefaultRowById {
+  param([string]$RowId)
+  $id = ([string]$RowId).Trim()
+  if ($id -eq '') { return $null }
+  foreach ($section in (Get-ResumeSectionDefaults)) {
+    foreach ($row in @($section.rows)) {
+      if ([string]$row.id -eq $id) {
+        return $row
+      }
+    }
+  }
+  return $null
+}
+
 function Ensure-ResumeProfileFile {
   if ([string]::IsNullOrWhiteSpace([string]$ResumeProfileFile)) {
     throw 'ResumeProfileFile not configured'
@@ -226,7 +240,8 @@ function Normalize-ResumeRow {
     $id = ('field_' + ($Index + 1))
   }
 
-  $type = ([string](Get-Prop $Row 'type' 'text')).Trim().ToLowerInvariant()
+  $defaultRow = Get-ResumeDefaultRowById -RowId $id
+  $type = ([string](Get-Prop $defaultRow 'type' (Get-Prop $Row 'type' 'text'))).Trim().ToLowerInvariant()
   if ($type -notin @('text', 'textarea', 'select', 'date')) {
     $type = 'text'
   }
@@ -235,7 +250,7 @@ function Normalize-ResumeRow {
     id = $id
     label = $label
     value = [string](Get-Prop $Row 'value' '')
-    aliases = [string](Get-Prop $Row 'aliases' '')
+    aliases = [string](Get-Prop $defaultRow 'aliases' (Get-Prop $Row 'aliases' ''))
     type = $type
   }
 }

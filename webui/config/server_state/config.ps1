@@ -231,9 +231,15 @@ function Get-ConfigState {
   $behavior['refresh_every_uses'] = [Math]::Max(1, $uses)
   $behavior['refresh_every_minutes'] = [Math]::Max(1, $mins)
 
-  $app = [ordered]@{ active_mode = 'shortcuts' }
+  $app = [ordered]@{
+    active_mode = 'shortcuts'
+    mode_order = (Get-DefaultModeOrder)
+  }
   if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
     $app['active_mode'] = Normalize-Mode([string]$ini['App']['active_mode'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('mode_order')) {
+    $app['mode_order'] = Normalize-ModeOrder([string]$ini['App']['mode_order'])
   }
 
   return [ordered]@{
@@ -341,11 +347,17 @@ function Write-ConfigState {
   $lines.Add('')
   $lines.Add('[App]')
   $currentMode = 'shortcuts'
+  $currentOrder = Get-DefaultModeOrder
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('active_mode')) {
     $currentMode = Normalize-Mode([string]$currentIni['App']['active_mode'])
   }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('mode_order')) {
+    $currentOrder = Normalize-ModeOrder([string]$currentIni['App']['mode_order'])
+  }
   $mode = Normalize-Mode([string](Get-Prop (Get-Prop $Payload 'app' $null) 'active_mode' $currentMode))
+  $modeOrder = Normalize-ModeOrder((Get-Prop (Get-Prop $Payload 'app' $null) 'mode_order' $currentOrder))
   $lines.Add('active_mode=' + $mode)
+  $lines.Add('mode_order=' + [string]::Join(',', $modeOrder))
 
   $capture = Get-CaptureSettings
   $lines.Add('')
@@ -373,6 +385,7 @@ function Write-ConfigState {
   $lines.Add('active_template=' + $assistant.active_template)
   $lines.Add('prompt=' + ((Get-AssistantPromptByTemplate -Settings $assistant) -replace '[\r\n]+', ' '))
   $lines.Add('overlay_opacity=' + $assistant.overlay_opacity)
+  $lines.Add('enhanced_capture_mode=' + $assistant.enhanced_capture_mode)
   $lines.Add('disable_copy=' + $assistant.disable_copy)
   $lines.Add('rate_limit_enabled=' + $assistant.rate_limit_enabled)
   $lines.Add('rate_limit_per_hour=' + $assistant.rate_limit_per_hour)
@@ -466,10 +479,34 @@ function Set-AppMode {
     $ini['App'] = [ordered]@{}
   }
   $ini['App']['active_mode'] = Normalize-Mode $Mode
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
   Write-Ini $ini
 
   [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
   Write-AppLog 'mode_switch' ('active_mode=' + $ini['App']['active_mode'])
+}
+
+function Set-AppModeOrder {
+  param($ModeOrder)
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  }
+  $normalized = Normalize-ModeOrder $ModeOrder
+  $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  $ini['App']['mode_order'] = [string]::Join(',', $normalized)
+  Write-Ini $ini
+
+  [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
+  Write-AppLog 'mode_order_save' ('mode_order=' + $ini['App']['mode_order'])
 }
 
 

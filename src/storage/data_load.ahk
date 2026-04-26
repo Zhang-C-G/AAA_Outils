@@ -25,6 +25,10 @@ EnsureDataFile() {
         . "open_config=!+q`n"
         . "assistant_capture=!+a`n"
         . "assistant_capture_now=F1`n"
+        . "assistant_voice_input=F3`n"
+        . "notes_display_overlay=F4`n"
+        . "notes_overlay_up=Up`n"
+        . "notes_overlay_down=Down`n"
         . "assistant_overlay_up=!Up`n"
         . "assistant_overlay_down=!Down`n"
         . "close_panel=Esc`n"
@@ -33,6 +37,8 @@ EnsureDataFile() {
         . "move_down=Down`n"
         . "`n[App]`n"
         . "active_mode=shortcuts`n"
+        . "mode_order=shortcuts,notes,notes_display,capture,assistant,resume,hotkeys,testing`n"
+        . "capture_dir=" A_ScriptDir "\\captures`n"
         . "`n[Capture]`n"
         . "upload_endpoint=https://0x0.st`n"
         . "open_qr_after_upload=1`n"
@@ -45,9 +51,13 @@ EnsureDataFile() {
         . "model=doubao-seed-2-0-lite-260215`n"
         . "active_template=default_template`n"
         . "prompt=编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。`n"
-        . "overlay_opacity=92`n"
+        . "overlay_opacity=75`n"
         . "rate_limit_enabled=1`n"
         . "rate_limit_per_hour=100`n"
+        . "voice_input_enabled=0`n"
+        . "voice_input_provider=local_windows`n"
+        . "voice_input_endpoint=`n"
+        . "voice_input_model=`n"
         . "`n[AssistantTemplates]`n"
         . "default_template=编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。`n"
         . "`n[Behavior]`n"
@@ -201,11 +211,22 @@ LoadBehavior() {
 
 LoadAppSettings() {
     global gDataFile
-    settings := Map("active_mode", "shortcuts")
+    settings := Map(
+        "active_mode", "shortcuts",
+        "mode_order", GetDefaultModeOrderCsv(),
+        "capture_dir", A_ScriptDir "\\captures"
+    )
     raw := LoadSection(gDataFile, "App")
     for row in raw {
         if (row["key"] = "active_mode") {
             settings["active_mode"] := NormalizeModeId(row["value"])
+        } else if (row["key"] = "mode_order") {
+            settings["mode_order"] := NormalizeModeOrderCsv(row["value"])
+        } else if (row["key"] = "capture_dir") {
+            dir := Trim(row["value"])
+            if (dir != "") {
+                settings["capture_dir"] := dir
+            }
         }
     }
     return settings
@@ -216,6 +237,9 @@ NormalizeModeId(mode) {
     if (m = "notes") {
         return "notes"
     }
+    if (m = "notes_display") {
+        return "notes_display"
+    }
     if (m = "capture") {
         return "capture"
     }
@@ -225,7 +249,44 @@ NormalizeModeId(mode) {
     if (m = "resume") {
         return "resume"
     }
+    if (m = "hotkeys") {
+        return "hotkeys"
+    }
+    if (m = "testing") {
+        return "testing"
+    }
     return "shortcuts"
+}
+
+GetDefaultModeOrderCsv() {
+    return "shortcuts,notes,notes_display,capture,assistant,resume,hotkeys,testing"
+}
+
+NormalizeModeOrderCsv(raw) {
+    order := []
+    seen := Map()
+    text := Trim(raw)
+    if (text != "") {
+        for part in StrSplit(text, ",") {
+            mode := NormalizeModeId(part)
+            token := StrLower(Trim(part))
+            if (mode = "shortcuts" && token != "shortcuts") {
+                continue
+            }
+            if !seen.Has(mode) {
+                seen[mode] := 1
+                order.Push(mode)
+            }
+        }
+    }
+
+    for mode in StrSplit(GetDefaultModeOrderCsv(), ",") {
+        if !seen.Has(mode) {
+            seen[mode] := 1
+            order.Push(mode)
+        }
+    }
+    return StrJoin(order, ",")
 }
 
 LoadCaptureSettings() {

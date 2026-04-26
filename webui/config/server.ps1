@@ -7,6 +7,7 @@
   [string]$ActionFile,
   [string]$PidFile,
   [string]$NotesDir,
+  [string]$NotesDisplayDir,
   [string]$CaptureDir,
   [string]$BridgeScript,
   [string]$BridgePidFile,
@@ -85,6 +86,16 @@ while ($true) {
       Set-AppMode -Mode ([string](Get-Prop $payload 'active_mode' 'shortcuts'))
       Send-Json $res ([ordered]@{ ok=$true })
     }
+    elseif ($path -eq '/api/app/mode-order' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppModeOrder -ModeOrder (Get-Prop $payload 'mode_order' @())
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
+    elseif ($path -eq '/api/app/shortcuts-category' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppShortcutsSelectedCategory -CategoryId ([string](Get-Prop $payload 'shortcuts_selected_category' ''))
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
     elseif ($path -eq '/api/notes/list' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; notes=(Get-NotesMeta) })
     }
@@ -120,6 +131,44 @@ while ($true) {
         Send-Json $res ([ordered]@{ ok=$false; error='missing id' })
       } else {
         Delete-Note -Id $id
+        Send-Json $res ([ordered]@{ ok=$true })
+      }
+    }
+    elseif ($path -eq '/api/notes-display/list' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{ ok=$true; notes=(Get-NotesDisplayMeta) })
+    }
+    elseif ($path -eq '/api/notes-display/get' -and $method -eq 'GET') {
+      $id = [string]$req.QueryString['id']
+      if ([string]::IsNullOrWhiteSpace($id)) {
+        Send-Json $res ([ordered]@{ ok=$false; error='missing id' })
+      } else {
+        Write-AppLog 'notes_display_select' ('id=' + $id)
+        Send-Json $res ([ordered]@{ ok=$true; note=(Load-NotesDisplayNote -Id $id) })
+      }
+    }
+    elseif ($path -eq '/api/notes-display/create' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $id = Create-NotesDisplayNote -Title ([string](Get-Prop $payload 'title' 'New Note'))
+      Send-Json $res ([ordered]@{ ok=$true; id=$id })
+    }
+    elseif ($path -eq '/api/notes-display/save' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $id = [string](Get-Prop $payload 'id' '')
+      if ([string]::IsNullOrWhiteSpace($id)) {
+        Send-Json $res ([ordered]@{ ok=$false; error='missing id' })
+      } else {
+        Save-NotesDisplayContent -Id $id -Title ([string](Get-Prop $payload 'title' 'Untitled')) -Content ([string](Get-Prop $payload 'content' ''))
+        Write-AppLog 'notes_display_save' ('id=' + $id)
+        Send-Json $res ([ordered]@{ ok=$true })
+      }
+    }
+    elseif ($path -eq '/api/notes-display/delete' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $id = [string](Get-Prop $payload 'id' '')
+      if ([string]::IsNullOrWhiteSpace($id)) {
+        Send-Json $res ([ordered]@{ ok=$false; error='missing id' })
+      } else {
+        Delete-NotesDisplayNote -Id $id
         Send-Json $res ([ordered]@{ ok=$true })
       }
     }
@@ -191,6 +240,29 @@ while ($true) {
     elseif ($path -eq '/api/assistant/state' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; state=(Get-AssistantState) })
     }
+    elseif ($path -eq '/api/assistant/audio-input-devices' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{ ok=$true; devices=@(Get-AssistantAudioInputDevices) })
+    }
+    elseif ($path -eq '/api/assistant/benchmark-state' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{ ok=$true; benchmark=(Get-AssistantBenchmarkState) })
+    }
+    elseif ($path -eq '/api/assistant/benchmark-image' -and $method -eq 'GET') {
+      Send-File -Res $res -Path (Ensure-AssistantBenchmarkImage) -Type 'image/png'
+    }
+    elseif ($path -eq '/api/assistant/benchmark-run' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $result = Invoke-AssistantBenchmarkRun $payload
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/assistant/benchmark-stream-start' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $result = Start-AssistantBenchmarkStreamRun $payload
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/assistant/benchmark-stream-state' -and $method -eq 'GET') {
+      $result = Get-AssistantBenchmarkStreamState -RunId ([string]$req.QueryString['run_id'])
+      Send-Json $res $result
+    }
     elseif ($path -eq '/api/assistant/save-settings' -and $method -eq 'POST') {
       $payload = Read-BodyJson $req
       $settings = Save-AssistantSettings $payload
@@ -206,6 +278,14 @@ while ($true) {
     }
     elseif ($path -eq '/api/assistant/trigger-capture' -and $method -eq 'POST') {
       $result = Request-AssistantCaptureRun
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/assistant/open-folder' -and $method -eq 'POST') {
+      $result = Open-AssistantCaptureFolder
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/assistant/pick-folder' -and $method -eq 'POST') {
+      $result = Select-AssistantCaptureFolder
       Send-Json $res $result
     }
     elseif ($path -eq '/api/resume/state' -and $method -eq 'GET') {

@@ -2,6 +2,15 @@
   return '编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。'
 }
 
+function Get-AssistantVoiceInputScriptPath {
+  $moduleRoot = $PSScriptRoot
+  if ([string]::IsNullOrWhiteSpace($moduleRoot)) {
+    $moduleRoot = Join-Path (Split-Path -Parent $DataFile) 'webui\config\server_state'
+  }
+  $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $moduleRoot))
+  return Join-Path $repoRoot 'scripts\assistant_voice_input.ps1'
+}
+
 function Get-AssistantModelCatalog {
   return @(
     [ordered]@{
@@ -14,6 +23,14 @@ function Get-AssistantModelCatalog {
     [ordered]@{
       id = 'doubao-seed-2-0-pro-260215'
       name = 'Doubao Seed 2.0 Pro (Vision)'
+      provider = 'volcengine-ark'
+      vision = 1
+      enabled = 1
+    },
+    [ordered]@{
+      id = 'doubao-seed-2-0-mini-260215'
+      name = 'Doubao Seed 2.0 Mini (ASR Fast)'
+      note = '语音识别专用，速度特别快'
       provider = 'volcengine-ark'
       vision = 1
       enabled = 1
@@ -66,23 +83,36 @@ function Get-AssistantDefaults {
     prompt = $prompt
     active_template = 'default_template'
     templates = @([ordered]@{ name = 'default_template'; prompt = $prompt })
-    overlay_opacity = 92
+    overlay_opacity = 75
+    enhanced_capture_mode = 0
     disable_copy = 1
+    voice_input_enabled = 0
+    voice_input_device_id = ''
     rate_limit_enabled = 1
-    rate_limit_per_hour = 30
+    rate_limit_per_hour = 100
   }
 }
 
 function Clamp-AssistantOpacity {
   param($Opacity)
-  $v = 92
+  $v = 100
   [int]::TryParse([string]$Opacity, [ref]$v) | Out-Null
-  return [Math]::Min(100, [Math]::Max(35, $v))
+  $allowed = @(20, 50, 75, 100)
+  $best = $allowed[0]
+  $bestDiff = [Math]::Abs($v - $best)
+  foreach ($candidate in $allowed) {
+    $diff = [Math]::Abs($v - $candidate)
+    if ($diff -lt $bestDiff -or ($diff -eq $bestDiff -and $candidate -gt $best)) {
+      $best = $candidate
+      $bestDiff = $diff
+    }
+  }
+  return $best
 }
 
 function Clamp-AssistantRatePerHour {
   param($Limit)
-  $v = 30
+  $v = 100
   [int]::TryParse([string]$Limit, [ref]$v) | Out-Null
   return [Math]::Min(10000, [Math]::Max(1, $v))
 }
@@ -200,7 +230,7 @@ function Convert-ToAssistantSettings {
   if ($null -eq $Fallback) { $Fallback = Get-AssistantDefaults }
 
   $settings = [ordered]@{}
-  $settings.enabled = if ([string](Get-Prop $PayloadAssistant 'enabled' (Get-Prop $Fallback 'enabled' 1)) -eq '0') { 0 } else { 1 }
+  $settings.enabled = 1
 
   $endpoint = ([string](Get-Prop $PayloadAssistant 'api_endpoint' (Get-Prop $Fallback 'api_endpoint' 'https://ark.cn-beijing.volces.com/api/v3/responses'))).Trim()
   if ($endpoint -eq '') { $endpoint = 'https://ark.cn-beijing.volces.com/api/v3/responses' }
@@ -216,10 +246,13 @@ function Convert-ToAssistantSettings {
   $settings.active_template = ([string](Get-Prop $PayloadAssistant 'active_template' (Get-Prop $Fallback 'active_template' 'default_template'))).Trim()
   if ($settings.active_template -eq '') { $settings.active_template = 'default_template' }
 
-  $settings.overlay_opacity = Clamp-AssistantOpacity (Get-Prop $PayloadAssistant 'overlay_opacity' (Get-Prop $Fallback 'overlay_opacity' 92))
+  $settings.overlay_opacity = Clamp-AssistantOpacity (Get-Prop $PayloadAssistant 'overlay_opacity' (Get-Prop $Fallback 'overlay_opacity' 100))
+  $settings.enhanced_capture_mode = if ([string](Get-Prop $PayloadAssistant 'enhanced_capture_mode' (Get-Prop $Fallback 'enhanced_capture_mode' 0)) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $PayloadAssistant 'disable_copy' (Get-Prop $Fallback 'disable_copy' 1)) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_enabled = if ([string](Get-Prop $PayloadAssistant 'voice_input_enabled' (Get-Prop $Fallback 'voice_input_enabled' 0)) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_device_id = ([string](Get-Prop $PayloadAssistant 'voice_input_device_id' (Get-Prop $Fallback 'voice_input_device_id' ''))).Trim()
   $settings.rate_limit_enabled = if ([string](Get-Prop $PayloadAssistant 'rate_limit_enabled' (Get-Prop $Fallback 'rate_limit_enabled' 1)) -eq '0') { 0 } else { 1 }
-  $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 30))
+  $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 100))
 
   $payloadTemplates = Get-Prop $PayloadAssistant 'templates' $null
   if ($null -eq $payloadTemplates) {
@@ -261,7 +294,7 @@ function Get-AssistantSettings {
 
   if ($ini.Contains('Assistant')) {
     $sec = $ini['Assistant']
-    if ($sec.Contains('enabled')) { $settings.enabled = if ([string]$sec['enabled'] -eq '0') { 0 } else { 1 } }
+    if ($sec.Contains('enabled')) { $settings.enabled = 1 }
     if ($sec.Contains('api_endpoint')) {
       $tmp = ([string]$sec['api_endpoint']).Trim()
       if ($tmp) { $settings.api_endpoint = $tmp }
@@ -284,8 +317,17 @@ function Get-AssistantSettings {
     if ($sec.Contains('overlay_opacity')) {
       $settings.overlay_opacity = Clamp-AssistantOpacity $sec['overlay_opacity']
     }
+    if ($sec.Contains('enhanced_capture_mode')) {
+      $settings.enhanced_capture_mode = if ([string]$sec['enhanced_capture_mode'] -eq '0') { 0 } else { 1 }
+    }
     if ($sec.Contains('disable_copy')) {
       $settings.disable_copy = if ([string]$sec['disable_copy'] -eq '0') { 0 } else { 1 }
+    }
+    if ($sec.Contains('voice_input_enabled')) {
+      $settings.voice_input_enabled = if ([string]$sec['voice_input_enabled'] -eq '0') { 0 } else { 1 }
+    }
+    if ($sec.Contains('voice_input_device_id')) {
+      $settings.voice_input_device_id = ([string]$sec['voice_input_device_id']).Trim()
     }
     if ($sec.Contains('rate_limit_enabled')) {
       $settings.rate_limit_enabled = if ([string]$sec['rate_limit_enabled'] -eq '0') { 0 } else { 1 }
@@ -319,7 +361,10 @@ function Get-AssistantSettings {
   $settings.api_key = ''
   $settings.has_api_key = if ([string]$settings.api_key_protected -ne '') { 1 } else { 0 }
   $settings.model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' '')) -Fallback 'doubao-seed-2-0-lite-260215'
+  $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_enabled = if ([string](Get-Prop $settings 'voice_input_enabled' 0) -eq '0') { 0 } else { 1 }
+  $settings.voice_input_device_id = ([string](Get-Prop $settings 'voice_input_device_id' '')).Trim()
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour $settings.rate_limit_per_hour
   return $settings
 }
@@ -341,7 +386,66 @@ function Get-AssistantPublicSettings {
   $public['api_key'] = ''
   $public['has_api_key'] = if ([string](Get-Prop $Settings 'api_key_protected' '') -ne '') { 1 } else { 0 }
   $public['model_options'] = Get-AssistantModelCatalog
+  $public['capture_dir'] = [string]$CaptureDir
+  $public['latest_capture'] = (Get-CaptureLatestPath)
   return $public
+}
+
+function Get-AssistantAudioInputDevices {
+  $scriptPath = Get-AssistantVoiceInputScriptPath
+  if (-not (Test-Path $scriptPath)) {
+    return @()
+  }
+
+  $jsonPath = Join-Path $env:TEMP 'raccourci_assistant_audio_devices.json'
+  try {
+    if (Test-Path $jsonPath) {
+      Remove-Item -LiteralPath $jsonPath -Force
+    }
+  } catch {}
+
+  $args = @(
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-File', $scriptPath,
+    '-Mode', 'list',
+    '-DevicesJsonPath', $jsonPath
+  )
+
+  try {
+    $proc = Start-Process -FilePath 'powershell' -ArgumentList $args -WindowStyle Hidden -PassThru -Wait
+    if ($proc.ExitCode -ne 0) {
+      return @()
+    }
+    if (-not (Test-Path $jsonPath)) {
+      return @()
+    }
+
+    $raw = [IO.File]::ReadAllText($jsonPath, [Text.Encoding]::UTF8)
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+      return @()
+    }
+
+    $parsed = $raw | ConvertFrom-Json
+    $items = @()
+    foreach ($item in @($parsed)) {
+      $items += [ordered]@{
+        id = ([string](Get-Prop $item 'id' '')).Trim()
+        label = ([string](Get-Prop $item 'label' '')).Trim()
+        is_default = if ([bool](Get-Prop $item 'is_default' $false)) { 1 } else { 0 }
+      }
+    }
+    return @($items | Where-Object { -not [string]::IsNullOrWhiteSpace($_.id) })
+  } catch {
+    Write-AppLog 'assistant_audio_input_devices_failed' $_.Exception.Message
+    return @()
+  } finally {
+    try {
+      if (Test-Path $jsonPath) {
+        Remove-Item -LiteralPath $jsonPath -Force
+      }
+    } catch {}
+  }
 }
 
 function Save-AssistantSettings {
@@ -361,7 +465,10 @@ function Save-AssistantSettings {
   $ini['Assistant']['active_template'] = [string]$settings.active_template
   $ini['Assistant']['prompt'] = ([string](Get-AssistantPromptByTemplate -Settings $settings) -replace '[\r\n]+', ' ')
   $ini['Assistant']['overlay_opacity'] = [string]$settings.overlay_opacity
+  $ini['Assistant']['enhanced_capture_mode'] = [string]$settings.enhanced_capture_mode
   $ini['Assistant']['disable_copy'] = [string]$settings.disable_copy
+  $ini['Assistant']['voice_input_enabled'] = [string]$settings.voice_input_enabled
+  $ini['Assistant']['voice_input_device_id'] = [string]$settings.voice_input_device_id
   $ini['Assistant']['rate_limit_enabled'] = [string]$settings.rate_limit_enabled
   $ini['Assistant']['rate_limit_per_hour'] = [string]$settings.rate_limit_per_hour
 

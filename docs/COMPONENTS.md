@@ -2,13 +2,21 @@
 
 项目：`Raccourci`
 入口：`main.ahk`
-最近同步：`2026-04-23`
+最近同步：`2026-04-24`
 
 ## 产品核心定位（必须保持）
 
 - 核心一：输入提效器（全局热键 + 悬浮匹配 + 一键插入）。
 - 核心二：扩展容器（通过模式切换承载笔记、截图发手机、后续新能力）。
 - 结论：扩展能力是核心功能的一部分，改造时必须保留统一的模式切换入口。
+
+## 核心优先原则（必须保持）
+
+- 每个模块都必须先定义“核心主功能是什么”，再讨论体验优化、附加能力与边界修复。
+- 任何非核心问题，都不能通过牺牲核心主功能来换取“看起来更稳定”或“局部更好看”的结果。
+- 如果两个目标冲突，必须优先保住模块核心功能，再处理次级问题。
+- 文档、实现、排障结论都必须明确写出该模块的核心，避免后续改动偏离主线。
+- 面向外部环境的不确定性（如随机录屏软件、随机网站、随机输入目标）默认按“通用兼容”处理，不能把核心能力建立在某个特定软件的定向兼容上。
 
 ## 文档拆分说明（2026-04-20）
 
@@ -31,9 +39,18 @@
 - 组件拆分文档目录：`docs/components/`
 - 模块化维护目录：`docs/modules/README.md`
 - 公用块维护目录：`docs/shared/README.md`
+- 扩展开发规范目录：`docs/extension/README.md`
 - 文档系统总图：`docs/DOC_SYSTEM.md`
+- AI 开发分阶段指南：`docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+- 悬浮窗二阶段开发指南：`docs/extension/OVERLAY_STAGE2_GUIDE.md`
 - 决策记录（ADR）：`docs/adr/README.md`
 - 更新执行清单：`docs/UPDATE_CHECKLIST.md`
+
+## 开发前置要求（必须保持）
+
+- 每次开始一个新的开发阶段前，必须先阅读 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`。
+- 如果本轮开发涉及悬浮窗、保护态、热键作用域、位置保存、隐藏恢复，还必须同时阅读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`。
+- 如果本轮开发针对某个具体模块，还必须同时阅读对应 `docs/modules/*.md`。
 
 ## 目录结构（代码）
 
@@ -88,10 +105,14 @@
 - `webui/config/app-notes.js`：笔记模式
 - `webui/config/app-capture.js`：截图模式
 - `webui/config/app-assistant.js`：截图问答模式
+- `webui/config/app-testing.js`：测试模式（录屏探针 + API 基线测试）
 - `webui/config/app-resume.js`：简历自动填写模式
 - `webui/config/app-main.js`：入口与模式切换
 - `browser_extension/resume_autofill/*`：简历自动填写浏览器插件骨架
 - Web 顶部按钮现为：`快捷字段/笔记/截图发手机/截图问答/简历自动填写/快捷键/测试`，其中“快捷键”为专用视图入口（后端仍映射 `shortcuts` 模式）
+- `测试` 视图当前同时承载两类能力：
+  - 录屏捕获检测
+  - 截图问答 API 基线测试（固定默认题图、独立选模型、秒级计时）
 - `scripts/test_assistant_mock.ps1`：截图问答本地模拟链路测试脚本（不调用外部 API）
 
 ## 维护要求
@@ -100,4 +121,5 @@
 - 每次重要改动后，必须检查并更新 `docs/AI_HANDOFF.md`，保证下一个 AI 能快速接手当前状态与下一步工作。
 - 修改系统行为时，必须同步更新 `docs/ACTION_LOG.md` 与对应 `docs/components/*.md`。
 - 修改具体功能模块时，必须同步更新对应 `docs/modules/*.md`。
+- 更新模块文档时，必须同步检查该模块“核心主功能”描述是否仍与当前实现一致。
 - 新功能优先写入已有功能域文件；若超过合理体量，再按功能域继续拆分，不做杂糅拆分。

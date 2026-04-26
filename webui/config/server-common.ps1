@@ -31,6 +31,45 @@ function Send-Text {
   $Res.OutputStream.Write($buf, 0, $buf.Length)
 }
 
+function Send-File {
+  param(
+    $Res,
+    [string]$Path,
+    [string]$Type = ''
+  )
+
+  if (!(Test-Path -LiteralPath $Path)) {
+    $Res.StatusCode = 404
+    Send-Text $Res 'not found'
+    return
+  }
+
+  $ext = [IO.Path]::GetExtension($Path).ToLowerInvariant()
+  if ([string]::IsNullOrWhiteSpace($Type)) {
+    $Type = switch ($ext) {
+      '.html' { 'text/html; charset=utf-8' }
+      '.css' { 'text/css; charset=utf-8' }
+      '.js' { 'application/javascript; charset=utf-8' }
+      '.svg' { 'image/svg+xml' }
+      '.png' { 'image/png' }
+      '.jpg' { 'image/jpeg' }
+      '.jpeg' { 'image/jpeg' }
+      default { 'application/octet-stream' }
+    }
+  }
+
+  $bytes = [IO.File]::ReadAllBytes($Path)
+  $Res.Headers['Access-Control-Allow-Origin'] = '*'
+  $Res.Headers['Access-Control-Allow-Headers'] = 'Content-Type'
+  $Res.Headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+  $Res.Headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+  $Res.Headers['Pragma'] = 'no-cache'
+  $Res.Headers['Expires'] = '0'
+  $Res.ContentType = $Type
+  $Res.ContentLength64 = $bytes.Length
+  $Res.OutputStream.Write($bytes, 0, $bytes.Length)
+}
+
 function Read-BodyJson {
   param($Req)
   $ms = New-Object IO.MemoryStream
@@ -154,8 +193,45 @@ function Get-CategorySection {
 function Normalize-Mode {
   param([string]$Mode)
   $m = ($Mode + '').Trim().ToLowerInvariant()
-  if ($m -in @('shortcuts', 'notes', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')) { return $m }
+  if ($m -in @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')) { return $m }
   return 'shortcuts'
+}
+
+function Get-DefaultModeOrder {
+  return @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')
+}
+
+function Normalize-ModeOrder {
+  param($RawOrder)
+
+  $defaults = Get-DefaultModeOrder
+  $ordered = New-Object System.Collections.Generic.List[string]
+
+  $items = @()
+  if ($RawOrder -is [System.Array]) {
+    $items = @($RawOrder)
+  } else {
+    $text = ([string]$RawOrder).Trim()
+    if ($text -ne '') {
+      $items = @($text -split ',')
+    }
+  }
+
+  foreach ($item in $items) {
+    $mode = Normalize-Mode ([string]$item)
+    if ($mode -eq 'shortcuts' -and ([string]$item).Trim().ToLowerInvariant() -ne 'shortcuts') { continue }
+    if (-not $ordered.Contains($mode)) {
+      $ordered.Add($mode) | Out-Null
+    }
+  }
+
+  foreach ($mode in $defaults) {
+    if (-not $ordered.Contains($mode)) {
+      $ordered.Add($mode) | Out-Null
+    }
+  }
+
+  return @($ordered)
 }
 
 function Get-HotkeyDefs {
@@ -168,6 +244,10 @@ function Get-HotkeyDefs {
     [ordered]@{ id='move_down'; label='下移候选'; default='Down'; group='shared'; group_label='公共快捷键'; scope='panel' },
     [ordered]@{ id='assistant_capture'; label='启动问答悬浮窗'; default='!+a'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
     [ordered]@{ id='assistant_capture_now'; label='截图并问答'; default='F1'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
+    [ordered]@{ id='assistant_voice_input'; label='按住语音输入'; default='F3'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
+    [ordered]@{ id='notes_display_overlay'; label='启动笔记显示悬浮窗'; default='F4'; group='notes_display'; group_label='笔记显示特有'; scope='notes_display' },
+    [ordered]@{ id='notes_overlay_up'; label='笔记目录上移'; default='Up'; group='notes_display'; group_label='笔记显示特有'; scope='notes_display' },
+    [ordered]@{ id='notes_overlay_down'; label='笔记目录下移'; default='Down'; group='notes_display'; group_label='笔记显示特有'; scope='notes_display' },
     [ordered]@{ id='assistant_overlay_up'; label='问答悬浮上移'; default='!Up'; group='assistant'; group_label='截图问答特有'; scope='assistant' },
     [ordered]@{ id='assistant_overlay_down'; label='问答悬浮下移'; default='!Down'; group='assistant'; group_label='截图问答特有'; scope='assistant' }
   )
@@ -192,21 +272,5 @@ function Serve-Static {
     return
   }
 
-  $ext = [IO.Path]::GetExtension($file).ToLowerInvariant()
-  $ct = switch ($ext) {
-    '.html' { 'text/html; charset=utf-8' }
-    '.css' { 'text/css; charset=utf-8' }
-    '.js' { 'application/javascript; charset=utf-8' }
-    '.svg' { 'image/svg+xml' }
-    '.png' { 'image/png' }
-    default { 'application/octet-stream' }
-  }
-
-  $bytes = [IO.File]::ReadAllBytes($file)
-  $Res.Headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-  $Res.Headers['Pragma'] = 'no-cache'
-  $Res.Headers['Expires'] = '0'
-  $Res.ContentType = $ct
-  $Res.ContentLength64 = $bytes.Length
-  $Res.OutputStream.Write($bytes, 0, $bytes.Length)
+  Send-File -Res $Res -Path $file
 }

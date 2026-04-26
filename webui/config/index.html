@@ -3,26 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZCG-Raccourci Control Web UI</title>
+  <title>靠北！Raccourci Control Web UI</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <div class="app">
     <header class="topbar">
       <div>
-        <h1>ZCG-Raccourci Control</h1>
+        <h1>靠北！Raccourci Control</h1>
         <p id="subTitle">Web UI Config · 黑白风 · 阴影 · 动效</p>
       </div>
     </header>
 
-    <section class="panel mode-panel">
-      <button class="mode-btn" id="modeShortcutsBtn">快捷字段</button>
-      <button class="mode-btn" id="modeNotesBtn">笔记</button>
-      <button class="mode-btn" id="modeCaptureBtn">截图发手机</button>
-      <button class="mode-btn" id="modeAssistantBtn">截图问答</button>
-      <button class="mode-btn" id="modeResumeBtn">简历自动填写</button>
-      <button class="mode-btn" id="modeHotkeysBtn">快捷键</button>
-      <button class="mode-btn" id="modeTestingBtn">测试</button>
+    <section class="panel mode-panel" id="modePanel">
+      <button class="mode-btn" id="modeShortcutsBtn" data-mode="shortcuts" draggable="true">A快捷字段</button>
+      <button class="mode-btn" id="modeNotesBtn" data-mode="notes" draggable="true">B笔记</button>
+      <button class="mode-btn" id="modeNotesDisplayBtn" data-mode="notes_display" draggable="true">C笔记显示</button>
+      <button class="mode-btn" id="modeCaptureBtn" data-mode="capture" draggable="true">D截图发手机</button>
+      <button class="mode-btn" id="modeAssistantBtn" data-mode="assistant" draggable="true">E截图问答</button>
+      <button class="mode-btn" id="modeResumeBtn" data-mode="resume" draggable="true">F简历自动填写</button>
+      <button class="mode-btn" id="modeHotkeysBtn" data-mode="hotkeys" draggable="true">G快捷键</button>
+      <button class="mode-btn" id="modeTestingBtn" data-mode="testing" draggable="true">H测试</button>
     </section>
 
     <section id="shortcutsView" class="view">
@@ -71,11 +72,29 @@
         </div>
         <div class="notes-right">
           <label>标题<input id="noteTitle" type="text" /></label>
-          <label>内容<textarea id="noteContent"></textarea></label>
-          <div class="notes-actions">
-            <button id="saveNoteBtn" class="btn primary">保存笔记</button>
-          </div>
+          <label>内容（Markdown）<textarea id="noteContent"></textarea></label>
         </div>
+      </section>
+    </section>
+
+    <section id="notesDisplayView" class="view hidden">
+      <section class="panel notes-display-layout">
+        <div id="notesDisplayHotkeyExplain" class="assistant-hotkey-explain"></div>
+        <section class="notes-layout notes-display-shell">
+          <div class="notes-right notes-display-right">
+            <label>内容（Markdown）<textarea id="notesDisplayContent"></textarea></label>
+            <section class="notes-display-preview">
+              <div class="notes-display-preview-toc">
+                <div class="notes-display-preview-head">目录</div>
+                <div id="notesDisplayPreviewToc" class="notes-display-preview-toc-list"></div>
+              </div>
+              <div class="notes-display-preview-body-wrap">
+                <div class="notes-display-preview-head">正文预览</div>
+                <div id="notesDisplayPreviewBody" class="notes-display-preview-body"></div>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
     </section>
 
@@ -110,46 +129,94 @@
 
     <section id="assistantView" class="view hidden">
       <section class="panel assistant-layout">
+        <div id="assistantHotkeyExplain" class="assistant-hotkey-explain"></div>
         <div class="assistant-sections">
           <section class="assistant-block">
             <div class="assistant-block-head">
               <h2>基础设置</h2>
-              <button id="assistantAdvancedToggleBtn" class="btn ghost" type="button">开启高级设置</button>
+              <button id="assistantAdvancedToggleBtn" class="assistant-advanced-switch" type="button" aria-pressed="false">
+                <span class="assistant-advanced-switch-track">
+                  <span class="assistant-advanced-switch-dot"></span>
+                </span>
+                <span id="assistantAdvancedToggleText">高级设置已关闭</span>
+              </button>
             </div>
             <div class="assistant-grid assistant-grid-basic">
-              <label><span>模型选择</span><select id="assistantModel"></select></label>
+              <label><span>问答模型选择</span><select id="assistantModel"></select></label>
+              <label><span>语音模型选择</span><select id="assistantVoiceModel"></select></label>
               <label><span>模板选择</span><select id="assistantTemplateSelect"></select></label>
               <label><span>模板名称</span><input id="assistantTemplateName" type="text" /></label>
+              <div class="assistant-template-actions assistant-template-actions-basic">
+                <button id="assistantAddTplBtn" class="btn ghost">新增模板</button>
+                <button id="assistantDeleteTplBtn" class="btn danger">删除模板</button>
+              </div>
               <label><span>Prompt</span><textarea id="assistantPrompt"></textarea></label>
             </div>
           </section>
 
-          <section class="assistant-block">
+          <section id="assistantAdvancedSection" class="assistant-block hidden">
             <div class="assistant-block-head">
               <h2>高级设置</h2>
             </div>
             <div id="assistantAdvancedBody" class="assistant-grid assistant-grid-advanced hidden">
-              <label class="check"><span>启用助手</span><input id="assistantEnabled" type="checkbox" /></label>
-              <label><span>透明度(35-100)</span><input id="assistantOpacity" type="number" min="35" max="100" /></label>
-              <label><span>API Endpoint</span><input id="assistantEndpoint" type="text" /></label>
-              <label><span>API Key</span><input id="assistantApiKey" type="password" /></label>
-              <label class="check"><span>禁止复制悬浮窗答案</span><input id="assistantDisableCopy" type="checkbox" /></label>
-              <label class="check"><span>启用每小时限流</span><input id="assistantRateEnabled" type="checkbox" /></label>
-              <label><span>每小时最多调用次数</span><input id="assistantRatePerHour" type="number" min="1" max="10000" /></label>
-              <div class="assistant-template-actions">
-                <button id="assistantAddTplBtn" class="btn ghost">新增模板</button>
-                <button id="assistantDeleteTplBtn" class="btn danger">删除模板</button>
+              <div class="assistant-opacity-group">
+                <span>透明度档位</span>
+                <div id="assistantOpacityChoices" class="assistant-opacity-choices">
+                  <button class="assistant-opacity-choice" type="button" data-value="20">20%</button>
+                  <button class="assistant-opacity-choice" type="button" data-value="50">50%</button>
+                  <button class="assistant-opacity-choice" type="button" data-value="75">75%</button>
+                  <button class="assistant-opacity-choice" type="button" data-value="100">100%</button>
+                </div>
               </div>
+              <label class="assistant-toggle-row">
+                <span>增强模式：截图时本地可见，截图不可见，录屏不可见</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantEnhancedCaptureMode" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
+              <label><span>问答模型 API</span><input id="assistantApiKey" type="password" /></label>
+              <label class="assistant-toggle-row">
+                <span>禁止复制悬浮窗答案</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantDisableCopy" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
+              <label class="assistant-toggle-row">
+                <span>启用每小时限流</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantRateEnabled" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
+              <label><span>每小时最多调用次数</span><input id="assistantRatePerHour" type="number" min="1" max="10000" /></label>
+              <label class="assistant-toggle-row">
+                <span>开启语音识别功能</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantVoiceEnabled" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
+              <label class="assistant-toggle-row">
+                <span>语音模型激活</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantVoiceModelEnabled" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
+              <label><span>语音模型 API</span><input id="assistantVoiceApiKey" type="password" /></label>
+              <label class="assistant-topmost-field"><span>麦克风选择</span><select id="assistantVoiceDevice"></select></label>
             </div>
           </section>
         </div>
 
-        <div class="assistant-actions">
-          <button id="assistantSaveBtn" class="btn">保存助手设置</button>
-          <button id="assistantShowOverlayBtn" class="btn ghost">启动悬浮窗</button>
-          <button id="assistantRunBtn" class="btn primary">截图并问答（F1）</button>
+        <div class="assistant-folder-row">
+          <label><span>截图保存目录</span><input id="assistantCaptureDir" type="text" readonly /></label>
+          <button id="assistantOpenFolderInlineBtn" class="btn ghost" type="button">打开目录</button>
+          <button id="assistantPickFolderBtn" class="btn" type="button">修改目录</button>
         </div>
-        <div id="assistantHotkeyExplain" class="assistant-hotkey-explain"></div>
+
       </section>
     </section>
 
@@ -158,7 +225,6 @@
         <aside class="resume-sidebar">
           <div class="resume-sidebar-head">
             <h2>简历分区</h2>
-            <p>按模块维护资料，供浏览器插件自动填表。</p>
           </div>
           <div id="resumeSections" class="resume-sections"></div>
         </aside>
@@ -166,18 +232,16 @@
           <div class="resume-main-head">
             <div>
               <h2 id="resumeSectionTitle">简历自动填写</h2>
-              <p id="resumeSectionDesc">先选择左侧分区，再编辑字段。</p>
             </div>
             <div class="assistant-actions">
               <button id="resumeSaveBtn" class="btn">保存简历资料</button>
-              <button id="resumeCopyJsonBtn" class="btn ghost">复制 JSON</button>
             </div>
           </div>
 
           <div class="table-wrap resume-table-wrap">
             <table>
               <thead>
-                <tr><th>字段名</th><th>值</th><th>匹配别名</th><th>类型</th><th>操作</th></tr>
+                <tr><th>字段名</th><th>值</th><th>操作</th></tr>
               </thead>
               <tbody id="resumeRows"></tbody>
             </table>
@@ -186,27 +250,64 @@
           <div class="row-actions">
             <button id="resumeAddRowBtn" class="btn">新增字段</button>
           </div>
-
-          <label><span>当前 Profile JSON 预览</span><textarea id="resumeJsonPreview" readonly></textarea></label>
         </div>
       </section>
     </section>
 
     <section id="testingView" class="view hidden">
       <section class="panel assistant-layout">
-        <div class="assistant-grid">
-          <label><span>测试时长（秒）</span><input id="testDurationSec" type="number" min="4" max="30" value="6" /></label>
-          <label><span>录制帧率（FPS）</span><input id="testFps" type="number" min="5" max="30" value="10" /></label>
-          <div class="assistant-template-actions">
-            <button id="openHotkeyProbeBtn" class="btn ghost">打开按键焦点探针</button>
-            <button id="runOverlayRecordTestBtn" class="btn primary">执行录屏捕获检测</button>
-          </div>
-          <label><span>测试输出</span><textarea id="testOutput" readonly></textarea></label>
+        <div class="assistant-sections">
+          <section class="assistant-block assistant-benchmark-block">
+            <div class="assistant-block-head">
+              <h2>API 基线测试</h2>
+              <div class="assistant-benchmark-toolbar">
+                <label class="assistant-benchmark-model-label">
+                  <span>测试模型</span>
+                  <select id="assistantBenchmarkModel"></select>
+                </label>
+                <div id="assistantBenchmarkTimer" class="assistant-benchmark-timer">0.0 s</div>
+                <button id="assistantBenchmarkRunBtn" class="btn primary" type="button">开始测试</button>
+              </div>
+            </div>
+            <p class="assistant-benchmark-note">
+              固定默认题图，直接测试“图片进入当前视觉 API，到拿到答案”为止的基础耗时。
+              这里不测 F1 截图、悬浮窗保护或 UI 展示，只测图片问答接口这一层。
+            </p>
+            <div class="assistant-benchmark-layout">
+              <div class="assistant-benchmark-preview">
+                <img id="assistantBenchmarkImage" alt="API 基线测试默认题图" />
+              </div>
+              <div class="assistant-benchmark-meta">
+                <div id="assistantBenchmarkMeta" class="assistant-benchmark-meta-card"></div>
+                <div id="assistantBenchmarkSummary" class="assistant-benchmark-summary"></div>
+                <pre id="assistantBenchmarkAnswer" class="assistant-benchmark-answer"></pre>
+              </div>
+            </div>
+            <div>
+              <h3 class="assistant-benchmark-history-title">最近测试</h3>
+              <div id="assistantBenchmarkHistory" class="assistant-benchmark-history"></div>
+            </div>
+          </section>
+
+          <section class="assistant-block">
+            <div class="assistant-block-head">
+              <h2>录屏捕获检测</h2>
+            </div>
+            <div class="assistant-grid">
+              <label><span>测试时长（秒）</span><input id="testDurationSec" type="number" min="4" max="30" value="6" /></label>
+              <label><span>录制帧率（FPS）</span><input id="testFps" type="number" min="5" max="30" value="10" /></label>
+              <div class="assistant-template-actions">
+                <button id="openHotkeyProbeBtn" class="btn ghost">打开按键焦点探针</button>
+                <button id="runOverlayRecordTestBtn" class="btn primary">执行录屏捕获检测</button>
+              </div>
+              <label><span>测试输出</span><textarea id="testOutput" readonly></textarea></label>
+            </div>
+          </section>
         </div>
       </section>
     </section>
 
-    <div id="toast" class="toast"></div>
+    <section id="toastHost" class="toast-host" aria-live="polite" aria-atomic="false"></section>
   </div>
 
   <script type="module" src="/app-main.js"></script>
