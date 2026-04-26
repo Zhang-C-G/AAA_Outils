@@ -28,7 +28,6 @@
 
 按“一个连续目标的落地”计数，不按修改文件数或代码行数计数。  
 例如：
-
 - 修复 1 条明确 bug
 - 给 1 个模块补 1 组 UI 字段
 - 新增 1 份阶段文档
@@ -36,12 +35,12 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-04-26-after-checkpoint-doc-stage-and-e-toggle`
+- 当前轮次：`2026-04-26-after-checkpoint-codex-optimization-self-eval`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`3`
-- 下一次强制 git 阈值：`已达到本轮强制 checkpoint 条件，需立即 commit 并 push origin/main`
-- 上一个 git 检查点：`checkpoint: stage docs and E overlay toggle`
-- 当前计数说明：`本轮已完成 3 次改动：(1) 新增第二阶段风险知识库，并将其接入第二阶段开发入口；(2) 统一修平 5 份入口文档的阶段 / 偏好 / 风险口径；(3) 写入 Codex 优化建议“先自评、可行再直做”的执行规则`
+- 当前连续改动次数：`1`
+- 下一次强制 git 阈值：`还差 2 次完成且测试通过的改动`
+- 上一个 git 检查点：`checkpoint: codex optimization self-eval rule`
+- 当前计数说明：`当前新一轮已完成 1 次改动：(1) 修复 A 模块悬浮窗候选插入偶发复用旧剪贴板的问题，并同步修正文档计数轮次未在上次 checkpoint 后回到新一轮的问题`
 
 ## 5. 维护方式
 

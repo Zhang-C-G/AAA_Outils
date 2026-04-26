@@ -313,7 +313,7 @@ UseMatchedRow(selected) {
 }
 
 InsertValueToTarget(text) {
-    global gLastTargetHwnd
+    global gLastTargetHwnd, gClipboardRestorePending, gClipboardRestoreData, gClipboardRestoreSeq
 
     HidePanel()
 
@@ -335,8 +335,29 @@ InsertValueToTarget(text) {
     WinActivate("ahk_id " gLastTargetHwnd)
     WinWaitActive("ahk_id " gLastTargetHwnd, , 0.6)
     Send("^v")
-    Sleep(80)
+    Sleep(220)
 
-    A_Clipboard := oldClip
-    WriteLog("insert_success", "chars=" StrLen(text))
+    gClipboardRestoreSeq += 1
+    restoreSeq := gClipboardRestoreSeq
+    gClipboardRestorePending := true
+    gClipboardRestoreData := oldClip
+    SetTimer(() => RestoreClipboardAfterInsert(restoreSeq), -40)
+
+    WriteLog("insert_success", "chars=" StrLen(text) " restore=delayed")
+}
+
+RestoreClipboardAfterInsert(seq) {
+    global gClipboardRestorePending, gClipboardRestoreData, gClipboardRestoreSeq
+
+    if !gClipboardRestorePending {
+        return
+    }
+    if (seq != gClipboardRestoreSeq) {
+        return
+    }
+
+    try A_Clipboard := gClipboardRestoreData
+    gClipboardRestoreData := ""
+    gClipboardRestorePending := false
+    WriteLog("clipboard_restore", "source=panel_insert ok=1")
 }

@@ -50,6 +50,9 @@ gCaptureLastPath := ""
 gCaptureLatestFile := ""
 gAssistantLastResult := ""
 gConfigDiskStamp := ""
+gClipboardRestorePending := false
+gClipboardRestoreData := ""
+gClipboardRestoreSeq := 0
 
 gHotkeys := Map()
 gHotkeyDefs := []
