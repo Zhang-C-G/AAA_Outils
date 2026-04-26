@@ -883,6 +883,49 @@ label span { color: #d2d2d2; font-size: 14px; }
   color: #fff;
   background: rgba(255,255,255,.08);
 }
+.confirm-host.hidden {
+  display: none;
+}
+.confirm-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+}
+.confirm-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0,0,0,.48);
+}
+.confirm-dialog {
+  width: min(420px, calc(100vw - 32px));
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #303030;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(23,23,23,.98), rgba(14,14,14,.98));
+  box-shadow: 0 20px 56px rgba(0,0,0,.46);
+}
+.confirm-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f7f7f7;
+}
+.confirm-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #d9d9d9;
+  word-break: break-word;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .dirty-tip { color: #ffe7a8; }
 @media (max-width: 980px) {
   #shortcutsView { grid-template-columns: 1fr; }

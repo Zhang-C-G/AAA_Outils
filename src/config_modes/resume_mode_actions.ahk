@@ -1,3 +1,5 @@
+gResumeAutoSavePending := false
+
 SaveResumeSettingsFromGui() {
     global gConfigGui, gResumeSettings
     
@@ -9,9 +11,23 @@ SaveResumeSettingsFromGui() {
     gResumeSettings["skills"] := gConfigGui["ResumeSkillsEdit"].Value
 }
 
-OnSaveResumeConfigClicked(*) {
+ScheduleResumeSettingsAutoSave() {
+    global gResumeAutoSavePending
+    gResumeAutoSavePending := true
+    SetTimer(FlushResumeSettingsAutoSave, -500)
+}
+
+FlushResumeSettingsAutoSave(*) {
+    global gResumeAutoSavePending
+    if !gResumeAutoSavePending {
+        return
+    }
+    gResumeAutoSavePending := false
     SaveResumeSettingsFromGui()
     SaveData()
-    WriteLog("resume", "config saved")
-    MsgBox("Resume config saved")
+    WriteLog("resume_auto_save", "config saved")
+}
+
+OnResumeFieldChanged(*) {
+    ScheduleResumeSettingsAutoSave()
 }

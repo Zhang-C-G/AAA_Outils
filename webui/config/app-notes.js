@@ -1,4 +1,4 @@
-import { state, byId, api, toast, setDirty, escapeHtml } from './app-common.js';
+﻿import { state, byId, api, toast, setDirty, escapeHtml, confirmDialog } from './app-common.js';
 
 const NOTES_AUTOSAVE_DELAY_MS = 700;
 let notesAutosaveTimer = 0;
@@ -223,8 +223,7 @@ export function initNotesHandlers() {
   byId('deleteNoteBtn').onclick = async () => {
     const id = state.notes.currentId;
     if (!id) return;
-    if (!confirm('确认删除当前笔记吗？')) return;
-    if (!confirm('二次确认：删除后不可恢复，继续吗？')) return;
+    if (!(await confirmDialog('确认删除当前笔记吗？', { title: '删除笔记', confirmText: '删除', danger: true }))) return;
 
     const payload = await api('/api/notes/delete', {
       method: 'POST',
@@ -241,3 +240,4 @@ export function initNotesHandlers() {
     toast('笔记已删除');
   };
 }
+

@@ -22,10 +22,10 @@ BuildResumeModeBody() {
     gConfigGui.AddEdit("x130 y436 w800 h80 vResumeSkillsEdit c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
     
     gConfigGui.AddText("x20 y692 w940 h1 0x10 Background" gTheme["line"])
-    
-    saveBtn := gConfigGui.AddButton("x350 y712 w220 h42 Background" gTheme["bg_header"] " c" gTheme["text_on_light"], "Save Resume Config")
-    saveBtn.SetFont("s11 w700", "Segoe UI")
-    saveBtn.OnEvent("Click", OnSaveResumeConfigClicked)
+
+    for ctrlName in ["ResumeNameEdit", "ResumePhoneEdit", "ResumeEmailEdit", "ResumeEducationEdit", "ResumeExperienceEdit", "ResumeSkillsEdit"] {
+        gConfigGui[ctrlName].OnEvent("Change", OnResumeFieldChanged)
+    }
 }
 
 ReloadResumePanel() {

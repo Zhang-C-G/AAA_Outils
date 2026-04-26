@@ -1,4 +1,4 @@
-import { state, byId, api, toast } from './app-common.js';
+import { state, byId, api, toast, confirmDialog } from './app-common.js';
 import { enhanceTopLayerSelect, refreshTopLayerSelect } from './top-layer-select.js';
 
 const API_KEY_MASK = '****************';
@@ -607,11 +607,13 @@ export function initAssistantHandlers() {
         return;
       }
       const name = state.assistant.active_template;
-      if (!confirm(`\u786e\u8ba4\u5220\u9664\u6a21\u677f\u3010${name}\u3011\u5417\uff1f`)) return;
-      state.assistant.templates = state.assistant.templates.filter((t) => t.name !== name);
-      state.assistant.active_template = state.assistant.templates[0].name;
-      renderTemplateControls();
-      scheduleAssistantAutoSave(true);
+      void (async () => {
+        if (!(await confirmDialog(`确认删除模板【${name}】吗？`, { title: '删除模板', confirmText: '删除', danger: true }))) return;
+        state.assistant.templates = state.assistant.templates.filter((t) => t.name !== name);
+        state.assistant.active_template = state.assistant.templates[0].name;
+        renderTemplateControls();
+        scheduleAssistantAutoSave(true);
+      })();
     };
   }
 

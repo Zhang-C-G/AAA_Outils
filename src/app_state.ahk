@@ -31,6 +31,7 @@ gHintText := ""
 
 gLastTargetHwnd := 0
 gPanelVisible := false
+gPanelPrimed := false
 gMatches := []
 
 gData := Map("fields", [], "prompts", [])

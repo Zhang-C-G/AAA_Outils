@@ -3,7 +3,7 @@
 gPanelHideWatcherEnabled := false
 
 BuildPanelGui() {
-    global gPanelGui, gSearchEdit, gMatchList, gStatusText, gHintText, gAppName, gTheme
+    global gPanelGui, gSearchEdit, gMatchList, gStatusText, gHintText, gAppName, gTheme, gPanelW, gPanelH, gPanelPrimed
 
     gPanelGui := Gui("-Caption +ToolWindow +Border", gAppName " - 热键悬浮面板")
     gPanelGui.BackColor := gTheme["bg_app"]
@@ -38,6 +38,13 @@ BuildPanelGui() {
 
     gPanelGui.OnEvent("Close", (*) => HidePanel())
     gPanelGui.OnEvent("Escape", (*) => HidePanel())
+
+    ; Prime the panel once in hidden state so later summons do not need a
+    ; first visible layout pass, which was causing a flash on screen.
+    gPanelGui.Show("Hide x-32000 y-32000 w" gPanelW " h" gPanelH)
+    try WinSetTransparent("Off", "ahk_id " gPanelGui.Hwnd)
+    gPanelGui.Hide()
+    gPanelPrimed := true
 }
 
 TogglePanel() {
@@ -50,7 +57,7 @@ TogglePanel() {
 }
 
 ShowPanel() {
-    global gPanelGui, gSearchEdit, gPanelVisible, gLastTargetHwnd, gPanelW, gPanelH, gCurrentQuery
+    global gPanelGui, gSearchEdit, gPanelVisible, gLastTargetHwnd, gPanelW, gPanelH, gCurrentQuery, gPanelPrimed
 
     gLastTargetHwnd := WinGetID("A")
 
@@ -62,13 +69,22 @@ ShowPanel() {
     px := Max(8, Min(px, maxX))
     py := Max(8, Min(py, maxY))
 
+    gSearchEdit.Value := ""
     gCurrentQuery := ""
+
+    if (gPanelPrimed && gPanelGui.Hwnd) {
+        try DllCall("user32\SendMessageW", "Ptr", gPanelGui.Hwnd, "UInt", 0x000B, "Ptr", 0, "Ptr", 0)
+    }
     RefreshMatches("")
-    gPanelGui.Show("x" px " y" py " w" gPanelW " h" gPanelH)
+    gPanelGui.Show("Hide x" px " y" py " w" gPanelW " h" gPanelH)
     gPanelGui.Opt("+OwnDialogs")
     try WinSetTransparent("Off", "ahk_id " gPanelGui.Hwnd)
+    if (gPanelPrimed && gPanelGui.Hwnd) {
+        try DllCall("user32\SendMessageW", "Ptr", gPanelGui.Hwnd, "UInt", 0x000B, "Ptr", 1, "Ptr", 0)
+        try DllCall("user32\RedrawWindow", "Ptr", gPanelGui.Hwnd, "Ptr", 0, "Ptr", 0, "UInt", 0x0001 | 0x0004 | 0x0400)
+    }
+    gPanelGui.Show("x" px " y" py " w" gPanelW " h" gPanelH)
 
-    gSearchEdit.Value := ""
     gSearchEdit.Focus()
     SwitchToEnglishLayout(gPanelGui.Hwnd)
     gPanelVisible := true

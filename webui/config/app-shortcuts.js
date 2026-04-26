@@ -1,4 +1,4 @@
-﻿import { state, fallbackHotkeyDefs, byId, setDirty, escapeHtml, toInt, isTruthy, validateHotkeyText, toast, api } from './app-common.js';
+﻿import { state, fallbackHotkeyDefs, byId, setDirty, escapeHtml, toInt, isTruthy, validateHotkeyText, toast, api, confirmDialog } from './app-common.js';
 
 const KEY_TO_AHK = {
   escape: 'Esc', esc: 'Esc',
@@ -689,7 +689,7 @@ export function initShortcutsHandlers() {
     void saveShortcutsNowOnStructureChange('新增栏目保存失败');
   };
 
-  byId('deleteTabBtn').onclick = () => {
+  byId('deleteTabBtn').onclick = async () => {
     ensureVisibleSelectedCategory();
     const cat = state.categories.find(c => c.id === state.selectedCategoryId);
     if (!cat) return;
@@ -697,7 +697,7 @@ export function initShortcutsHandlers() {
       toast('默认栏目不可删除');
       return;
     }
-    if (!confirm(`确认删除栏目【${cat.name}】吗？`)) return;
+    if (!(await confirmDialog(`确认删除栏目【${cat.name}】吗？`, { title: '删除栏目', confirmText: '删除', danger: true }))) return;
     state.categories = state.categories.filter(c => c.id !== cat.id);
     delete state.data[cat.id];
     state.selectedCategoryId = state.categories[0]?.id || null;
@@ -730,4 +730,5 @@ export function initShortcutsHandlers() {
   };
 
 }
+
 

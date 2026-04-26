@@ -467,7 +467,7 @@ async function switchModeInternal(mode, options = {}) {
       (mode === 'notes_display' ? '保存笔记显示内容' :
       (mode === 'capture' ? '保存截图设置' :
       (mode === 'assistant' ? '保存助手设置' :
-      (mode === 'resume' ? '保存简历资料' : '执行测试'))))));
+      (mode === 'resume' ? '简历自动保存' : '执行测试'))))));
   }
 
   const persistedMode = (mode === 'hotkeys' || mode === 'testing') ? 'shortcuts' : mode;

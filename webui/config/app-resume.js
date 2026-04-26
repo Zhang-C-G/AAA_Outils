@@ -179,9 +179,4 @@ export function initResumeHandlers() {
       scheduleAutoSave();
     };
   }
-
-  const saveBtn = byId('resumeSaveBtn');
-  if (saveBtn) {
-    saveBtn.onclick = () => saveResumeProfile().catch((e) => toast(`\u4fdd\u5b58\u5931\u8d25: ${e.message}`));
-  }
 }

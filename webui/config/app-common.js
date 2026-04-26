@@ -84,6 +84,11 @@ const toastState = {
   timers: new Map()
 };
 
+const confirmState = {
+  host: null,
+  active: null
+};
+
 function ensureToastHost() {
   if (toastState.host && document.body.contains(toastState.host)) {
     return toastState.host;
@@ -98,6 +103,20 @@ function ensureToastHost() {
     document.body.appendChild(toastState.host);
   }
   return toastState.host;
+}
+
+function ensureConfirmHost() {
+  if (confirmState.host && document.body.contains(confirmState.host)) {
+    return confirmState.host;
+  }
+  confirmState.host = byId('confirmHost');
+  if (!confirmState.host) {
+    confirmState.host = document.createElement('section');
+    confirmState.host.id = 'confirmHost';
+    confirmState.host.className = 'confirm-host hidden';
+    document.body.appendChild(confirmState.host);
+  }
+  return confirmState.host;
 }
 
 function inferToastType(message, type = '') {
@@ -227,6 +246,86 @@ toast.success = (message, options = {}) => toast(message, { ...options, type: 's
 toast.error = (message, options = {}) => toast(message, { ...options, type: 'error' });
 toast.warning = (message, options = {}) => toast(message, { ...options, type: 'warning' });
 toast.info = (message, options = {}) => toast(message, { ...options, type: 'info' });
+
+export function confirmDialog(message, options = {}) {
+  const text = String(message || '').trim();
+  if (!text) return Promise.resolve(false);
+
+  if (confirmState.active?.reject) {
+    confirmState.active.reject(new Error('confirm dialog replaced'));
+    confirmState.active = null;
+  }
+
+  const host = ensureConfirmHost();
+  host.innerHTML = '';
+  host.classList.remove('hidden');
+
+  return new Promise((resolve, reject) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'confirm-dialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+
+    const title = document.createElement('div');
+    title.className = 'confirm-title';
+    title.textContent = String(options.title || '请确认').trim() || '请确认';
+
+    const body = document.createElement('div');
+    body.className = 'confirm-body';
+    body.textContent = text;
+
+    const actions = document.createElement('div');
+    actions.className = 'confirm-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'btn ghost';
+    cancelBtn.textContent = String(options.cancelText || '取消').trim() || '取消';
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = `btn ${options.danger ? 'danger' : ''}`.trim();
+    okBtn.textContent = String(options.confirmText || '确定').trim() || '确定';
+
+    const close = (result) => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      host.classList.add('hidden');
+      host.innerHTML = '';
+      confirmState.active = null;
+      resolve(result);
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(false);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        close(true);
+      }
+    };
+
+    cancelBtn.onclick = () => close(false);
+    okBtn.onclick = () => close(true);
+    overlay.onclick = () => close(false);
+    dialog.onclick = (event) => event.stopPropagation();
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    dialog.appendChild(title);
+    dialog.appendChild(body);
+    dialog.appendChild(actions);
+    overlay.appendChild(dialog);
+    host.appendChild(overlay);
+
+    confirmState.active = { resolve, reject };
+    document.addEventListener('keydown', onKeyDown, true);
+    window.requestAnimationFrame(() => okBtn.focus());
+  });
+}
 
 export function setDirty(v, mode = 'shortcuts') {
   if (mode === 'shortcuts') {
