@@ -102,6 +102,11 @@ while ($true) {
     elseif ($path -eq '/api/notes/list' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; notes=(Get-NotesMeta) })
     }
+    elseif ($path -eq '/api/notes/reorder' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $notes = Reorder-Notes -Order (Get-Prop $payload 'order' @())
+      Send-Json $res ([ordered]@{ ok=$true; notes=$notes })
+    }
     elseif ($path -eq '/api/notes/get' -and $method -eq 'GET') {
       $id = [string]$req.QueryString['id']
       if ([string]::IsNullOrWhiteSpace($id)) {

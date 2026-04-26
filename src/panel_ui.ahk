@@ -1,9 +1,11 @@
 ﻿; Floating panel UI and insertion workflow
 
+gPanelHideWatcherEnabled := false
+
 BuildPanelGui() {
     global gPanelGui, gSearchEdit, gMatchList, gStatusText, gHintText, gAppName, gTheme
 
-    gPanelGui := Gui("+AlwaysOnTop -Caption +ToolWindow +Border", gAppName " - 热键悬浮面板")
+    gPanelGui := Gui("-Caption +ToolWindow +Border", gAppName " - 热键悬浮面板")
     gPanelGui.BackColor := gTheme["bg_app"]
     gPanelGui.MarginX := 14
     gPanelGui.MarginY := 14
@@ -25,17 +27,17 @@ BuildPanelGui() {
     gStatusText := gPanelGui.AddText("xm y+8 w" panelInnerW " h20 c" gTheme["text_primary"], "")
     gStatusText.SetFont("s9", "Microsoft YaHei UI")
 
-    gMatchList := gPanelGui.AddListView("vMatchList xm y+6 w" panelInnerW " h220 -Multi -Hdr Background" gTheme["bg_surface"] " c" gTheme["text_primary"], ["键", "内容", "热度"])
+    gMatchList := gPanelGui.AddListView("vMatchList xm y+6 w" panelInnerW " h220 -Multi -Hdr Background" gTheme["bg_surface"] " c" gTheme["text_primary"], ["键", "热度"])
     gMatchList.SetFont("s10", "Segoe UI")
     gMatchList.OnEvent("DoubleClick", OnMatchDoubleClick)
-    gMatchList.ModifyCol(1, 90)
-    gMatchList.ModifyCol(2, 236)
-    gMatchList.ModifyCol(3, 52)
+    gMatchList.ModifyCol(1, 320)
+    gMatchList.ModifyCol(2, 52)
 
-    gHintText := gPanelGui.AddText("xm y+8 w" panelInnerW " h20 c" gTheme["text_hint"], "Tip: 空搜索默认展示提示词 Top 5，↑/↓ 切换候选，Enter 插入")
+    gHintText := gPanelGui.AddText("xm y+8 w" panelInnerW " h20 c" gTheme["text_hint"], "Tip: 空搜索默认展示字段 Top 10，↑/↓ 切换候选，Enter 插入")
     gHintText.SetFont("s8", "Microsoft YaHei UI")
 
     gPanelGui.OnEvent("Close", (*) => HidePanel())
+    gPanelGui.OnEvent("Escape", (*) => HidePanel())
 }
 
 TogglePanel() {
@@ -64,21 +66,62 @@ ShowPanel() {
     RefreshMatches("")
     gPanelGui.Show("x" px " y" py " w" gPanelW " h" gPanelH)
     gPanelGui.Opt("+OwnDialogs")
+    try WinSetTransparent("Off", "ahk_id " gPanelGui.Hwnd)
 
     gSearchEdit.Value := ""
     gSearchEdit.Focus()
     SwitchToEnglishLayout(gPanelGui.Hwnd)
-    PanelFadeIn()
     gPanelVisible := true
+    StartPanelHideWatcher()
     WriteLog("panel_open", "target_hwnd=" gLastTargetHwnd)
 }
 
 HidePanel() {
     global gPanelGui, gPanelVisible
-    PanelFadeOut()
+    StopPanelHideWatcher()
+    try WinSetTransparent("Off", "ahk_id " gPanelGui.Hwnd)
     gPanelGui.Hide()
     gPanelVisible := false
     WriteLog("panel_close", "hidden")
+}
+
+StartPanelHideWatcher() {
+    global gPanelHideWatcherEnabled
+    if gPanelHideWatcherEnabled {
+        return
+    }
+    SetTimer(WatchPanelAutoHide, 120)
+    gPanelHideWatcherEnabled := true
+}
+
+StopPanelHideWatcher() {
+    global gPanelHideWatcherEnabled
+    if !gPanelHideWatcherEnabled {
+        return
+    }
+    SetTimer(WatchPanelAutoHide, 0)
+    gPanelHideWatcherEnabled := false
+}
+
+WatchPanelAutoHide(*) {
+    global gPanelGui, gPanelVisible
+    if !gPanelVisible || !gPanelGui || !gPanelGui.Hwnd {
+        StopPanelHideWatcher()
+        return
+    }
+
+    activeHwnd := WinGetID("A")
+    if (activeHwnd = gPanelGui.Hwnd) {
+        return
+    }
+
+    focusedCtrl := ""
+    try focusedCtrl := ControlGetFocus("ahk_id " gPanelGui.Hwnd)
+    if (focusedCtrl != "") {
+        return
+    }
+
+    HidePanel()
 }
 
 OnSearchChanged(ctrl, *) {
@@ -93,19 +136,18 @@ RefreshMatches(query) {
     q := Trim(StrLower(query))
     matches := []
     fieldCount := 0
-    promptCount := 0
 
     if (q = "") {
         ranked := []
         idx := 0
 
-        if !gData.Has("prompts") {
-            gData["prompts"] := []
+        if !gData.Has("fields") {
+            gData["fields"] := []
         }
-        for row in gData["prompts"] {
+        for row in gData["fields"] {
             idx += 1
             key := row["key"]
-            count := (gUsage.Has("prompts") && gUsage["prompts"].Has(key)) ? gUsage["prompts"][key] : 0
+            count := (gUsage.Has("fields") && gUsage["fields"].Has(key)) ? gUsage["fields"][key] : 0
             ranked.Push(Map("index", idx, "count", count, "row", row))
         }
 
@@ -122,16 +164,19 @@ RefreshMatches(query) {
             }
         }
 
-        maxN := Min(5, ranked.Length)
+        maxN := Min(10, ranked.Length)
         loop maxN {
             row := ranked[A_Index]["row"]
-            matches.Push(Map("type", "提示词", "cat_id", "prompts", "key", row["key"], "value", row["value"]))
+            matches.Push(Map("type", "字段", "cat_id", "fields", "key", row["key"], "value", row["value"]))
         }
-        promptCount := matches.Length
+        fieldCount := matches.Length
     } else {
         for cat in gCategories {
             catId := cat["id"]
             catName := cat["name"]
+            if (catId != "fields") {
+                continue
+            }
             if !gData.Has(catId) {
                 continue
             }
@@ -140,8 +185,6 @@ RefreshMatches(query) {
                     matches.Push(Map("type", catName, "cat_id", catId, "key", row["key"], "value", row["value"]))
                     if (catId = "fields") {
                         fieldCount += 1
-                    } else if (catId = "prompts") {
-                        promptCount += 1
                     }
                 }
             }
@@ -152,13 +195,9 @@ RefreshMatches(query) {
     gMatchList.Delete()
 
     for idx, row in matches {
-        preview := row["value"]
-        if (StrLen(preview) > 30) {
-            preview := SubStr(preview, 1, 30) "..."
-        }
         keyLabel := row["key"]
         heat := GetUsageCountByCategory(row["cat_id"], row["key"])
-        gMatchList.Add(, keyLabel, preview, heat)
+        gMatchList.Add(, keyLabel, heat)
     }
 
     if (matches.Length > 0) {
@@ -166,9 +205,9 @@ RefreshMatches(query) {
     }
 
     if (q = "") {
-        gStatusText.Value := "默认展示：提示词 Top " matches.Length "（按使用频率）"
+        gStatusText.Value := "默认展示：字段 Top " matches.Length "（按使用频率）"
     } else {
-        gStatusText.Value := "找到 " matches.Length " 个匹配项  ·  字段 " fieldCount "  ·  提示词 " promptCount
+        gStatusText.Value := "找到 " matches.Length " 个字段匹配项"
     }
 }
 

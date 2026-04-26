@@ -6,6 +6,7 @@ let notesSaveInFlight = false;
 let notesSaveQueued = false;
 let notesSavePromise = null;
 let notesChangeVersion = 0;
+let draggingNoteId = '';
 
 function renderNotesList() {
   const listEl = byId('notesList');
@@ -14,10 +15,57 @@ function renderNotesList() {
   for (const note of state.notes.list) {
     const item = document.createElement('div');
     item.className = `note-item ${note.id === state.notes.currentId ? 'active' : ''}`;
+    item.draggable = true;
+    item.dataset.id = note.id;
     item.innerHTML = `<div>${escapeHtml(note.title || 'Untitled')}</div>`;
     item.onclick = () => selectNote(note.id).catch((e) => toast(`切换失败: ${e.message}`));
+    item.addEventListener('dragstart', (event) => {
+      draggingNoteId = note.id;
+      item.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', note.id);
+    });
+    item.addEventListener('dragend', () => {
+      draggingNoteId = '';
+      item.classList.remove('dragging');
+      for (const node of listEl.querySelectorAll('.drag-target')) {
+        node.classList.remove('drag-target');
+      }
+    });
+    item.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      if (!draggingNoteId || draggingNoteId === note.id) return;
+      item.classList.add('drag-target');
+    });
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-target');
+    });
+    item.addEventListener('drop', (event) => {
+      event.preventDefault();
+      item.classList.remove('drag-target');
+      const fromId = event.dataTransfer.getData('text/plain');
+      if (!fromId || fromId === note.id) return;
+      const from = state.notes.list.findIndex((entry) => entry.id === fromId);
+      const to = state.notes.list.findIndex((entry) => entry.id === note.id);
+      if (from < 0 || to < 0) return;
+      const [moving] = state.notes.list.splice(from, 1);
+      state.notes.list.splice(to, 0, moving);
+      renderNotesList();
+      void persistNotesOrder().catch((e) => toast(`笔记排序保存失败: ${e.message}`));
+    });
     listEl.appendChild(item);
   }
+}
+
+async function persistNotesOrder() {
+  const order = (state.notes.list || []).map((note) => String(note.id || '').trim()).filter(Boolean);
+  const payload = await api('/api/notes/reorder', {
+    method: 'POST',
+    body: JSON.stringify({ order })
+  });
+  if (!payload.ok) throw new Error(payload.error || 'reorder notes failed');
+  state.notes.list = payload.notes || state.notes.list;
+  renderNotesList();
 }
 
 function cancelNotesAutosave() {

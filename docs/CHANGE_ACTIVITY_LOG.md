@@ -12,57 +12,57 @@
 
 - 轮次标识：`2026-04-26-after-checkpoint-fix-a-module-add-tab-save-validation`
 - 当前连续改动次数：`3`
-- 本轮目标：`把 bug / incident 文档机制落地，并补齐 A 模块栏目个性化持久化能力`
-- 上一个 git 检查点：`checkpoint: fix a-module add-tab save validation`
+- 本轮目标：`收紧 A 模块悬浮窗逻辑，补齐拖拽排序个性化能力，并消除唤出时闪动`
+- 上一个 git 检查点：`checkpoint: incident docs and shortcuts category persistence`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 当前 3 次改动窗口
 
 ### 第 1 次改动
 - 时间：`2026-04-26`
-- 内容：构建独立的 BUG / incident 文档机制；新增 `docs/incidents/README.md` 作为 incident 目录入口，并重写 `docs/templates/INCIDENT_TEMPLATE.md` 作为统一模板
+- 内容：调整 A 模块悬浮窗逻辑；把它收敛为普通悬浮窗行为，增加失焦自动隐藏；空搜索默认展示 `fields` 中按使用频率排序的 Top 10；悬浮窗列表只显示触发词与热度，不再罗列内容列
 - 影响文件：
-  - `docs/incidents/README.md`
-  - `docs/templates/INCIDENT_TEMPLATE.md`
+  - `src/panel_ui.ahk`
   - `docs/CHANGE_ACTIVITY_LOG.md`
   - `docs/CHANGE_CHECKPOINT_RULE.md`
 - 测试：
-  - 确认 `docs/incidents/README.md` 已创建
-  - 确认 `docs/templates/INCIDENT_TEMPLATE.md` 已创建并包含核心段落
+  - 代码校验：确认悬浮窗列表列定义已改为 `键 / 热度`
+  - 逻辑校验：确认空搜索默认候选来源已从 `prompts` 切到 `fields`
+  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例成功
 - 测试结果：`通过`
 - 是否触发 git：`否`
 
 ### 第 2 次改动
 - 时间：`2026-04-26`
-- 内容：把“栏目改名时输入框应贴合外部栏目框”的要求写入全局私人偏好体系，并同步到通用结论层与栏目框偏好层
+- 内容：为笔记模块左侧罗列框增加拖拽排序，并把顺序持久化到笔记目录顺序文件；同时为 A 模块 `quick_fields` 条目增加拖拽改顺序能力。该排序能力归类为个人偏好
 - 影响文件：
-  - `docs/extension/global_preferences/components/10_栏目框偏好.md`
+  - `webui/config/app-notes.js`
+  - `webui/config/server-notes.ps1`
+  - `webui/config/server.ps1`
+  - `webui/config/app-shortcuts.js`
+  - `webui/config/styles.css`
+  - `docs/extension/global_preferences/components/13_列表排序偏好.md`
   - `docs/extension/global_preferences/00_通用偏好结论.md`
   - `docs/CHANGE_ACTIVITY_LOG.md`
   - `docs/CHANGE_CHECKPOINT_RULE.md`
 - 测试：
-  - 文档校验：确认组件层已新增“编辑态贴合”要求
-  - 文档校验：确认通用结论层已同步该偏好
+  - 代码校验：确认笔记列表已接入 `dragstart / drop` 和 `/api/notes/reorder`
+  - 代码校验：确认 `quick_fields` 条目已接入拖拽重排并走自动保存
+  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例成功
+  - 接口校验：新增 `/api/notes/reorder` 路由已挂载
 - 测试结果：`通过`
 - 是否触发 git：`否`
 
 ### 第 3 次改动
 - 时间：`2026-04-26`
-- 内容：为 A 模块栏目补齐“当前选中栏目”的持久化链路；点击 `Codex` 这类自定义栏目后，会把当前栏目写入 `App.shortcuts_selected_category`，下次重新进入时优先恢复上次选中的栏目
+- 内容：修正 A 模块悬浮窗唤出时闪动；去掉该悬浮窗显示/隐藏时的透明度淡入淡出，改成普通悬浮窗的直接弹出与直接隐藏，避免在唤出瞬间出现可见闪动
 - 影响文件：
-  - `webui/config/app-shortcuts.js`
-  - `webui/config/server_state/config.ps1`
-  - `src/storage/data_load.ahk`
-  - `src/storage/data_save.ahk`
-  - `docs/extension/global_preferences/components/10_栏目框偏好.md`
-  - `docs/extension/global_preferences/00_通用偏好结论.md`
+  - `src/panel_ui.ahk`
   - `docs/CHANGE_ACTIVITY_LOG.md`
   - `docs/CHANGE_CHECKPOINT_RULE.md`
 - 测试：
-  - 语法校验：PowerShell 点载入 `webui/config/server_state/config.ps1` 成功
+  - 代码校验：确认 `ShowPanel()` / `HidePanel()` 已不再调用 `PanelFadeIn()` / `PanelFadeOut()`
   - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例成功
-  - 持久化校验：调用 `/api/app/shortcuts-category` 写入 `cat_1777196053431`
-  - 配置校验：`config.ini` 已存在 `shortcuts_selected_category=cat_1777196053431`
-  - 重启校验：重启后调用 `/api/state`，返回 `shortcuts_selected_category=cat_1777196053431`
+  - 行为校验：A 模块悬浮窗现按普通悬浮窗直接显示/隐藏
 - 测试结果：`通过`
 - 是否触发 git：`是，本次完成后执行 checkpoint`

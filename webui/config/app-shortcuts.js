@@ -29,6 +29,7 @@ let autoSaveInFlight = false;
 let autoSaveQueued = false;
 let activeHotkeyRecorder = null;
 let tabClickTimer = 0;
+let draggingShortcutRowIndex = -1;
 const HIDDEN_SHORTCUT_CATEGORY_IDS = new Set(['prompts', 'quick_fields']);
 
 function saveShortcutsNowOnStructureChange(message) {
@@ -386,9 +387,12 @@ function renderRows() {
   rowsEl.innerHTML = '';
   const catId = state.selectedCategoryId;
   const rows = state.data[catId] || [];
+  const allowDragReorder = catId === 'quick_fields';
 
   rows.forEach((row, idx) => {
     const tr = document.createElement('tr');
+    tr.className = allowDragReorder ? 'sortable-row' : '';
+    tr.draggable = allowDragReorder;
     tr.innerHTML = `
       <td><input type="text" value="${escapeHtml(row.key || '')}" data-k="key" /></td>
       <td><textarea data-k="value">${escapeHtml(row.value || '')}</textarea></td>
@@ -411,6 +415,41 @@ function renderRows() {
       renderRows();
       scheduleAutoSave(true);
     };
+    if (allowDragReorder) {
+      tr.addEventListener('dragstart', (event) => {
+        draggingShortcutRowIndex = idx;
+        tr.classList.add('dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(idx));
+      });
+      tr.addEventListener('dragend', () => {
+        draggingShortcutRowIndex = -1;
+        tr.classList.remove('dragging');
+        for (const node of rowsEl.querySelectorAll('.drag-target')) {
+          node.classList.remove('drag-target');
+        }
+      });
+      tr.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        if (draggingShortcutRowIndex < 0 || draggingShortcutRowIndex === idx) return;
+        tr.classList.add('drag-target');
+      });
+      tr.addEventListener('dragleave', () => {
+        tr.classList.remove('drag-target');
+      });
+      tr.addEventListener('drop', (event) => {
+        event.preventDefault();
+        tr.classList.remove('drag-target');
+        const from = Number.parseInt(event.dataTransfer.getData('text/plain'), 10);
+        const to = idx;
+        if (!Number.isInteger(from) || from < 0 || from === to || from >= rows.length) return;
+        const [moving] = rows.splice(from, 1);
+        rows.splice(to, 0, moving);
+        setDirty(true, 'shortcuts');
+        renderRows();
+        scheduleAutoSave(true);
+      });
+    }
     rowsEl.appendChild(tr);
   });
 }
