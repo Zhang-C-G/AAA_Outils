@@ -1,144 +1,77 @@
-# 改动流水记录
+# 改动流水文档
 
 最近同步：`2026-04-26`
+状态：`active`
 
-## 记录规则
+## 1. 文档定位
 
-- 每完成 1 次明确改动，就追加 1 条记录
-- 每满 3 次改动，必须立刻 git
-- git 后在记录中写明提交 hash，并将计数重新开始
+这份文档只记录“当前连续这一轮”的改动流水。
 
----
+规则是：
 
-## 2026-04-26
+- 最多只保留当前轮次的 `3` 次改动
+- 一旦第 `3` 次改动触发 git 并成功推送远端，本文件就不继续累积旧历史
+- 更早的历史版本统一通过 git 提交记录追溯
 
-### 轮次：E 模块语音模型 UI / 启动修复
+## 2. 当前轮次
+
+- 轮次标识：`2026-04-26-after-checkpoint-a-module-tab-rename`
+- 当前连续改动次数：`0`
+- 本轮目标：`修复 A 模块栏目双击改名链路，并完成当前轮次 git 检查点`
+- 上一个 git 检查点：`checkpoint: a-module tab rename editing ui`
+- 历史追溯方式：`git log` / 远端提交记录
+
+## 3. 当前 3 次改动窗口
 
 #### 第 1 次改动
 
 - 时间：`2026-04-26`
-- 内容：E 模块第一阶段 UI 拆分，新增“问答模型选择 / 语音模型选择 / 语音模型激活 / 语音模型 API”等前端字段
+- 内容：收窄变更机制文档，明确 `CHANGE_ACTIVITY_LOG` 只维护当前连续 3 次改动；超过 3 次后的历史统一通过 git 追溯
 - 影响文件：
-  - `webui/config/index.html`
-  - `webui/config/app-assistant.js`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/AI_HANDOFF.md`
 - 是否触发 git：`否`
-- 备注：第一阶段只做 UI 壳层与前端状态占位，不接后端链路
+- 备注：这是新轮次的第 `1` 次改动；旧流水历史不再继续堆叠保留
+
+## 4. 使用说明
+
+- 第 `2` 次、第 `3` 次改动继续直接追加在本文档下方
+- 当第 `3` 次改动完成并成功 git 后：
+  1. 由 git 提交承担长期历史
+  2. 本文档进入下一轮，只保留新的 1-3 次改动
 
 #### 第 2 次改动
 
 - 时间：`2026-04-26`
-- 内容：新增 E 模块第一阶段文档，明确本阶段范围、页面结构与第二阶段待补项
+- 内容：补充变更机制规则，明确每次改动必须先完成对应测试并且测试通过，这次改动才算完成并计入连续 3 次
 - 影响文件：
-  - `docs/modules/06E_stage1_voice_model_ui.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/AI_HANDOFF.md`
+- 测试：
+  - 文档一致性复核：已检查 3 份机制文档中的规则表述是否一致
+- 测试结果：`通过`
 - 是否触发 git：`否`
-- 备注：用于固定“先做 UI、后接真实链路”的边界
+- 备注：这是当前轮次的第 `2` 次改动；下一次改动完成并测试通过后，将触发 git
 
 #### 第 3 次改动
 
 - 时间：`2026-04-26`
-- 内容：修复助手语音输入启动时的 AHK `#Warn` 作用域问题，避免 `gAssistantVoiceTranscriptLastText` 被误判为局部变量
-- 影响文件：
-  - `src/assistant_overlay.ahk`
-- 是否触发 git：`是`
-- git 检查点：`d999c5c`
-- 备注：按当前规则，这 3 次改动已构成一轮检查点锚点
-
-#### 第 4 次改动
-
-- 时间：`2026-04-26`
-- 内容：建立“每 3 次改动强制 git”的文档机制，并补写规则文档、流水文档、AI 交接总文档
-- 影响文件：
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-  - `docs/AI_HANDOFF.md`
-- 是否触发 git：`否`
-- 备注：当前连续计数从本次开始重新累计为 `1`
-
-#### 第 5 次改动
-
-- 时间：`2026-04-26`
-- 内容：A 模块 Web UI 标签栏隐藏 `提示词`、`快捷字段`，仅保留 `字段` 与用户自建栏目；同步更新模块文档与前端文档口径
+- 内容：修复 A 模块栏目双击改名链路，拆开单击选择与双击改名的事件冲突，确保双击时不会被单击重绘打断
 - 影响文件：
   - `webui/config/app-shortcuts.js`
-  - `docs/modules/02_field_prompt_quickfield.md`
-  - `docs/modules/07_web_config_frontend.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-- 是否触发 git：`否`
-- 备注：当前连续计数更新为 `2`，下一次改动后必须 git
-
-#### 第 6 次改动
-
-- 时间：`2026-04-26`
-- 内容：重构全局私人偏好文档结构，新增“通用偏好结论层”和“控件专项层”，并补齐栏目框、按钮、标签页三份控件偏好文档
-- 影响文件：
-  - `docs/extension/全局私人偏好文档.md`
-  - `docs/extension/global_preferences/00_通用偏好结论.md`
-  - `docs/extension/global_preferences/components/10_栏目框偏好.md`
-  - `docs/extension/global_preferences/components/11_按钮偏好.md`
-  - `docs/extension/global_preferences/components/12_标签页偏好.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
   - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - 自动校验 `webui/config/app-shortcuts.js` 是否包含延迟单击选择、双击清理点击计时器、双击强制选中当前栏目
+  - 自动校验 `webui/config/styles.css` 的编辑态是否保持白色边框且未启用变形
+- 测试结果：`通过`
 - 是否触发 git：`是`
-- git 检查点：`checkpoint: restructure global preference docs`
-- 备注：这是当前连续第 3 次改动，按规则本次改动完成后立即 git，后续计数从 `0` 重新开始
+- git 检查点：`checkpoint: fix a-module tab double-click rename`
+- 备注：这是当前轮次的第 `3` 次改动；测试通过后立即执行 git，并推送到远端
 
-#### 第 7 次改动
+## 4. 当前状态
 
-- 时间：`2026-04-26`
-- 内容：修正规则文档中对 `git` 的定义，明确本项目语境里的 git 默认指“本地 commit + push 到远端分支”，并补充远端结果说明要求
-- 影响文件：
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-  - `docs/AI_HANDOFF.md`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-- 是否触发 git：`否`
-- 备注：当前连续计数更新为 `1`
-
-#### 第 8 次改动
-
-- 时间：`2026-04-26`
-- 内容：继续修正规则文档，明确默认远端目标应为 `origin/main`，只有主分支拒绝直推时才退回工作分支
-- 影响文件：
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-  - `docs/AI_HANDOFF.md`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-- 是否触发 git：`是`
-- git 检查点：`docs: default git target is origin/main`
-- 备注：本次提前执行 git，并实际按新规则直推 `origin/main`；后续计数从 `0` 重新开始
-
-#### 第 9 次改动
-
-- 时间：`2026-04-26`
-- 内容：把 A 模块栏目框的“双击改名时保持框大小不变、仅外圈边框切白”写入全局私人偏好三层文档
-- 影响文件：
-  - `docs/extension/global_preferences/00_通用偏好结论.md`
-  - `docs/extension/global_preferences/03_同构结构偏好.md`
-  - `docs/extension/global_preferences/components/10_栏目框偏好.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-- 是否触发 git：`否`
-- 备注：当前连续计数更新为 `1`
-
-#### 第 10 次改动
-
-- 时间：`2026-04-26`
-- 内容：补充 git 检查点规则，明确连续 3 次改动期间必须分别记录“每次改了什么”，以便回退到上一个 git 后仍能根据流水继续开发
-- 影响文件：
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-  - `docs/AI_HANDOFF.md`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-- 是否触发 git：`否`
-- 备注：当前连续计数更新为 `2`
-
-#### 第 11 次改动
-
-- 时间：`2026-04-26`
-- 内容：实现 A 模块栏目双击改名编辑态；进入编辑时保持栏目框尺寸不变，仅用白色外圈提示编辑状态，不使用放大、外扩或加粗描边
-- 影响文件：
-  - `webui/config/app-shortcuts.js`
-  - `webui/config/styles.css`
-  - `docs/modules/02_field_prompt_quickfield.md`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-- 是否触发 git：`是`
-- git 检查点：`checkpoint: a-module tab rename editing ui`
-- 备注：这是当前连续第 3 次改动；与第 9 次、第 10 次共同构成一轮完整施工，完成后立即 git 并推送远端
+- 本轮第 `3` 次改动已完成，并已满足触发 git 的条件
+- 下一轮开始时，本文档将按新轮次重新维护最多 `3` 次改动

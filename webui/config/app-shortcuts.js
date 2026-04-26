@@ -28,6 +28,7 @@ let autoSaveTimer = 0;
 let autoSaveInFlight = false;
 let autoSaveQueued = false;
 let activeHotkeyRecorder = null;
+let tabClickTimer = 0;
 const HIDDEN_SHORTCUT_CATEGORY_IDS = new Set(['prompts', 'quick_fields']);
 
 function ahkToFriendly(hk) {
@@ -264,12 +265,31 @@ function renderTabs() {
     tab.draggable = true;
 
     tab.onclick = () => {
-      state.selectedCategoryId = cat.id;
-      renderTabs();
-      renderRows();
+      if (tab.classList.contains('editing')) {
+        return;
+      }
+      if (tabClickTimer) {
+        clearTimeout(tabClickTimer);
+      }
+      tabClickTimer = window.setTimeout(() => {
+        tabClickTimer = 0;
+        if (state.selectedCategoryId === cat.id) {
+          return;
+        }
+        state.selectedCategoryId = cat.id;
+        renderTabs();
+        renderRows();
+      }, 220);
     };
 
     tab.ondblclick = () => {
+      if (tabClickTimer) {
+        clearTimeout(tabClickTimer);
+        tabClickTimer = 0;
+      }
+      state.selectedCategoryId = cat.id;
+      tab.classList.add('active');
+      renderRows();
       const rect = tab.getBoundingClientRect();
       const input = document.createElement('input');
       let canceled = false;
