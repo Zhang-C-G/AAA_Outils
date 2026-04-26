@@ -524,7 +524,7 @@ StartAssistantCaptureFlow(showNotice := true) {
 }
 
 StartAssistantVoiceInputHold(showNotice := true) {
-    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult
+    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult, gAssistantVoiceTranscriptLastText
 
     if gAssistantVoiceInputActive {
         return Map("ok", 1, "error", "")

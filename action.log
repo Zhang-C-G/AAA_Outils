@@ -1755,3 +1755,166 @@
 2026-04-26 15:32:47 | mode_switch | active_mode=assistant
 2026-04-26 15:32:49 | mode_switch | active_mode=resume
 2026-04-26 15:32:50 | mode_switch | active_mode=assistant
+2026-04-26 15:39:17 | mode_switch | active_mode=resume
+2026-04-26 15:39:17 | mode_switch | active_mode=assistant
+2026-04-26 15:39:18 | mode_switch | active_mode=notes_display
+2026-04-26 15:39:18 | notes_display_select | id=20260426151517
+2026-04-26 15:39:18 | mode_switch | active_mode=assistant
+2026-04-26 15:39:20 | mode_switch | active_mode=shortcuts
+2026-04-26 15:39:21 | mode_switch | active_mode=assistant
+2026-04-26 15:39:24 | mode_switch | active_mode=shortcuts
+2026-04-26 15:39:40 | mode_switch | active_mode=resume
+2026-04-26 15:39:41 | mode_switch | active_mode=assistant
+2026-04-26 15:39:42 | mode_switch | active_mode=shortcuts
+2026-04-26 15:39:42 | mode_switch | active_mode=notes
+2026-04-26 15:39:42 | notes_select | id=20260420172621
+2026-04-26 15:39:44 | notes_select | id=20260420172534
+2026-04-26 15:39:45 | notes_select | id=20260420172755
+2026-04-26 15:39:47 | mode_switch | active_mode=capture
+2026-04-26 15:40:14 | mode_switch | active_mode=shortcuts
+2026-04-26 15:41:23 | mode_switch | active_mode=resume
+2026-04-26 15:41:23 | mode_switch | active_mode=shortcuts
+2026-04-26 15:41:24 | mode_switch | active_mode=notes
+2026-04-26 15:41:24 | notes_select | id=20260420172755
+2026-04-26 15:41:24 | mode_switch | active_mode=notes_display
+2026-04-26 15:41:24 | notes_display_select | id=20260426151517
+2026-04-26 15:41:25 | mode_switch | active_mode=shortcuts
+2026-04-26 15:42:16 | startup | script initialized
+2026-04-26 15:42:18 | web_config_reload | applied from web ui
+2026-04-26 15:42:39 | assistant_overlay_protect_rearm | mode=WDA_EXCLUDEFROMCAPTURE reason=pre_show
+2026-04-26 15:42:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-26 15:42:39 | assistant_overlay_open | source=manual
+2026-04-26 15:42:41 | assistant_voice_input_start | provider=local_windows
+2026-04-26 15:42:42 | assistant_voice_input_empty | provider=本地语音识别
+2026-04-26 15:42:43 | notes_overlay_protect_on | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 reason=pre_show
+2026-04-26 15:42:43 | notes_overlay_protect_on | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 reason=show
+2026-04-26 15:42:43 | notes_overlay_show | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=1 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 placed=1
+2026-04-26 15:42:43 | notes_overlay_open | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=1 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 id=20260426151517
+2026-04-26 15:42:46 | notes_overlay_position_saved | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=1 manual_lock=1 auto_restore=0 affinity=1 note_id=20260426151517 x=661 y=178
+2026-04-26 15:42:46 | notes_overlay_protect_off | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=1 auto_restore=0 affinity=0 note_id=20260426151517 reason=hide
+2026-04-26 15:42:46 | notes_overlay_hide | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=1 auto_restore=0 affinity=0 note_id=20260426151517
+2026-04-26 15:42:46 | notes_overlay_close | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=1 auto_restore=0 affinity=0 note_id=20260426151517 source=close_event
+2026-04-26 15:45:18 | startup | script initialized
+2026-04-26 16:00:26 | mode_switch | active_mode=shortcuts
+2026-04-26 16:00:27 | web_config_reload | applied from web ui
+2026-04-26 16:00:29 | mode_switch | active_mode=resume
+2026-04-26 16:00:29 | web_config_reload | applied from web ui
+2026-04-26 16:00:30 | mode_switch | active_mode=shortcuts
+2026-04-26 16:00:31 | web_config_reload | applied from web ui
+2026-04-26 16:00:31 | mode_switch | active_mode=shortcuts
+2026-04-26 16:00:32 | web_config_reload | applied from web ui
+2026-04-26 16:00:38 | mode_switch | active_mode=notes_display
+2026-04-26 16:00:38 | notes_display_select | id=20260426151517
+2026-04-26 16:00:39 | mode_switch | active_mode=assistant
+2026-04-26 16:00:39 | web_config_reload | applied from web ui
+2026-04-26 16:00:39 | mode_switch | active_mode=resume
+2026-04-26 16:00:40 | web_config_reload | applied from web ui
+2026-04-26 16:00:40 | mode_switch | active_mode=notes_display
+2026-04-26 16:00:40 | notes_display_select | id=20260426151517
+2026-04-26 16:00:41 | web_config_reload | applied from web ui
+2026-04-26 16:00:42 | mode_switch | active_mode=assistant
+2026-04-26 16:00:43 | web_config_reload | applied from web ui
+2026-04-26 16:00:47 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-26 16:00:49 | web_config_reload | applied from web ui
+2026-04-26 16:00:50 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-26 16:00:51 | web_config_reload | applied from web ui
+2026-04-26 16:00:54 | assistant_settings_save | model=doubao-seed-2-0-pro-260215 template=default_template
+2026-04-26 16:00:54 | web_config_reload | applied from web ui
+2026-04-26 16:00:56 | mode_switch | active_mode=resume
+2026-04-26 16:00:56 | mode_switch | active_mode=assistant
+2026-04-26 16:00:57 | web_config_reload | applied from web ui
+2026-04-26 16:01:09 | mode_switch | active_mode=shortcuts
+2026-04-26 16:01:10 | web_config_reload | applied from web ui
+2026-04-26 16:01:11 | mode_switch | active_mode=shortcuts
+2026-04-26 16:01:13 | web_config_reload | applied from web ui
+2026-04-26 16:05:23 | mode_switch | active_mode=shortcuts
+2026-04-26 16:05:23 | web_config_reload | applied from web ui
+2026-04-26 16:05:25 | mode_switch | active_mode=resume
+2026-04-26 16:05:26 | web_config_reload | applied from web ui
+2026-04-26 16:05:26 | mode_switch | active_mode=shortcuts
+2026-04-26 16:05:27 | web_config_reload | applied from web ui
+2026-04-26 16:05:46 | mode_switch | active_mode=assistant
+2026-04-26 16:05:47 | web_config_reload | applied from web ui
+2026-04-26 16:05:47 | mode_switch | active_mode=notes_display
+2026-04-26 16:05:47 | notes_display_select | id=20260426151517
+2026-04-26 16:05:48 | web_config_reload | applied from web ui
+2026-04-26 16:05:59 | mode_switch | active_mode=shortcuts
+2026-04-26 16:06:00 | web_config_reload | applied from web ui
+2026-04-26 16:06:18 | mode_switch | active_mode=shortcuts
+2026-04-26 16:06:19 | web_config_reload | applied from web ui
+2026-04-26 16:06:28 | mode_switch | active_mode=shortcuts
+2026-04-26 16:06:29 | web_config_reload | applied from web ui
+2026-04-26 16:07:36 | mode_switch | active_mode=notes_display
+2026-04-26 16:07:36 | notes_display_select | id=20260426151517
+2026-04-26 16:07:37 | web_config_reload | applied from web ui
+2026-04-26 16:07:40 | mode_switch | active_mode=assistant
+2026-04-26 16:07:41 | mode_switch | active_mode=assistant
+2026-04-26 16:07:41 | web_config_reload | applied from web ui
+2026-04-26 16:07:41 | assistant_overlay_protect_rearm | mode=WDA_EXCLUDEFROMCAPTURE reason=pre_show
+2026-04-26 16:07:41 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-04-26 16:07:41 | assistant_overlay_open | source=manual
+2026-04-26 16:07:42 | notes_overlay_protect_on | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 reason=pre_show
+2026-04-26 16:07:42 | notes_overlay_protect_on | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 reason=show
+2026-04-26 16:07:42 | notes_overlay_show | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=1 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 placed=1
+2026-04-26 16:07:42 | notes_overlay_open | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=1 manual_lock=0 auto_restore=0 affinity=1 note_id=20260426151517 id=20260426151517
+2026-04-26 16:07:42 | web_config_reload | applied from web ui
+2026-04-26 16:07:44 | assistant_overlay_protect_rearm | mode=WDA_EXCLUDEFROMCAPTURE reason=capture_affinity_drift_0
+2026-04-26 16:07:45 | notes_overlay_position_saved | visible=1 temp_hidden=0 restore_ms=0 restore_token=0 guard=1 manual_lock=1 auto_restore=0 affinity=1 note_id=20260426151517 x=334 y=381
+2026-04-26 16:07:45 | notes_overlay_protect_off | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=1 auto_restore=0 affinity=0 note_id=20260426151517 reason=hide
+2026-04-26 16:07:45 | notes_overlay_hide | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=1 auto_restore=0 affinity=0 note_id=20260426151517
+2026-04-26 16:07:45 | notes_overlay_close | visible=0 temp_hidden=0 restore_ms=0 restore_token=0 guard=0 manual_lock=1 auto_restore=0 affinity=0 note_id=20260426151517 source=close_event
+2026-04-26 16:08:49 | mode_switch | active_mode=shortcuts
+2026-04-26 16:08:50 | web_config_reload | applied from web ui
+2026-04-26 16:09:50 | mode_switch | active_mode=shortcuts
+2026-04-26 16:09:51 | web_config_reload | applied from web ui
+2026-04-26 16:09:54 | mode_switch | active_mode=notes_display
+2026-04-26 16:09:54 | notes_display_select | id=20260426151517
+2026-04-26 16:09:55 | web_config_reload | applied from web ui
+2026-04-26 16:09:55 | mode_switch | active_mode=shortcuts
+2026-04-26 16:09:57 | web_config_reload | applied from web ui
+2026-04-26 16:10:17 | mode_switch | active_mode=notes_display
+2026-04-26 16:10:17 | notes_display_select | id=20260426151517
+2026-04-26 16:10:18 | mode_switch | active_mode=shortcuts
+2026-04-26 16:10:18 | mode_switch | active_mode=notes_display
+2026-04-26 16:10:18 | notes_display_select | id=20260426151517
+2026-04-26 16:10:19 | web_config_reload | applied from web ui
+2026-04-26 16:10:19 | mode_switch | active_mode=assistant
+2026-04-26 16:10:19 | startup | script initialized
+2026-04-26 16:10:20 | mode_switch | active_mode=notes_display
+2026-04-26 16:10:20 | notes_display_select | id=20260426151517
+2026-04-26 16:10:20 | mode_switch | active_mode=shortcuts
+2026-04-26 16:10:21 | web_config_reload | applied from web ui
+2026-04-26 16:11:47 | mode_switch | active_mode=notes_display
+2026-04-26 16:11:47 | notes_display_select | id=20260426151517
+2026-04-26 16:11:48 | mode_switch | active_mode=shortcuts
+2026-04-26 16:11:48 | web_config_reload | applied from web ui
+2026-04-26 16:11:48 | mode_switch | active_mode=assistant
+2026-04-26 16:11:49 | mode_switch | active_mode=resume
+2026-04-26 16:11:49 | web_config_reload | applied from web ui
+2026-04-26 16:11:49 | mode_switch | active_mode=shortcuts
+2026-04-26 16:11:49 | web_config_reload | applied from web ui
+2026-04-26 16:11:50 | mode_switch | active_mode=notes
+2026-04-26 16:11:50 | notes_select | id=20260420172621
+2026-04-26 16:11:50 | web_config_reload | applied from web ui
+2026-04-26 16:11:50 | mode_switch | active_mode=capture
+2026-04-26 16:11:51 | mode_switch | active_mode=shortcuts
+2026-04-26 16:11:51 | web_config_reload | applied from web ui
+2026-04-26 16:11:52 | mode_switch | active_mode=shortcuts
+2026-04-26 16:11:52 | web_config_reload | applied from web ui
+2026-04-26 16:11:53 | web_config_reload | applied from web ui
+2026-04-26 16:16:32 | mode_switch | active_mode=shortcuts
+2026-04-26 16:16:33 | web_config_reload | applied from web ui
+2026-04-26 16:17:44 | mode_switch | active_mode=capture
+2026-04-26 16:17:44 | mode_switch | active_mode=notes
+2026-04-26 16:17:44 | notes_select | id=20260420172621
+2026-04-26 16:17:45 | web_config_reload | applied from web ui
+2026-04-26 16:17:45 | mode_switch | active_mode=shortcuts
+2026-04-26 16:17:45 | web_config_reload | applied from web ui
+2026-04-26 16:17:45 | mode_switch | active_mode=resume
+2026-04-26 16:17:46 | mode_switch | active_mode=assistant
+2026-04-26 16:17:46 | web_config_reload | applied from web ui
+2026-04-26 16:17:47 | mode_switch | active_mode=shortcuts
+2026-04-26 16:17:47 | web_config_reload | applied from web ui
+2026-04-26 16:17:48 | web_config_reload | applied from web ui
+2026-04-26 16:17:49 | mode_switch | active_mode=shortcuts
+2026-04-26 16:17:50 | web_config_reload | applied from web ui

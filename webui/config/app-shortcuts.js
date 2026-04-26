@@ -28,6 +28,7 @@ let autoSaveTimer = 0;
 let autoSaveInFlight = false;
 let autoSaveQueued = false;
 let activeHotkeyRecorder = null;
+const HIDDEN_SHORTCUT_CATEGORY_IDS = new Set(['prompts', 'quick_fields']);
 
 function ahkToFriendly(hk) {
   const raw = String(hk || '').trim();
@@ -235,11 +236,28 @@ function buildSanitizedData() {
   return out;
 }
 
+function getVisibleShortcutCategories() {
+  return state.categories.filter((cat) => !HIDDEN_SHORTCUT_CATEGORY_IDS.has(String(cat?.id || '').trim()));
+}
+
+function ensureVisibleSelectedCategory() {
+  const visible = getVisibleShortcutCategories();
+  if (!visible.length) {
+    state.selectedCategoryId = null;
+    return;
+  }
+
+  if (!visible.find((cat) => cat.id === state.selectedCategoryId)) {
+    state.selectedCategoryId = visible[0].id;
+  }
+}
+
 function renderTabs() {
   const tabsEl = byId('tabs');
   tabsEl.innerHTML = '';
+  ensureVisibleSelectedCategory();
 
-  for (const cat of state.categories) {
+  for (const cat of getVisibleShortcutCategories()) {
     const tab = document.createElement('div');
     tab.className = `tab ${cat.id === state.selectedCategoryId ? 'active' : ''}`;
     tab.textContent = cat.name;
@@ -462,6 +480,7 @@ export function applyShortcutsState(payload) {
   if (!state.selectedCategoryId || !state.categories.find(c => c.id === state.selectedCategoryId)) {
     state.selectedCategoryId = state.categories[0]?.id || null;
   }
+  ensureVisibleSelectedCategory();
 
   state.behavior.auto_refresh_enabled = isTruthy(state.behavior.auto_refresh_enabled) ? 1 : 0;
   state.behavior.refresh_every_uses = toInt(state.behavior.refresh_every_uses, 3, 1, 1000);
@@ -558,6 +577,7 @@ export function initShortcutsHandlers() {
   };
 
   byId('deleteTabBtn').onclick = () => {
+    ensureVisibleSelectedCategory();
     const cat = state.categories.find(c => c.id === state.selectedCategoryId);
     if (!cat) return;
     if (state.protectedCategoryIds.has(cat.id)) {
@@ -575,6 +595,7 @@ export function initShortcutsHandlers() {
   };
 
   byId('addRowBtn').onclick = () => {
+    ensureVisibleSelectedCategory();
     const catId = state.selectedCategoryId;
     if (!catId) return;
     state.data[catId] ||= [];

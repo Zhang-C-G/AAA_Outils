@@ -55,6 +55,14 @@ function defaults() {
       { id: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro (Vision)', enabled: 1 },
       { id: 'doubao-seed-2-0-mini-260215', name: 'Doubao Seed 2.0 Mini (ASR Fast | 语音识别特别快)', enabled: 1 }
     ],
+    voice_model: 'doubao-seed-2-0-mini-260215',
+    voice_model_options: [
+      { id: 'doubao-seed-2-0-mini-260215', name: 'Doubao Seed 2.0 Mini (Voice)', enabled: 1 },
+      { id: 'whisper-1', name: 'Whisper 1 (Voice)', enabled: 1 }
+    ],
+    voice_model_enabled: 0,
+    voice_model_api_key: '',
+    has_voice_model_api_key: 0,
     prompt: DEFAULT_PROMPT,
     active_template: 'default_template',
     templates: [{ name: 'default_template', prompt: DEFAULT_PROMPT }],
@@ -200,11 +208,16 @@ function normalizeModelOptions(options) {
   return out.length ? out : defaults().model_options;
 }
 
-function renderModelOptions(selectedModel) {
-  const sel = byId('assistantModel');
+function normalizeVoiceModelOptions(options) {
+  const list = normalizeModelOptions(options);
+  return list.length ? list : defaults().voice_model_options;
+}
+
+function renderSelectOptions(selectId, options, selectedValue, fallbackValue) {
+  const sel = byId(selectId);
   sel.innerHTML = '';
 
-  const list = normalizeModelOptions(state.assistant.model_options);
+  const list = Array.isArray(options) ? options : [];
   for (const item of list) {
     if (Number(item.enabled || 0) === 0) continue;
     const opt = document.createElement('option');
@@ -213,9 +226,19 @@ function renderModelOptions(selectedModel) {
     sel.appendChild(opt);
   }
 
-  const hasSelected = Array.from(sel.options).some((o) => o.value === selectedModel);
-  sel.value = hasSelected ? selectedModel : (sel.options[0]?.value || 'doubao-seed-2-0-lite-260215');
-  state.assistant.model = sel.value;
+  const hasSelected = Array.from(sel.options).some((o) => o.value === selectedValue);
+  sel.value = hasSelected ? selectedValue : (sel.options[0]?.value || fallbackValue);
+  return sel.value;
+}
+
+function renderModelOptions(selectedModel) {
+  const list = normalizeModelOptions(state.assistant.model_options);
+  state.assistant.model = renderSelectOptions('assistantModel', list, selectedModel, 'doubao-seed-2-0-lite-260215');
+}
+
+function renderVoiceModelOptions(selectedModel) {
+  const list = normalizeVoiceModelOptions(state.assistant.voice_model_options);
+  state.assistant.voice_model = renderSelectOptions('assistantVoiceModel', list, selectedModel, 'doubao-seed-2-0-mini-260215');
 }
 
 function isBrokenPrompt(text) {
@@ -391,6 +414,9 @@ export function applyAssistantState(payload) {
     ...incoming
   };
   state.assistant.model_options = normalizeModelOptions(incoming.model_options || state.assistant.model_options);
+  state.assistant.voice_model_options = normalizeVoiceModelOptions(
+    incoming.voice_model_options || state.assistant.voice_model_options
+  );
 
   if (isBrokenPrompt(state.assistant.prompt)) {
     state.assistant.prompt = fallback.prompt;
@@ -408,13 +434,19 @@ export function applyAssistantState(payload) {
   ensureActiveTemplate();
 
   renderModelOptions(state.assistant.model || 'doubao-seed-2-0-lite-260215');
+  renderVoiceModelOptions(state.assistant.voice_model || 'doubao-seed-2-0-mini-260215');
   byId('assistantApiKey').value = Number(state.assistant.has_api_key || 0) !== 0 ? API_KEY_MASK : '';
+  byId('assistantVoiceApiKey').value = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? API_KEY_MASK : '';
   byId('assistantDisableCopy').checked = Number(state.assistant.disable_copy ?? 1) !== 0;
   byId('assistantEnhancedCaptureMode').checked = Number(state.assistant.enhanced_capture_mode ?? 0) !== 0;
   byId('assistantVoiceEnabled').checked = Number(state.assistant.voice_input_enabled ?? 0) !== 0;
+  byId('assistantVoiceModelEnabled').checked = Number(state.assistant.voice_model_enabled ?? 0) !== 0;
   byId('assistantApiKey').placeholder = Number(state.assistant.has_api_key || 0) !== 0
     ? '\u5df2\u4fdd\u5b58\u5bc6\u94a5\uff08\u4fdd\u6301\u661f\u53f7\u8868\u793a\u4e0d\u53d8\uff09'
     : '\u8bf7\u8f93\u5165 API Key';
+  byId('assistantVoiceApiKey').placeholder = Number(state.assistant.has_voice_model_api_key || 0) !== 0
+    ? '\u5df2\u4fdd\u5b58\u8bed\u97f3\u6a21\u578b\u5bc6\u94a5\uff08\u4fdd\u6301\u661f\u53f7\u8868\u793a\u4e0d\u53d8\uff09'
+    : '\u8bf7\u8f93\u5165\u8bed\u97f3\u6a21\u578b API';
   byId('assistantRateEnabled').checked = Number(state.assistant.rate_limit_enabled || 0) !== 0;
   byId('assistantRatePerHour').value = Math.max(1, Number(state.assistant.rate_limit_per_hour || 100));
   byId('assistantCaptureDir').value = state.assistant.capture_dir || '';
@@ -435,9 +467,11 @@ function readAssistantFromUi() {
   state.assistant.enabled = 1;
   state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 75);
   state.assistant.model = (byId('assistantModel').value || '').trim() || 'doubao-seed-2-0-lite-260215';
+  state.assistant.voice_model = (byId('assistantVoiceModel').value || '').trim() || 'doubao-seed-2-0-mini-260215';
   state.assistant.enhanced_capture_mode = byId('assistantEnhancedCaptureMode').checked ? 1 : 0;
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
   state.assistant.voice_input_enabled = byId('assistantVoiceEnabled').checked ? 1 : 0;
+  state.assistant.voice_model_enabled = byId('assistantVoiceModelEnabled').checked ? 1 : 0;
   state.assistant.voice_input_device_id = String(getVoiceDeviceSelect()?.value || '').trim();
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
   state.assistant.rate_limit_per_hour = Math.min(10000, Math.max(1, Math.round(Number(byId('assistantRatePerHour').value || 100))));
@@ -450,6 +484,15 @@ function readAssistantFromUi() {
   } else {
     state.assistant.api_key = '';
     state.assistant.keep_api_key = Number(state.assistant.has_api_key || 0) !== 0 ? 1 : 0;
+  }
+
+  const inputVoiceKey = String(byId('assistantVoiceApiKey').value || '').trim();
+  if (inputVoiceKey && inputVoiceKey !== API_KEY_MASK) {
+    state.assistant.voice_model_api_key = inputVoiceKey;
+    state.assistant.keep_voice_model_api_key = 0;
+  } else {
+    state.assistant.voice_model_api_key = '';
+    state.assistant.keep_voice_model_api_key = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? 1 : 0;
   }
 
   ensureActiveTemplate();
@@ -468,6 +511,8 @@ export async function saveAssistantSettings(options = {}) {
   state.assistant = { ...state.assistant, ...(payload.settings || {}) };
   state.assistant.api_key = '';
   state.assistant.keep_api_key = 0;
+  state.assistant.voice_model_api_key = '';
+  state.assistant.keep_voice_model_api_key = 0;
   applyAssistantState({ assistant: state.assistant });
   if (!silent) {
     toast('\u52a9\u624b\u8bbe\u7f6e\u5df2\u4fdd\u5b58');
@@ -499,6 +544,7 @@ async function pickAssistantFolder() {
 }
 
 export function initAssistantHandlers() {
+  enhanceTopLayerSelect('assistantVoiceModel');
   enhanceTopLayerSelect('assistantVoiceDevice', { placeholder: '系统默认麦克风' });
 
   const advancedToggleBtn = byId('assistantAdvancedToggleBtn');
@@ -583,12 +629,16 @@ export function initAssistantHandlers() {
   }
   const model = byId('assistantModel');
   if (model) model.onchange = () => scheduleAssistantAutoSave(true);
+  const voiceModel = byId('assistantVoiceModel');
+  if (voiceModel) voiceModel.onchange = () => scheduleAssistantAutoSave(true);
   const disableCopy = byId('assistantDisableCopy');
   if (disableCopy) disableCopy.onchange = () => scheduleAssistantAutoSave(true);
   const enhancedCaptureMode = byId('assistantEnhancedCaptureMode');
   if (enhancedCaptureMode) enhancedCaptureMode.onchange = () => scheduleAssistantAutoSave(true);
   const voiceEnabled = byId('assistantVoiceEnabled');
   if (voiceEnabled) voiceEnabled.onchange = () => scheduleAssistantAutoSave(true);
+  const voiceModelEnabled = byId('assistantVoiceModelEnabled');
+  if (voiceModelEnabled) voiceModelEnabled.onchange = () => scheduleAssistantAutoSave(true);
   const voiceDevice = getVoiceDeviceSelect();
   if (voiceDevice) {
     voiceDevice.onchange = () => scheduleAssistantAutoSave(true);
@@ -596,6 +646,8 @@ export function initAssistantHandlers() {
   }
   const apiKey = byId('assistantApiKey');
   if (apiKey) apiKey.onchange = () => scheduleAssistantAutoSave(true);
+  const voiceApiKey = byId('assistantVoiceApiKey');
+  if (voiceApiKey) voiceApiKey.onchange = () => scheduleAssistantAutoSave(true);
   const rateEnabled = byId('assistantRateEnabled');
   if (rateEnabled) rateEnabled.onchange = () => scheduleAssistantAutoSave(true);
   const ratePerHour = byId('assistantRatePerHour');

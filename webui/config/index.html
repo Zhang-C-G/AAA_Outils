@@ -142,7 +142,8 @@
               </button>
             </div>
             <div class="assistant-grid assistant-grid-basic">
-              <label><span>模型选择</span><select id="assistantModel"></select></label>
+              <label><span>问答模型选择</span><select id="assistantModel"></select></label>
+              <label><span>语音模型选择</span><select id="assistantVoiceModel"></select></label>
               <label><span>模板选择</span><select id="assistantTemplateSelect"></select></label>
               <label><span>模板名称</span><input id="assistantTemplateName" type="text" /></label>
               <div class="assistant-template-actions assistant-template-actions-basic">
@@ -174,7 +175,7 @@
                   <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
                 </span>
               </label>
-              <label><span>API Key</span><input id="assistantApiKey" type="password" /></label>
+              <label><span>问答模型 API</span><input id="assistantApiKey" type="password" /></label>
               <label class="assistant-toggle-row">
                 <span>禁止复制悬浮窗答案</span>
                 <span class="assistant-inline-switch">
@@ -197,6 +198,14 @@
                   <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
                 </span>
               </label>
+              <label class="assistant-toggle-row">
+                <span>语音模型激活</span>
+                <span class="assistant-inline-switch">
+                  <input id="assistantVoiceModelEnabled" type="checkbox" />
+                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                </span>
+              </label>
+              <label><span>语音模型 API</span><input id="assistantVoiceApiKey" type="password" /></label>
               <label class="assistant-topmost-field"><span>麦克风选择</span><select id="assistantVoiceDevice"></select></label>
             </div>
           </section>
