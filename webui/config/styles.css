@@ -795,6 +795,61 @@ label span { color: #d2d2d2; font-size: 14px; }
   gap: 12px;
   align-items: start;
 }
+.resume-entry-bar {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #2f2f2f;
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255,255,255,0.028) 0,
+      rgba(255,255,255,0.028) 8px,
+      rgba(255,255,255,0.012) 8px,
+      rgba(255,255,255,0.012) 16px
+    ),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+}
+.resume-entry-bar-label {
+  color: #d6d6d6;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.resume-entry-bar-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.resume-entry-bar-link.active {
+  color: #f1f1f1;
+}
+.resume-subview.hidden {
+  display: none;
+}
+.resume-company-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+}
+.resume-company-toggle span {
+  font-size: 13px;
+  color: #d6d6d6;
+}
+.resume-company-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
 .resume-table-wrap textarea {
   min-height: 38px;
   height: 38px;
@@ -939,6 +994,10 @@ label span { color: #d2d2d2; font-size: 14px; }
   .capture-status { grid-template-columns: 1fr; }
   .resume-layout { grid-template-columns: 1fr; }
   .resume-main-head { flex-direction: column; }
+  .resume-entry-bar {
+    width: 100%;
+    justify-content: space-between;
+  }
   .assistant-folder-row { grid-template-columns: 1fr; }
   .assistant-benchmark-layout { grid-template-columns: 1fr; }
   .toast-host {

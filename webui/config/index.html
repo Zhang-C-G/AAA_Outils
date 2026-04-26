@@ -233,19 +233,40 @@
             <div>
               <h2 id="resumeSectionTitle">简历自动填写</h2>
             </div>
+            <div id="resumeEntryBar" class="resume-entry-bar">
+              <span id="resumeEntryBarLabel" class="resume-entry-bar-label">进入公司链接界面：</span>
+              <button id="resumeToggleCompanyViewBtn" class="resume-entry-bar-link" type="button">点击进入</button>
+            </div>
           </div>
 
-          <div class="table-wrap resume-table-wrap">
-            <table>
-              <thead>
-                <tr><th>字段名</th><th>值</th><th>操作</th></tr>
-              </thead>
-              <tbody id="resumeRows"></tbody>
-            </table>
+          <div id="resumeProfilePanel" class="resume-subview">
+            <div class="table-wrap resume-table-wrap">
+              <table>
+                <thead>
+                  <tr><th>字段名</th><th>值</th><th>操作</th></tr>
+                </thead>
+                <tbody id="resumeRows"></tbody>
+              </table>
+            </div>
+
+            <div class="row-actions">
+              <button id="resumeAddRowBtn" class="btn">新增字段</button>
+            </div>
           </div>
 
-          <div class="row-actions">
-            <button id="resumeAddRowBtn" class="btn">新增字段</button>
+          <div id="resumeCompanyPanel" class="resume-subview hidden">
+            <div class="table-wrap resume-table-wrap">
+              <table>
+                <thead>
+                  <tr><th>公司</th><th>链接地址</th><th>允许填充</th><th>操作</th></tr>
+                </thead>
+                <tbody id="resumeCompanyRows"></tbody>
+              </table>
+            </div>
+
+            <div class="row-actions">
+              <button id="resumeAddCompanyRowBtn" class="btn">新增公司</button>
+            </div>
           </div>
         </div>
       </section>

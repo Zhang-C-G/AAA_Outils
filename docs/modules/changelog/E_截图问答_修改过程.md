@@ -35,3 +35,15 @@
   - 代码校验：确认 `assistantDeleteTplBtn` 删除链路已改为 `confirmDialog`
   - 全局搜索：确认模板删除链路不再使用默认 `confirm()`
 - 测试结果：`通过`
+
+### 2026-04-26 / 语音模型 API 回填改为星号保护
+- 改动内容：
+  - E 模块“语音模型 API”补齐与“问答模型 API”一致的受保护存储链路
+  - 前端回填时继续使用星号遮罩，不回显明文
+  - 公开状态新增 `has_voice_model_api_key`，使前端可稳定按“已保存密钥”样式显示
+- 测试：
+  - 代码校验：确认 `server_state/assistant.ps1` 已新增 `voice_model_api_key_protected`
+  - 代码校验：确认公开状态已返回 `has_voice_model_api_key`
+  - 语法校验：PowerShell Parser 成功解析 `webui/config/server_state/assistant.ps1`
+  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
+- 测试结果：`通过`

@@ -79,6 +79,9 @@ function Get-AssistantDefaults {
     api_key = ''
     api_key_protected = ''
     has_api_key = 0
+    voice_model_api_key = ''
+    voice_model_api_key_protected = ''
+    has_voice_model_api_key = 0
     model = (Resolve-AssistantModel -Requested 'doubao-seed-2-0-lite-260215')
     prompt = $prompt
     active_template = 'default_template'
@@ -224,6 +227,30 @@ function Resolve-AssistantProtectedKey {
   return ''
 }
 
+function Resolve-AssistantVoiceModelProtectedKey {
+  param($PayloadAssistant, $Fallback)
+
+  $fallbackProtected = [string](Get-Prop $Fallback 'voice_model_api_key_protected' '')
+  $incoming = Get-Prop $PayloadAssistant 'voice_model_api_key' $null
+  $keep = [string](Get-Prop $PayloadAssistant 'keep_voice_model_api_key' '0') -eq '1'
+  $clear = [string](Get-Prop $PayloadAssistant 'clear_voice_model_api_key' '0') -eq '1'
+
+  if ($clear) { return '' }
+
+  if ($null -ne $incoming) {
+    $keyText = ([string]$incoming).Trim()
+    if ($keyText -ne '') {
+      $protected = Protect-AssistantSecret -Secret $keyText
+      if ($protected -ne '') { return $protected }
+    }
+    if ($keep -or $fallbackProtected -ne '') { return $fallbackProtected }
+    return ''
+  }
+
+  if ($keep -or $fallbackProtected -ne '') { return $fallbackProtected }
+  return ''
+}
+
 function Convert-ToAssistantSettings {
   param($PayloadAssistant, $Fallback)
 
@@ -239,6 +266,9 @@ function Convert-ToAssistantSettings {
   $settings.api_key = ''
   $settings.api_key_protected = Resolve-AssistantProtectedKey -PayloadAssistant $PayloadAssistant -Fallback $Fallback
   $settings.has_api_key = if ($settings.api_key_protected -ne '') { 1 } else { 0 }
+  $settings.voice_model_api_key = ''
+  $settings.voice_model_api_key_protected = Resolve-AssistantVoiceModelProtectedKey -PayloadAssistant $PayloadAssistant -Fallback $Fallback
+  $settings.has_voice_model_api_key = if ($settings.voice_model_api_key_protected -ne '') { 1 } else { 0 }
 
   $requestedModel = [string](Get-Prop $PayloadAssistant 'model' (Get-Prop $Fallback 'model' 'doubao-seed-2-0-lite-260215'))
   $settings.model = Resolve-AssistantModel -Requested $requestedModel -Fallback ([string](Get-Prop $Fallback 'model' 'doubao-seed-2-0-lite-260215'))
@@ -302,6 +332,9 @@ function Get-AssistantSettings {
     if ($sec.Contains('api_key_protected')) {
       $settings.api_key_protected = ([string]$sec['api_key_protected']).Trim()
     }
+    if ($sec.Contains('voice_model_api_key_protected')) {
+      $settings.voice_model_api_key_protected = ([string]$sec['voice_model_api_key_protected']).Trim()
+    }
     if ($sec.Contains('model')) {
       $tmp = ([string]$sec['model']).Trim()
       if ($tmp) { $settings.model = (Resolve-AssistantModel -Requested $tmp -Fallback ([string]$settings.model)) }
@@ -342,6 +375,12 @@ function Get-AssistantSettings {
         $settings.api_key_protected = Protect-AssistantSecret -Secret $legacy
       }
     }
+    if (($settings.voice_model_api_key_protected -eq '') -and $sec.Contains('voice_model_api_key')) {
+      $legacyVoice = ([string]$sec['voice_model_api_key']).Trim()
+      if ($legacyVoice -ne '') {
+        $settings.voice_model_api_key_protected = Protect-AssistantSecret -Secret $legacyVoice
+      }
+    }
   }
 
   if ($ini.Contains('AssistantTemplates')) {
@@ -360,6 +399,8 @@ function Get-AssistantSettings {
   Ensure-AssistantTemplates $settings
   $settings.api_key = ''
   $settings.has_api_key = if ([string]$settings.api_key_protected -ne '') { 1 } else { 0 }
+  $settings.voice_model_api_key = ''
+  $settings.has_voice_model_api_key = if ([string]$settings.voice_model_api_key_protected -ne '') { 1 } else { 0 }
   $settings.model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' '')) -Fallback 'doubao-seed-2-0-lite-260215'
   $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
@@ -376,7 +417,12 @@ function Get-AssistantPublicSettings {
   $public = [ordered]@{}
   foreach ($k in $Settings.Keys) {
     if ($k -eq 'api_key_protected') { continue }
+    if ($k -eq 'voice_model_api_key_protected') { continue }
     if ($k -eq 'api_key') {
+      $public[$k] = ''
+      continue
+    }
+    if ($k -eq 'voice_model_api_key') {
       $public[$k] = ''
       continue
     }
@@ -385,6 +431,8 @@ function Get-AssistantPublicSettings {
 
   $public['api_key'] = ''
   $public['has_api_key'] = if ([string](Get-Prop $Settings 'api_key_protected' '') -ne '') { 1 } else { 0 }
+  $public['voice_model_api_key'] = ''
+  $public['has_voice_model_api_key'] = if ([string](Get-Prop $Settings 'voice_model_api_key_protected' '') -ne '') { 1 } else { 0 }
   $public['model_options'] = Get-AssistantModelCatalog
   $public['capture_dir'] = [string]$CaptureDir
   $public['latest_capture'] = (Get-CaptureLatestPath)
@@ -461,6 +509,8 @@ function Save-AssistantSettings {
   $ini['Assistant']['api_endpoint'] = [string]$settings.api_endpoint
   $ini['Assistant']['api_key'] = ''
   $ini['Assistant']['api_key_protected'] = [string]$settings.api_key_protected
+  $ini['Assistant']['voice_model_api_key'] = ''
+  $ini['Assistant']['voice_model_api_key_protected'] = [string]$settings.voice_model_api_key_protected
   $ini['Assistant']['model'] = [string]$settings.model
   $ini['Assistant']['active_template'] = [string]$settings.active_template
   $ini['Assistant']['prompt'] = ([string](Get-AssistantPromptByTemplate -Settings $settings) -replace '[\r\n]+', ' ')

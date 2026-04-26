@@ -9,68 +9,57 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-04-26-after-f5bb764`
-- 当前连续改动次数：`1`
-- 本轮目标：`统一删除确认交互，落地自定义确认弹窗偏好`
-- 上一个 git 检查点：`checkpoint: fix a-panel top10 scope and voice model`
+- 轮次标识：`2026-04-26-after-81dc34a`
+- 当前连续改动次数：`3`
+- 本轮目标：`补齐 E 模块语音模型 API 的受保护回填链路，并继续沉淀全局偏好`
+- 上一个 git 检查点：`checkpoint: confirm dialogs, panel summon, resume autosave`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 当前 1-3 次改动窗口
 
 ### 第 1 次改动
 - 时间：`2026-04-26`
-- 内容：统一 A 模块栏目删除、B 模块笔记删除、E 模块模板删除的确认链路；全部改为应用内自定义弹窗，并将删除操作收敛为一次确认；同时新增“弹窗确认偏好”文档并更新全局偏好结论
+- 内容：补齐 E 模块“语音模型 API”的受保护存储与回填；前端继续用星号显示，公开状态增加 `has_voice_model_api_key`，使其 UI 行为与“问答模型 API”一致
 - 影响文件：
-  - `webui/config/app-common.js`
-  - `webui/config/app-notes.js`
-  - `webui/config/app-shortcuts.js`
-  - `webui/config/app-assistant.js`
-  - `webui/config/styles.css`
-  - `docs/extension/global_preferences/components/14_弹窗确认偏好.md`
-  - `docs/extension/global_preferences/00_通用偏好结论.md`
-  - `docs/modules/changelog/A_快捷字段_修改过程.md`
-  - `docs/modules/changelog/B_笔记_修改过程.md`
+  - `webui/config/server_state/assistant.ps1`
   - `docs/modules/changelog/E_截图问答_修改过程.md`
   - `docs/CHANGE_ACTIVITY_LOG.md`
   - `docs/CHANGE_CHECKPOINT_RULE.md`
 - 测试：
-  - 代码校验：确认三条删除链路均改为 `confirmDialog`
-  - 全局搜索：确认 `webui/config` 中不再残留默认 `confirm()`
-  - 模块解析校验：通过 `vm.SourceTextModule` 成功解析 `app-common.js`、`app-notes.js`、`app-shortcuts.js`、`app-assistant.js`
+  - 代码校验：确认新增 `voice_model_api_key_protected` / `has_voice_model_api_key`
+  - 语法校验：PowerShell Parser 成功解析 `webui/config/server_state/assistant.ps1`
   - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
 - 测试结果：`通过`
 - 是否触发 git：`否`
 
 ### 第 2 次改动
 - 时间：`2026-04-26`
-- 内容：继续收敛 A 模块悬浮窗唤出时的闪帧；改为在隐藏态完成预热、内容刷新、定位和重绘，再一次性显示，尽量去掉“先闪一下再出现”
+- 内容：将“说明条允许使用斜杠纹理背景”沉淀为全局偏好；明确这类样式适用于快捷键说明、同步说明、只读提示等辅助区域
 - 影响文件：
-  - `src/app_state.ahk`
-  - `src/panel_ui.ahk`
-  - `docs/modules/changelog/A_快捷字段_修改过程.md`
+  - `docs/extension/global_preferences/components/15_说明条偏好.md`
+  - `docs/extension/global_preferences/00_通用偏好结论.md`
   - `docs/CHANGE_ACTIVITY_LOG.md`
   - `docs/CHANGE_CHECKPOINT_RULE.md`
 - 测试：
-  - 代码校验：确认新增 `gPanelPrimed` 预热状态
-  - 代码校验：确认 `BuildPanelGui()` 与 `ShowPanel()` 已切换为隐藏态预布局方案
+  - 文档校验：确认新增 `15_说明条偏好.md`
+  - 文档校验：确认 `00_通用偏好结论.md` 已补入说明条斜杠背景结论
   - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
 - 测试结果：`通过`
 - 是否触发 git：`否`
 
 ### 第 3 次改动
 - 时间：`2026-04-26`
-- 内容：删除 F 模块保存按钮，并将 F 模块切到自动保存；同时覆盖 Web 端与 AHK 配置界面两条入口，统一符合“不要保存按钮、偏好自动保存”的个人偏好
+- 内容：为 F 模块增加第一阶段“公司链接维护界面”UI；将头部改为一行进入提示，点击后切换到公司 / 链接地址 / 允许填充维护表，先只做界面不接填充逻辑
 - 影响文件：
   - `webui/config/index.html`
   - `webui/config/app-resume.js`
-  - `src/config_modes/resume_mode_ui.ahk`
-  - `src/config_modes/resume_mode_actions.ahk`
+  - `webui/config/styles.css`
   - `docs/modules/changelog/F_简历自动填写_修改过程.md`
   - `docs/CHANGE_ACTIVITY_LOG.md`
   - `docs/CHANGE_CHECKPOINT_RULE.md`
 - 测试：
-  - 代码校验：确认 Web F 模块保存按钮已移除
-  - 代码校验：确认 AHK F 模块已改为字段修改后自动保存
+  - 模块解析校验：通过 `vm.SourceTextModule` 成功解析 `webui/config/app-resume.js`
+  - 代码校验：确认已新增 `resumeEntryBar`、`resumeCompanyPanel`、`resumeCompanyRows`
   - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
 - 测试结果：`通过`
 - 是否触发 git：`是，完成测试后执行 checkpoint`
