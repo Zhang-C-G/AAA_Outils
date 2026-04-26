@@ -367,8 +367,18 @@ function applyAppShellState(payload) {
   applyModeButtonOrder();
 }
 
+function getModePrefetchPayload(mode, payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const effectiveMode = mode === 'hotkeys' ? 'shortcuts' : mode;
+  if (effectiveMode === 'shortcuts' && payload.shortcuts_prefetch) {
+    return payload.shortcuts_prefetch;
+  }
+  return null;
+}
+
 async function ensureModeLoaded(mode, options = {}) {
   const forceReload = !!options.forceReload;
+  const prefetchedPayload = getModePrefetchPayload(mode, options.prefetchedPayload);
   const effectiveMode = mode === 'hotkeys' ? 'shortcuts' : mode;
 
   if (!forceReload && hasModeLoaded(effectiveMode)) {
@@ -376,7 +386,7 @@ async function ensureModeLoaded(mode, options = {}) {
   }
 
   if (effectiveMode === 'shortcuts') {
-    const payload = await api('/api/state');
+    const payload = prefetchedPayload || await api('/api/state');
     applyShortcutsState(payload);
     applyAppShellState(payload);
     markModeLoaded('shortcuts');
@@ -433,6 +443,7 @@ async function ensureModeLoaded(mode, options = {}) {
 async function switchModeInternal(mode, options = {}) {
   const persist = options.persist !== false;
   const forceReload = !!options.forceReload;
+  const prefetchedPayload = options.prefetchedPayload || null;
   if (!['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing'].includes(mode)) {
     mode = 'shortcuts';
   }
@@ -472,7 +483,7 @@ async function switchModeInternal(mode, options = {}) {
     capturePollTimer = 0;
   }
 
-  await ensureModeLoaded(mode, { forceReload });
+  await ensureModeLoaded(mode, { forceReload, prefetchedPayload });
 
   if (mode === 'notes') {
     tryRestoreNotesDraft();
@@ -505,7 +516,7 @@ async function reloadAll() {
   loadedModes.clear();
   const payload = await api('/api/app/state');
   applyAppShellState(payload);
-  await switchModeInternal(payload.app?.active_mode || 'shortcuts', { persist: false, forceReload: true });
+  await switchModeInternal(payload.app?.active_mode || 'shortcuts', { persist: false, forceReload: true, prefetchedPayload: payload });
 }
 
 async function waitForServerReady(maxAttempts = 20, delayMs = 500) {

@@ -2,6 +2,38 @@
 
 gWebConfigTimerEnabled := false
 
+GetConfigDiskStamp() {
+    global gDataFile
+    if !FileExist(gDataFile) {
+        return ""
+    }
+    try return FileGetTime(gDataFile, "M")
+    catch
+        return ""
+}
+
+UpdateConfigDiskStamp() {
+    global gConfigDiskStamp
+    gConfigDiskStamp := GetConfigDiskStamp()
+    return gConfigDiskStamp
+}
+
+SyncConfigStateFromDiskIfNewer(reason := "") {
+    global gConfigDiskStamp
+
+    currentStamp := GetConfigDiskStamp()
+    if (currentStamp = "") {
+        return false
+    }
+    if (gConfigDiskStamp = currentStamp) {
+        return false
+    }
+
+    ReloadAppStateFromDisk()
+    WriteLog("config_disk_sync", "reason=" reason " stamp=" currentStamp)
+    return true
+}
+
 ShowWebConfigWindow() {
     global gWebConfigPort, gWebConfigDesiredFile
     try FileAppend("", gWebConfigDesiredFile, "UTF-8")
@@ -178,6 +210,7 @@ ReloadAppStateFromDisk() {
     gCaptureSettings := LoadCaptureSettings()
     gAssistantSettings := LoadAssistantSettings()
     gActiveMode := gAppSettings["active_mode"]
+    UpdateConfigDiskStamp()
 
     RegisterHotkeys()
     RestartAutoRefreshTimer()

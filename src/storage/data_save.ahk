@@ -1,6 +1,7 @@
 SaveData() {
     global gDataFile, gData, gHotkeys, gHotkeyDefs, gBehavior, gCategories, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings, gCaptureDir, gAppSettings
     try ProcessWebConfigActionFile()
+    try SyncConfigStateFromDiskIfNewer("save_data")
 
     EnsureAssistantTemplates(gAssistantSettings)
     gAssistantSettings["overlay_opacity"] := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
@@ -104,6 +105,7 @@ SaveData() {
 
     FileDelete(gDataFile)
     FileAppend(StrJoin(lines, "`n"), gDataFile, "UTF-8")
+    UpdateConfigDiskStamp()
 }
 
 SaveSnapshotVersion() {

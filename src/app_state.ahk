@@ -48,6 +48,7 @@ gUsesSinceAutoRefresh := 0
 gCaptureLastPath := ""
 gCaptureLatestFile := ""
 gAssistantLastResult := ""
+gConfigDiskStamp := ""
 
 gHotkeys := Map()
 gHotkeyDefs := []
@@ -61,6 +62,7 @@ gDevReloadSignature := ""
 
 Init() {
     global gData, gUsage, gHotkeys, gBehavior, gCategories, gAppSettings, gActiveMode, gCaptureSettings, gAssistantSettings, gResumeSettings, gCaptureDir
+    global gConfigDiskStamp
     InitTheme()
     InitHotkeyDefs()
     EnsureDataFile()
@@ -82,6 +84,7 @@ Init() {
     gAssistantSettings := LoadAssistantSettings()
     gResumeSettings := LoadResumeSettings()
     gActiveMode := gAppSettings["active_mode"]
+    UpdateConfigDiskStamp()
 
     BuildPanelGui()
     BuildConfigGui()

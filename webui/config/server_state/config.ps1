@@ -282,11 +282,17 @@ function Get-AppShellState {
     $app['mode_order'] = Normalize-ModeOrder([string]$ini['App']['mode_order'])
   }
 
-  return [ordered]@{
+  $result = [ordered]@{
     hotkeys = $hotkeys
     hotkey_defs = (Get-HotkeyDefs)
     app = $app
   }
+
+  if ($app['active_mode'] -in @('shortcuts', 'hotkeys')) {
+    $result['shortcuts_prefetch'] = Get-ConfigState
+  }
+
+  return $result
 }
 
 function Write-ConfigState {

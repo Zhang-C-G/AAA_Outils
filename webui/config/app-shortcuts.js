@@ -31,6 +31,12 @@ let activeHotkeyRecorder = null;
 let tabClickTimer = 0;
 const HIDDEN_SHORTCUT_CATEGORY_IDS = new Set(['prompts', 'quick_fields']);
 
+function saveShortcutsNowOnStructureChange(message) {
+  return saveShortcuts({ silent: true }).catch((error) => {
+    toast(message || `保存失败: ${error.message}`);
+  });
+}
+
 function ahkToFriendly(hk) {
   const raw = String(hk || '').trim();
   if (!raw) return '';
@@ -313,7 +319,7 @@ function renderTabs() {
         if (name && name !== cat.name) {
           cat.name = name;
           setDirty(true, 'shortcuts');
-          scheduleAutoSave(true);
+          void saveShortcutsNowOnStructureChange('栏目改名保存失败');
         }
         renderTabs();
       };
@@ -353,7 +359,7 @@ function renderTabs() {
       state.categories.splice(to, 0, moving);
       setDirty(true, 'shortcuts');
       renderTabs();
-      scheduleAutoSave();
+      void saveShortcutsNowOnStructureChange('栏目排序保存失败');
     };
 
     tabsEl.appendChild(tab);
@@ -614,7 +620,7 @@ export function initShortcutsHandlers() {
     setDirty(true, 'shortcuts');
     renderTabs();
     renderRows();
-    scheduleAutoSave(true);
+    void saveShortcutsNowOnStructureChange('新增栏目保存失败');
   };
 
   byId('deleteTabBtn').onclick = () => {
@@ -632,7 +638,7 @@ export function initShortcutsHandlers() {
     setDirty(true, 'shortcuts');
     renderTabs();
     renderRows();
-    scheduleAutoSave(true);
+    void saveShortcutsNowOnStructureChange('删除栏目保存失败');
   };
 
   byId('addRowBtn').onclick = () => {
