@@ -43,6 +43,17 @@ ClampAssistantRatePerHour(limitValue) {
     return Min(10000, Max(1, v))
 }
 
+NormalizeAssistantOverlayColor(color, fallback := "#111111") {
+    raw := Trim("" color)
+    if RegExMatch(raw, "^#[0-9A-Fa-f]{6}$") {
+        return StrUpper(raw)
+    }
+    if RegExMatch(raw, "^[0-9A-Fa-f]{6}$") {
+        return "#" StrUpper(raw)
+    }
+    return NormalizeAssistantOverlayColor(fallback, "#111111")
+}
+
 EnsureAssistantTemplates(settings) {
     templates := []
     seen := Map()
@@ -144,6 +155,7 @@ GetAssistantDefaultSettings() {
         "active_template", "default_template",
         "templates", GetAssistantDefaultTemplates(),
         "overlay_opacity", 75,
+        "overlay_ball_color", "#111111",
         "enhanced_capture_mode", 0,
         "disable_copy", 1,
         "voice_input_enabled", 0,
@@ -243,6 +255,8 @@ LoadAssistantSettings() {
                 if RegExMatch(value, "^\d+$") {
                     settings["overlay_opacity"] := ClampAssistantOpacity(Integer(value))
                 }
+            case "overlay_ball_color":
+                settings["overlay_ball_color"] := NormalizeAssistantOverlayColor(value)
             case "enhanced_capture_mode":
                 settings["enhanced_capture_mode"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
             case "disable_copy":
@@ -299,6 +313,7 @@ LoadAssistantSettings() {
     }
 
     settings["overlay_opacity"] := ClampAssistantOpacity(settings["overlay_opacity"])
+    settings["overlay_ball_color"] := NormalizeAssistantOverlayColor(settings["overlay_ball_color"])
     settings["enabled"] := 1
     settings["enhanced_capture_mode"] := settings.Has("enhanced_capture_mode") ? (settings["enhanced_capture_mode"] ? 1 : 0) : 0
     settings["disable_copy"] := settings.Has("disable_copy") ? (settings["disable_copy"] ? 1 : 0) : 1

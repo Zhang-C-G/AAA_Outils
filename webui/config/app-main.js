@@ -7,8 +7,10 @@ import { initAssistantHandlers, applyAssistantState, saveAssistantSettings } fro
 import { initResumeHandlers, applyResumeState, saveResumeProfile } from './app-resume.js';
 import { initTestingHandlers, runOverlayRecordTest, refreshTestingState } from './app-testing.js';
 import { initApiCenterHandlers, refreshApiCenterState } from './app-api-center.js';
+import { applyShellTheme, mountThemePicker, normalizeThemeSettings } from './theme-picker.js';
 
 let capturePollTimer = 0;
+let shellThemePicker = null;
 const loadedModes = new Set();
 const SHORTCUTS_DRAFT_KEY = 'raccourci.shortcutsDraft';
 const SHORTCUTS_DRAFT_RESTORE_KEY = 'raccourci.shortcutsDraftRestorePending';
@@ -366,7 +368,44 @@ function applyAppShellState(payload) {
     ...(payload.app || {})
   };
   state.app.mode_order = normalizeModeOrder(state.app?.mode_order);
+  const theme = normalizeThemeSettings({
+    mode: state.app.shell_theme_mode,
+    primary: state.app.shell_theme_primary,
+    secondary: state.app.shell_theme_secondary,
+    accent: state.app.shell_theme_accent
+  });
+  state.app.shell_theme_mode = theme.mode;
+  state.app.shell_theme_primary = theme.primary;
+  state.app.shell_theme_secondary = theme.secondary;
+  state.app.shell_theme_accent = theme.accent;
+  applyShellTheme(theme);
+  if (shellThemePicker) {
+    shellThemePicker.setValue(theme);
+  }
   applyModeButtonOrder();
+}
+
+async function persistShellTheme(theme) {
+  const normalized = normalizeThemeSettings(theme);
+  const accent = normalized.mode === 'gradient' ? normalized.secondary : normalized.primary;
+  state.app.shell_theme_mode = normalized.mode;
+  state.app.shell_theme_primary = normalized.primary;
+  state.app.shell_theme_secondary = normalized.secondary;
+  state.app.shell_theme_accent = accent;
+  applyShellTheme({
+    ...normalized,
+    accent
+  });
+  await api('/api/app/theme', {
+    method: 'POST',
+    body: JSON.stringify({
+      shell_theme_mode: normalized.mode,
+      shell_theme_primary: normalized.primary,
+      shell_theme_secondary: normalized.secondary,
+      shell_theme_accent: accent
+    })
+  });
+  toast('主题已保存');
 }
 
 function getModePrefetchPayload(mode, payload) {
@@ -546,6 +585,43 @@ async function waitForServerReady(maxAttempts = 20, delayMs = 500) {
 }
 
 function bindHeaderActions() {
+  const shellThemeBtn = byId('shellThemeBtn');
+  const shellThemeHost = byId('shellThemePanelHost');
+  if (shellThemeBtn && shellThemeHost && !shellThemePicker) {
+    shellThemePicker = mountThemePicker(shellThemeHost, {
+      value: {
+        mode: state.app.shell_theme_mode,
+        primary: state.app.shell_theme_primary,
+        secondary: state.app.shell_theme_secondary,
+        accent: state.app.shell_theme_accent
+      },
+      onChange: (theme) => {
+        const accent = theme.mode === 'gradient' ? theme.secondary : theme.primary;
+        applyShellTheme({ ...theme, accent });
+      },
+      onSave: persistShellTheme
+    });
+    shellThemeBtn.onclick = () => {
+      if (shellThemeHost.classList.contains('hidden')) {
+        shellThemePicker.setValue({
+          mode: state.app.shell_theme_mode,
+          primary: state.app.shell_theme_primary,
+          secondary: state.app.shell_theme_secondary,
+          accent: state.app.shell_theme_accent
+        });
+        shellThemePicker.open();
+      } else {
+        applyShellTheme({
+          mode: state.app.shell_theme_mode,
+          primary: state.app.shell_theme_primary,
+          secondary: state.app.shell_theme_secondary,
+          accent: state.app.shell_theme_accent
+        });
+        shellThemePicker.close();
+      }
+    };
+  }
+
   const saveBtn = byId('saveBtn');
   if (saveBtn) {
     saveBtn.onclick = async () => {

@@ -87,6 +87,7 @@ function Get-AssistantDefaults {
     active_template = 'default_template'
     templates = @([ordered]@{ name = 'default_template'; prompt = $prompt })
     overlay_opacity = 75
+    overlay_ball_color = '#111111'
     enhanced_capture_mode = 0
     disable_copy = 1
     voice_input_enabled = 0
@@ -118,6 +119,21 @@ function Clamp-AssistantRatePerHour {
   $v = 100
   [int]::TryParse([string]$Limit, [ref]$v) | Out-Null
   return [Math]::Min(10000, [Math]::Max(1, $v))
+}
+
+function Normalize-AssistantOverlayColor {
+  param(
+    [string]$Color,
+    [string]$Fallback = '#111111'
+  )
+
+  $candidate = ([string]$Color).Trim()
+  if ($candidate -match '^#[0-9A-Fa-f]{6}$') { return $candidate.ToUpperInvariant() }
+  if ($candidate -match '^[0-9A-Fa-f]{6}$') { return ('#' + $candidate).ToUpperInvariant() }
+
+  $fallbackValue = ([string]$Fallback).Trim()
+  if ($fallbackValue -match '^#[0-9A-Fa-f]{6}$') { return $fallbackValue.ToUpperInvariant() }
+  return '#111111'
 }
 
 function Protect-AssistantSecret {
@@ -277,6 +293,7 @@ function Convert-ToAssistantSettings {
   if ($settings.active_template -eq '') { $settings.active_template = 'default_template' }
 
   $settings.overlay_opacity = Clamp-AssistantOpacity (Get-Prop $PayloadAssistant 'overlay_opacity' (Get-Prop $Fallback 'overlay_opacity' 100))
+  $settings.overlay_ball_color = Normalize-AssistantOverlayColor (Get-Prop $PayloadAssistant 'overlay_ball_color' (Get-Prop $Fallback 'overlay_ball_color' '#111111'))
   $settings.enhanced_capture_mode = if ([string](Get-Prop $PayloadAssistant 'enhanced_capture_mode' (Get-Prop $Fallback 'enhanced_capture_mode' 0)) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $PayloadAssistant 'disable_copy' (Get-Prop $Fallback 'disable_copy' 1)) -eq '0') { 0 } else { 1 }
   $settings.voice_input_enabled = if ([string](Get-Prop $PayloadAssistant 'voice_input_enabled' (Get-Prop $Fallback 'voice_input_enabled' 0)) -eq '0') { 0 } else { 1 }
@@ -349,6 +366,9 @@ function Get-AssistantSettings {
     }
     if ($sec.Contains('overlay_opacity')) {
       $settings.overlay_opacity = Clamp-AssistantOpacity $sec['overlay_opacity']
+    }
+    if ($sec.Contains('overlay_ball_color')) {
+      $settings.overlay_ball_color = Normalize-AssistantOverlayColor $sec['overlay_ball_color']
     }
     if ($sec.Contains('enhanced_capture_mode')) {
       $settings.enhanced_capture_mode = if ([string]$sec['enhanced_capture_mode'] -eq '0') { 0 } else { 1 }
@@ -515,6 +535,7 @@ function Save-AssistantSettings {
   $ini['Assistant']['active_template'] = [string]$settings.active_template
   $ini['Assistant']['prompt'] = ([string](Get-AssistantPromptByTemplate -Settings $settings) -replace '[\r\n]+', ' ')
   $ini['Assistant']['overlay_opacity'] = [string]$settings.overlay_opacity
+  $ini['Assistant']['overlay_ball_color'] = [string]$settings.overlay_ball_color
   $ini['Assistant']['enhanced_capture_mode'] = [string]$settings.enhanced_capture_mode
   $ini['Assistant']['disable_copy'] = [string]$settings.disable_copy
   $ini['Assistant']['voice_input_enabled'] = [string]$settings.voice_input_enabled

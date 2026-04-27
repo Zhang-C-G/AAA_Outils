@@ -57,6 +57,52 @@ gAssistantVoiceSession := ""
 gAssistantVoiceTranscriptWatchRunning := false
 gAssistantVoiceTranscriptLastText := ""
 
+NormalizeOverlayThemeHex(color, fallback := "111111") {
+    raw := Trim("" color)
+    if RegExMatch(raw, "^#[0-9A-Fa-f]{6}$") {
+        return SubStr(StrUpper(raw), 2)
+    }
+    if RegExMatch(raw, "^[0-9A-Fa-f]{6}$") {
+        return StrUpper(raw)
+    }
+    return NormalizeOverlayThemeHex(fallback, "111111")
+}
+
+GetAssistantOverlayAccentColor() {
+    global gAssistantSettings
+    try return NormalizeOverlayThemeHex(gAssistantSettings["overlay_ball_color"], "111111")
+    return "111111"
+}
+
+GetAssistantOverlayTextColorFor(bgColor) {
+    color := NormalizeOverlayThemeHex(bgColor, "111111")
+    r := Integer("0x" SubStr(color, 1, 2))
+    g := Integer("0x" SubStr(color, 3, 2))
+    b := Integer("0x" SubStr(color, 5, 2))
+    luminance := (r * 299 + g * 587 + b * 114) / 1000
+    return (luminance >= 160) ? "111111" : "F5F5F5"
+}
+
+GetAssistantOverlayMutedTextColorFor(bgColor) {
+    return (GetAssistantOverlayTextColorFor(bgColor) = "111111") ? "4F4F4F" : "C8C8C8"
+}
+
+RefreshAssistantOverlayTheme() {
+    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayStatusText, gAssistantOverlayTextHint, gAssistantOverlayCaptureBtn
+    if !IsObject(gAssistantOverlayGui) {
+        return
+    }
+
+    accent := GetAssistantOverlayAccentColor()
+    textColor := GetAssistantOverlayTextColorFor(accent)
+    mutedColor := GetAssistantOverlayMutedTextColorFor(accent)
+    gAssistantOverlayGui.BackColor := accent
+    try gAssistantOverlayText.Opt("c" textColor " Background" accent)
+    try gAssistantOverlayStatusText.Opt("c" mutedColor)
+    try gAssistantOverlayTextHint.Opt("c" mutedColor)
+    try gAssistantOverlayCaptureBtn.Opt("Background" accent " c" textColor)
+}
+
 BuildAssistantOverlayIdleStatus() {
     return "状态：待命：" GetAssistantCurrentModelLabel()
 }
@@ -177,6 +223,7 @@ SyncAssistantOverlayAfterSettingsChange() {
     }
 
     opacity := GetAssistantOverlayTargetOpacity()
+    RefreshAssistantOverlayTheme()
     if (!gAssistantOverlayAffinityEnabled && !gAssistantOverlayRecordingProtectionActive && opacity < 100) {
         DisableAssistantOverlayCaptureProtection("semi_transparent_settings")
     }
@@ -787,20 +834,23 @@ EnsureAssistantOverlayGui() {
     }
 
     ; Keep the overlay non-activating and out of taskbar / Alt-Tab surfaces.
+    accent := GetAssistantOverlayAccentColor()
+    textColor := GetAssistantOverlayTextColorFor(accent)
+    mutedColor := GetAssistantOverlayMutedTextColorFor(accent)
     gAssistantOverlayGui := Gui("+AlwaysOnTop +ToolWindow", gAppName " - Assistant")
-    gAssistantOverlayGui.BackColor := gTheme["bg_app"]
+    gAssistantOverlayGui.BackColor := accent
     gAssistantOverlayGui.SetFont("s10", "Microsoft YaHei UI")
 
-    title := gAssistantOverlayGui.AddText("x16 y12 w300 h24 c" gTheme["text_primary"], "截图问答助手")
+    title := gAssistantOverlayGui.AddText("x16 y12 w300 h24 c" textColor, "截图问答助手")
     title.SetFont("s12 w700", "Segoe UI")
 
-    gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x332 y18 w170 h28", "截图问答")
+    gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x332 y18 w170 h28 Background" accent " c" textColor, "截图问答")
     gAssistantOverlayCaptureBtn.OnEvent("Click", OnAssistantOverlayCaptureButton)
 
-    gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" gTheme["text_hint"], BuildAssistantOverlayIdleStatus())
+    gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" mutedColor, BuildAssistantOverlayIdleStatus())
 
-    gAssistantOverlayTextHint := gAssistantOverlayGui.AddText("x330 y88 w172 h14 Right c" gTheme["text_hint"], "Alt+Up / Alt+Down 滚动")
-    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y104 w486 h342 +Multi ReadOnly -VScroll c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
+    gAssistantOverlayTextHint := gAssistantOverlayGui.AddText("x330 y88 w172 h14 Right c" mutedColor, "Alt+Up / Alt+Down 滚动")
+    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y104 w486 h342 +Multi ReadOnly -VScroll c" textColor " Background" accent, "")
     gAssistantOverlayText.SetFont("s10", "Consolas")
 
     gAssistantOverlayGui.OnEvent("Close", OnAssistantOverlayClose)

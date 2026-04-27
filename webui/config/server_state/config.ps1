@@ -234,6 +234,10 @@ function Get-ConfigState {
   $app = [ordered]@{
     active_mode = 'shortcuts'
     mode_order = (Get-DefaultModeOrder)
+    shell_theme_mode = 'solid'
+    shell_theme_primary = '#111111'
+    shell_theme_secondary = '#2A2A2A'
+    shell_theme_accent = '#F3F3F3'
     shortcuts_selected_category = 'fields'
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
@@ -247,6 +251,18 @@ function Get-ConfigState {
     if (-not [string]::IsNullOrWhiteSpace($selectedCategory)) {
       $app['shortcuts_selected_category'] = $selectedCategory
     }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_mode')) {
+    $app['shell_theme_mode'] = Normalize-AppThemeMode ([string]$ini['App']['shell_theme_mode'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_primary')) {
+    $app['shell_theme_primary'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_primary']) '#111111'
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_secondary')) {
+    $app['shell_theme_secondary'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_secondary']) '#2A2A2A'
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_accent')) {
+    $app['shell_theme_accent'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_accent']) '#F3F3F3'
   }
 
   return [ordered]@{
@@ -281,6 +297,10 @@ function Get-AppShellState {
   $app = [ordered]@{
     active_mode = 'shortcuts'
     mode_order = (Get-DefaultModeOrder)
+    shell_theme_mode = 'solid'
+    shell_theme_primary = '#111111'
+    shell_theme_secondary = '#2A2A2A'
+    shell_theme_accent = '#F3F3F3'
     shortcuts_selected_category = 'fields'
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
@@ -294,6 +314,18 @@ function Get-AppShellState {
     if (-not [string]::IsNullOrWhiteSpace($selectedCategory)) {
       $app['shortcuts_selected_category'] = $selectedCategory
     }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_mode')) {
+    $app['shell_theme_mode'] = Normalize-AppThemeMode ([string]$ini['App']['shell_theme_mode'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_primary')) {
+    $app['shell_theme_primary'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_primary']) '#111111'
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_secondary')) {
+    $app['shell_theme_secondary'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_secondary']) '#2A2A2A'
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_accent')) {
+    $app['shell_theme_accent'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_accent']) '#F3F3F3'
   }
 
   $result = [ordered]@{
@@ -405,6 +437,10 @@ function Write-ConfigState {
   $currentMode = 'shortcuts'
   $currentOrder = Get-DefaultModeOrder
   $currentSelectedCategory = 'fields'
+  $currentThemeMode = 'solid'
+  $currentThemePrimary = '#111111'
+  $currentThemeSecondary = '#2A2A2A'
+  $currentThemeAccent = '#F3F3F3'
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('active_mode')) {
     $currentMode = Normalize-Mode([string]$currentIni['App']['active_mode'])
   }
@@ -417,15 +453,35 @@ function Write-ConfigState {
       $currentSelectedCategory = $selectedCategory
     }
   }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('shell_theme_mode')) {
+    $currentThemeMode = Normalize-AppThemeMode ([string]$currentIni['App']['shell_theme_mode'])
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('shell_theme_primary')) {
+    $currentThemePrimary = Normalize-AppThemeColor ([string]$currentIni['App']['shell_theme_primary']) '#111111'
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('shell_theme_secondary')) {
+    $currentThemeSecondary = Normalize-AppThemeColor ([string]$currentIni['App']['shell_theme_secondary']) '#2A2A2A'
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('shell_theme_accent')) {
+    $currentThemeAccent = Normalize-AppThemeColor ([string]$currentIni['App']['shell_theme_accent']) '#F3F3F3'
+  }
   $appPayload = Get-Prop $Payload 'app' $null
   $mode = Normalize-Mode([string](Get-Prop $appPayload 'active_mode' $currentMode))
   $modeOrder = Normalize-ModeOrder((Get-Prop $appPayload 'mode_order' $currentOrder))
   $selectedCategory = ([string](Get-Prop $appPayload 'shortcuts_selected_category' $currentSelectedCategory)).Trim()
+  $themeMode = Normalize-AppThemeMode ([string](Get-Prop $appPayload 'shell_theme_mode' $currentThemeMode))
+  $themePrimary = Normalize-AppThemeColor ([string](Get-Prop $appPayload 'shell_theme_primary' $currentThemePrimary)) '#111111'
+  $themeSecondary = Normalize-AppThemeColor ([string](Get-Prop $appPayload 'shell_theme_secondary' $currentThemeSecondary)) '#2A2A2A'
+  $themeAccent = Normalize-AppThemeColor ([string](Get-Prop $appPayload 'shell_theme_accent' $currentThemeAccent)) '#F3F3F3'
   if ([string]::IsNullOrWhiteSpace($selectedCategory)) {
     $selectedCategory = $currentSelectedCategory
   }
   $lines.Add('active_mode=' + $mode)
   $lines.Add('mode_order=' + [string]::Join(',', $modeOrder))
+  $lines.Add('shell_theme_mode=' + $themeMode)
+  $lines.Add('shell_theme_primary=' + $themePrimary)
+  $lines.Add('shell_theme_secondary=' + $themeSecondary)
+  $lines.Add('shell_theme_accent=' + $themeAccent)
   $lines.Add('shortcuts_selected_category=' + $selectedCategory)
 
   $capture = Get-CaptureSettings
@@ -454,6 +510,7 @@ function Write-ConfigState {
   $lines.Add('active_template=' + $assistant.active_template)
   $lines.Add('prompt=' + ((Get-AssistantPromptByTemplate -Settings $assistant) -replace '[\r\n]+', ' '))
   $lines.Add('overlay_opacity=' + $assistant.overlay_opacity)
+  $lines.Add('overlay_ball_color=' + $assistant.overlay_ball_color)
   $lines.Add('enhanced_capture_mode=' + $assistant.enhanced_capture_mode)
   $lines.Add('disable_copy=' + $assistant.disable_copy)
   $lines.Add('rate_limit_enabled=' + $assistant.rate_limit_enabled)
@@ -578,6 +635,34 @@ function Set-AppModeOrder {
   Write-AppLog 'mode_order_save' ('mode_order=' + $ini['App']['mode_order'])
 }
 
+function Set-AppTheme {
+  param($Theme)
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+
+  $ini['App']['shell_theme_mode'] = Normalize-AppThemeMode ([string](Get-Prop $Theme 'shell_theme_mode' 'solid'))
+  $ini['App']['shell_theme_primary'] = Normalize-AppThemeColor ([string](Get-Prop $Theme 'shell_theme_primary' '#111111')) '#111111'
+  $ini['App']['shell_theme_secondary'] = Normalize-AppThemeColor ([string](Get-Prop $Theme 'shell_theme_secondary' '#2A2A2A')) '#2A2A2A'
+  $ini['App']['shell_theme_accent'] = Normalize-AppThemeColor ([string](Get-Prop $Theme 'shell_theme_accent' '#F3F3F3')) '#F3F3F3'
+  Write-Ini $ini
+
+  [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
+  Write-AppLog 'app_theme_save' ('mode=' + $ini['App']['shell_theme_mode'] + ' primary=' + $ini['App']['shell_theme_primary'])
+}
+
 function Set-AppShortcutsSelectedCategory {
   param([string]$CategoryId)
 
@@ -607,3 +692,24 @@ function Set-AppShortcutsSelectedCategory {
 }
 
 
+function Normalize-AppThemeColor {
+  param(
+    [string]$Color,
+    [string]$Fallback = '#111111'
+  )
+
+  $candidate = ([string]$Color).Trim()
+  if ($candidate -match '^#[0-9A-Fa-f]{6}$') { return $candidate.ToUpperInvariant() }
+  if ($candidate -match '^[0-9A-Fa-f]{6}$') { return ('#' + $candidate).ToUpperInvariant() }
+  $base = ([string]$Fallback).Trim()
+  if ($base -match '^#[0-9A-Fa-f]{6}$') { return $base.ToUpperInvariant() }
+  return '#111111'
+}
+
+function Normalize-AppThemeMode {
+  param([string]$Mode)
+  if (([string]$Mode).Trim().ToLowerInvariant() -eq 'gradient') {
+    return 'gradient'
+  }
+  return 'solid'
+}

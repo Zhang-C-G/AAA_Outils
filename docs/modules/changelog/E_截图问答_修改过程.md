@@ -1,12 +1,12 @@
 # 模块修改过程记录：E 截图问答
 
-最近同步：`2026-04-26`
+最近同步：`2026-04-27`  
 状态：`active`
 
 ## 1. 当前状态
 
 - 核心范围：截图问答、语音输入、悬浮窗、模型配置
-- 当前重点：语音链路与保护态稳定
+- 当前重点：保留有效配置项，收掉无用前端入口
 
 ## 2. 修改记录
 
@@ -45,7 +45,7 @@
   - 代码校验：确认 `server_state/assistant.ps1` 已新增 `voice_model_api_key_protected`
   - 代码校验：确认公开状态已返回 `has_voice_model_api_key`
   - 语法校验：PowerShell Parser 成功解析 `webui/config/server_state/assistant.ps1`
-  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
+  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
 - 测试结果：`通过`
 
 ### 2026-04-26 / 悬浮窗再次点击可关闭
@@ -56,6 +56,32 @@
 - 测试：
   - 代码校验：确认 `HotkeyAssistantCapture()` 已改为调用 `ToggleAssistantOverlay()`
   - 代码校验：确认 `src/web_config.ahk` 中 `assistant_overlay_open` 已改为调用 `ToggleAssistantOverlay(false, "web_action")`
-  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk` 实例
+  - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
   - 进程校验：确认当前仅存在 1 个绑定 `main.ahk` 的 AutoHotkey 进程
+- 测试结果：`通过`
+
+### 2026-04-27 / 移除高级设置中的 API 输入框
+- 改动内容：
+  - 删除 E 模块高级设置中的 `问答模型 API` 与 `语音模型 API` 前端文案和输入框
+  - 删除前端对应的回填逻辑与输入监听
+  - 保留保存时沿用后端已有 key 的行为，避免因为 UI 删除而误清空已有配置
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-assistant.js`
+  - `rg` 确认前端文件中已不再存在 `assistantApiKey`、`assistantVoiceApiKey`、`问答模型 API`、`语音模型 API`
+  - 通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
+  - 延迟复查后确认当前仅存在 1 个 `AutoHotkey64.exe` 实例
+  - `GET http://127.0.0.1:8798/` 返回 HTML，确认页面中已不再包含这两组 API 字段
+- 测试结果：`通过`
+### 2026-04-27 / 悬浮球主色色轮
+- 改动内容：
+  - E 模块高级设置新增 `悬浮球主色`
+  - 使用原生色轮选择颜色，并显示当前十六进制颜色值
+  - 保存后端新增 `overlay_ball_color`，AHK 默认配置与加载链路同步接入
+  - 运行中的截图问答悬浮窗开始按该颜色刷新背景、按钮和文本对比色
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-assistant.js`
+  - PowerShell Parser 校验 `webui/config/server_state/assistant.ps1` 与 `webui/config/server_state/config.ps1`
+  - `scripts/restart_main_ahk.ps1`
+  - 确认仅存在 `1` 个 `AutoHotkey64.exe`
+  - `GET /api/assistant/state` 与 `POST /api/assistant/save-settings` 均正确返回 `overlay_ball_color`
 - 测试结果：`通过`

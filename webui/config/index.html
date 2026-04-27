@@ -13,6 +13,10 @@
         <h1>靠北！Raccourci Control</h1>
         <p id="subTitle">Web UI Config · 黑白风 · 阴影 · 动效</p>
       </div>
+      <div class="topbar-tools">
+        <button id="shellThemeBtn" class="btn ghost shell-theme-btn" type="button">设置</button>
+      </div>
+      <div id="shellThemePanelHost" class="shell-theme-panel-host hidden"></div>
     </header>
 
     <section class="panel mode-panel" id="modePanel">
@@ -169,6 +173,13 @@
                   <button class="assistant-opacity-choice" type="button" data-value="100">100%</button>
                 </div>
               </div>
+              <label class="assistant-color-field">
+                <span>悬浮球主色</span>
+                <div class="assistant-color-picker-row">
+                  <input id="assistantOverlayBallColor" type="color" />
+                  <input id="assistantOverlayBallColorText" type="text" readonly />
+                </div>
+              </label>
               <label class="assistant-toggle-row">
                 <span>增强模式：截图时本地可见，截图不可见，录屏不可见</span>
                 <span class="assistant-inline-switch">
@@ -176,7 +187,6 @@
                   <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
                 </span>
               </label>
-              <label><span>问答模型 API</span><input id="assistantApiKey" type="password" /></label>
               <label class="assistant-toggle-row">
                 <span>禁止复制悬浮窗答案</span>
                 <span class="assistant-inline-switch">
@@ -206,7 +216,6 @@
                   <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
                 </span>
               </label>
-              <label><span>语音模型 API</span><input id="assistantVoiceApiKey" type="password" /></label>
               <label class="assistant-topmost-field"><span>麦克风选择</span><select id="assistantVoiceDevice"></select></label>
             </div>
           </section>

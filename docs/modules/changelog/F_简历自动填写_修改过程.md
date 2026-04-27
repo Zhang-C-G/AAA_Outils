@@ -6,7 +6,7 @@
 ## 1. 当前状态
 
 - 核心范围：资料字段、映射、自动填写入口
-- 当前重点：字段编辑稳定、公司链接界面布局清晰
+- 当前重点：字段编辑稳定、公司链接界面布局清晰、内容从顶部起排
 
 ## 2. 修改记录
 
@@ -48,4 +48,17 @@
   - 代码校验：确认 `styles.css` 已新增 `.resume-subview` 与 `.resume-table-wrap` 的贴顶样式
   - 启动校验：通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
   - 进程校验：延迟复查后确认当前仅存在 1 个 `AutoHotkey64.exe` 实例
+- 测试结果：`通过`
+
+### 2026-04-27 / 字段页与公司页内容改为顶部起排
+- 改动内容：
+  - 字段页 `值` 输入区继续使用 `textarea`，并统一为顶部起排、向下自动扩展
+  - 公司页的“公司名称 / 链接地址”改为 `textarea`
+  - 公司页内容同样从顶部开始显示，并随内容向下扩展
+  - 公司页编辑、新增、删除也纳入自动保存
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg` 确认公司页已改为 `textarea`，并且样式包含 `min-height: 72px` 与顶部对齐设置
+  - 通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
+  - 延迟复查后确认当前仅存在 1 个 `AutoHotkey64.exe` 实例
 - 测试结果：`通过`

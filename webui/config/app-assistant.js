@@ -1,10 +1,9 @@
 import { state, byId, api, toast, confirmDialog } from './app-common.js';
 import { enhanceTopLayerSelect, refreshTopLayerSelect } from './top-layer-select.js';
-
-const API_KEY_MASK = '****************';
 const DEFAULT_PROMPT = '\u7f16\u7a0b\u9898\uff1a\u76f4\u63a5\u7ed9\u5b8c\u6574\u53ef\u8fd0\u884c\u4ee3\u7801\uff0c\u5e76\u5728\u4ee3\u7801\u6846\u4e2d\u8f93\u51fa\uff1b\u968f\u540e\u5bf9\u6838\u5fc3\u601d\u8def\u505a\u7b80\u77ed\u8bf4\u660e\u3002\u9009\u62e9\u9898\uff1a\u5148\u519915\u5b57\u4ee5\u5185\u9898\u76ee\u603b\u7ed3\uff0c\u518d\u76f4\u63a5\u7ed9\u7b54\u6848\u3002';
 const OPACITY_LEVELS = [20, 50, 75, 100];
 const ADVANCED_VISIBLE_STORAGE_KEY = 'assistant_advanced_visible';
+const DEFAULT_OVERLAY_BALL_COLOR = '#111111';
 
 let assistantAutoSaveTimer = 0;
 let assistantAutoSaveInFlight = false;
@@ -66,6 +65,7 @@ function defaults() {
     active_template: 'default_template',
     templates: [{ name: 'default_template', prompt: DEFAULT_PROMPT }],
     overlay_opacity: 75,
+    overlay_ball_color: DEFAULT_OVERLAY_BALL_COLOR,
     enhanced_capture_mode: 0,
     disable_copy: 1,
     voice_input_enabled: 0,
@@ -83,6 +83,22 @@ function defaults() {
       history: []
     }
   };
+}
+
+function normalizeAssistantColor(value, fallback = DEFAULT_OVERLAY_BALL_COLOR) {
+  const raw = String(value || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toUpperCase();
+  if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw.toUpperCase()}`;
+  return fallback.toUpperCase();
+}
+
+function renderAssistantOverlayBallColor(value) {
+  const normalized = normalizeAssistantColor(value, state.assistant.overlay_ball_color || DEFAULT_OVERLAY_BALL_COLOR);
+  state.assistant.overlay_ball_color = normalized;
+  const picker = byId('assistantOverlayBallColor');
+  const text = byId('assistantOverlayBallColorText');
+  if (picker) picker.value = normalized;
+  if (text) text.value = normalized;
 }
 
 function setAssistantAdvancedVisible(visible) {
@@ -423,6 +439,10 @@ export function applyAssistantState(payload) {
 
   state.assistant.templates = normalizeTemplates(incoming.templates || state.assistant.templates, fallback.prompt);
   state.assistant.overlay_opacity = normalizeOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
+  state.assistant.overlay_ball_color = normalizeAssistantColor(
+    incoming.overlay_ball_color ?? state.assistant.overlay_ball_color,
+    fallback.overlay_ball_color
+  );
   state.assistant.enhanced_capture_mode = Number(incoming.enhanced_capture_mode ?? state.assistant.enhanced_capture_mode ?? 0) === 0 ? 0 : 1;
   state.assistant.voice_input_enabled = Number(incoming.voice_input_enabled ?? state.assistant.voice_input_enabled ?? 0) === 0 ? 0 : 1;
   state.assistant.voice_input_device_id = String(incoming.voice_input_device_id ?? state.assistant.voice_input_device_id ?? '').trim();
@@ -434,18 +454,10 @@ export function applyAssistantState(payload) {
 
   renderModelOptions(state.assistant.model || 'doubao-seed-2-0-lite-260215');
   renderVoiceModelOptions(state.assistant.voice_model || 'xunfei_websocket_asr');
-  byId('assistantApiKey').value = Number(state.assistant.has_api_key || 0) !== 0 ? API_KEY_MASK : '';
-  byId('assistantVoiceApiKey').value = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? API_KEY_MASK : '';
   byId('assistantDisableCopy').checked = Number(state.assistant.disable_copy ?? 1) !== 0;
   byId('assistantEnhancedCaptureMode').checked = Number(state.assistant.enhanced_capture_mode ?? 0) !== 0;
   byId('assistantVoiceEnabled').checked = Number(state.assistant.voice_input_enabled ?? 0) !== 0;
   byId('assistantVoiceModelEnabled').checked = Number(state.assistant.voice_model_enabled ?? 0) !== 0;
-  byId('assistantApiKey').placeholder = Number(state.assistant.has_api_key || 0) !== 0
-    ? '\u5df2\u4fdd\u5b58\u5bc6\u94a5\uff08\u4fdd\u6301\u661f\u53f7\u8868\u793a\u4e0d\u53d8\uff09'
-    : '\u8bf7\u8f93\u5165 API Key';
-  byId('assistantVoiceApiKey').placeholder = Number(state.assistant.has_voice_model_api_key || 0) !== 0
-    ? '\u5df2\u4fdd\u5b58\u8bed\u97f3\u6a21\u578b\u5bc6\u94a5\uff08\u4fdd\u6301\u661f\u53f7\u8868\u793a\u4e0d\u53d8\uff09'
-    : '\u8bf7\u8f93\u5165\u8bed\u97f3\u6a21\u578b API';
   byId('assistantRateEnabled').checked = Number(state.assistant.rate_limit_enabled || 0) !== 0;
   byId('assistantRatePerHour').value = Math.max(1, Number(state.assistant.rate_limit_per_hour || 100));
   byId('assistantCaptureDir').value = state.assistant.capture_dir || '';
@@ -453,6 +465,7 @@ export function applyAssistantState(payload) {
   renderTemplateControls();
   renderHotkeyExplain();
   setAssistantOpacityChoice(state.assistant.overlay_opacity);
+  renderAssistantOverlayBallColor(state.assistant.overlay_ball_color);
   renderVoiceDeviceOptions();
   setAssistantAdvancedVisible(loadAssistantAdvancedVisible());
   if (!assistantVoiceDevicesLoaded) {
@@ -465,6 +478,10 @@ function readAssistantFromUi() {
 
   state.assistant.enabled = 1;
   state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 75);
+  state.assistant.overlay_ball_color = normalizeAssistantColor(
+    byId('assistantOverlayBallColor')?.value || state.assistant.overlay_ball_color,
+    DEFAULT_OVERLAY_BALL_COLOR
+  );
   state.assistant.model = (byId('assistantModel').value || '').trim() || 'doubao-seed-2-0-lite-260215';
   state.assistant.voice_model = (byId('assistantVoiceModel').value || '').trim() || 'xunfei_websocket_asr';
   state.assistant.enhanced_capture_mode = byId('assistantEnhancedCaptureMode').checked ? 1 : 0;
@@ -475,24 +492,10 @@ function readAssistantFromUi() {
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
   state.assistant.rate_limit_per_hour = Math.min(10000, Math.max(1, Math.round(Number(byId('assistantRatePerHour').value || 100))));
   state.assistant.api_endpoint = (state.assistant.api_endpoint || defaults().api_endpoint).trim() || defaults().api_endpoint;
-
-  const inputKey = String(byId('assistantApiKey').value || '').trim();
-  if (inputKey && inputKey !== API_KEY_MASK) {
-    state.assistant.api_key = inputKey;
-    state.assistant.keep_api_key = 0;
-  } else {
-    state.assistant.api_key = '';
-    state.assistant.keep_api_key = Number(state.assistant.has_api_key || 0) !== 0 ? 1 : 0;
-  }
-
-  const inputVoiceKey = String(byId('assistantVoiceApiKey').value || '').trim();
-  if (inputVoiceKey && inputVoiceKey !== API_KEY_MASK) {
-    state.assistant.voice_model_api_key = inputVoiceKey;
-    state.assistant.keep_voice_model_api_key = 0;
-  } else {
-    state.assistant.voice_model_api_key = '';
-    state.assistant.keep_voice_model_api_key = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? 1 : 0;
-  }
+  state.assistant.api_key = '';
+  state.assistant.keep_api_key = Number(state.assistant.has_api_key || 0) !== 0 ? 1 : 0;
+  state.assistant.voice_model_api_key = '';
+  state.assistant.keep_voice_model_api_key = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? 1 : 0;
 
   ensureActiveTemplate();
 }
@@ -624,6 +627,18 @@ export function initAssistantHandlers() {
     };
   });
 
+  const overlayBallColor = byId('assistantOverlayBallColor');
+  if (overlayBallColor) {
+    overlayBallColor.oninput = () => {
+      renderAssistantOverlayBallColor(overlayBallColor.value);
+      scheduleAssistantAutoSave();
+    };
+    overlayBallColor.onchange = () => {
+      renderAssistantOverlayBallColor(overlayBallColor.value);
+      scheduleAssistantAutoSave(true);
+    };
+  }
+
   const saveBtn = byId('assistantSaveBtn');
   if (saveBtn) {
     saveBtn.onclick = () => saveAssistantSettings().catch((e) => toast(`\u4fdd\u5b58\u5931\u8d25: ${e.message}`));
@@ -645,10 +660,6 @@ export function initAssistantHandlers() {
     voiceDevice.onchange = () => scheduleAssistantAutoSave(true);
     void refreshAssistantVoiceDevices();
   }
-  const apiKey = byId('assistantApiKey');
-  if (apiKey) apiKey.onchange = () => scheduleAssistantAutoSave(true);
-  const voiceApiKey = byId('assistantVoiceApiKey');
-  if (voiceApiKey) voiceApiKey.onchange = () => scheduleAssistantAutoSave(true);
   const rateEnabled = byId('assistantRateEnabled');
   if (rateEnabled) rateEnabled.onchange = () => scheduleAssistantAutoSave(true);
   const ratePerHour = byId('assistantRatePerHour');

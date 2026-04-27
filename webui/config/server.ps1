@@ -94,6 +94,11 @@ while ($true) {
       Set-AppModeOrder -ModeOrder (Get-Prop $payload 'mode_order' @())
       Send-Json $res ([ordered]@{ ok=$true })
     }
+    elseif ($path -eq '/api/app/theme' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppTheme -Theme $payload
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
     elseif ($path -eq '/api/app/shortcuts-category' -and $method -eq 'POST') {
       $payload = Read-BodyJson $req
       Set-AppShortcutsSelectedCategory -CategoryId ([string](Get-Prop $payload 'shortcuts_selected_category' ''))

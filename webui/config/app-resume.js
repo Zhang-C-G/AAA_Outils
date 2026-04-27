@@ -10,7 +10,7 @@ function normalizeRow(row, index = 0) {
   const type = String(row?.type || 'text').trim().toLowerCase();
   return {
     id: String(row?.id || `field_${index + 1}`).trim() || `field_${index + 1}`,
-    label: String(row?.label || `\u5b57\u6bb5${index + 1}`).trim() || `\u5b57\u6bb5${index + 1}`,
+    label: String(row?.label || `字段${index + 1}`).trim() || `字段${index + 1}`,
     value: String(row?.value || ''),
     aliases: String(row?.aliases || ''),
     type: ['text', 'textarea', 'select', 'date'].includes(type) ? type : 'text'
@@ -20,7 +20,7 @@ function normalizeRow(row, index = 0) {
 function normalizeSection(section, index = 0) {
   return {
     id: String(section?.id || `section_${index + 1}`).trim() || `section_${index + 1}`,
-    title: String(section?.title || `\u5206\u533a${index + 1}`).trim() || `\u5206\u533a${index + 1}`,
+    title: String(section?.title || `分区${index + 1}`).trim() || `分区${index + 1}`,
     rows: Array.isArray(section?.rows) ? section.rows.map((row, i) => normalizeRow(row, i)) : []
   };
 }
@@ -83,7 +83,7 @@ function escText(text) {
 function autoResizeResumeTextarea(el) {
   if (!el) return;
   el.style.height = 'auto';
-  el.style.height = `${Math.max(el.scrollHeight, 38)}px`;
+  el.style.height = `${Math.max(el.scrollHeight, 72)}px`;
 }
 
 function syncRowFromDom(sectionId, rowIndex, tr) {
@@ -124,7 +124,7 @@ function renderRows(section) {
     tr.innerHTML = `
       <td><input type="text" data-k="label" value="${escAttr(row.label)}" /></td>
       <td><textarea data-k="value">${escText(row.value)}</textarea></td>
-      <td><button class="btn ghost" type="button" data-k="delete">\u5220\u9664</button></td>
+      <td><button class="btn ghost" type="button" data-k="delete">删除</button></td>
     `;
 
     autoResizeResumeTextarea(tr.querySelector('[data-k="value"]'));
@@ -167,22 +167,31 @@ function renderCompanyRows() {
   for (const [index, row] of (state.resume.company_links || []).entries()) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" data-k="company" value="${escAttr(row.company)}" placeholder="公司名" /></td>
-      <td><input type="text" data-k="url" value="${escAttr(row.url)}" placeholder="公司投递或招聘链接" /></td>
+      <td><textarea data-k="company" placeholder="公司名称">${escText(row.company)}</textarea></td>
+      <td><textarea data-k="url" placeholder="公司投递或招聘链接">${escText(row.url)}</textarea></td>
       <td><label class="resume-company-toggle"><input type="checkbox" data-k="enabled" ${row.enabled ? 'checked' : ''} /><span>可填充</span></label></td>
       <td><button class="btn ghost" type="button" data-k="delete">删除</button></td>
     `;
 
-    tr.querySelectorAll('input').forEach((el) => {
+    tr.querySelectorAll('textarea').forEach((el) => {
+      autoResizeResumeTextarea(el);
+    });
+
+    tr.querySelectorAll('input, textarea').forEach((el) => {
       const evt = el.type === 'checkbox' ? 'change' : 'input';
       el.addEventListener(evt, () => {
+        if (el.tagName === 'TEXTAREA') {
+          autoResizeResumeTextarea(el);
+        }
         syncCompanyRowFromDom(index, tr);
+        scheduleAutoSave();
       });
     });
 
     tr.querySelector('[data-k="delete"]').onclick = () => {
       state.resume.company_links.splice(index, 1);
       renderResumeEditor();
+      scheduleAutoSave();
     };
 
     body.appendChild(tr);
@@ -219,7 +228,7 @@ function renderResumeEditor() {
 
   const title = byId('resumeSectionTitle');
   if (!section) {
-    title.textContent = '\u7b80\u5386\u81ea\u52a8\u586b\u5199';
+    title.textContent = '简历自动填写';
     byId('resumeRows').innerHTML = '';
     renderCompanyRows();
     renderResumeSubview();
@@ -259,7 +268,7 @@ export async function saveResumeProfile(options = {}) {
   }
   applyResumeState({ resume: payload.state || state.resume });
   if (!silent) {
-    toast('\u7b80\u5386\u8d44\u6599\u5df2\u4fdd\u5b58');
+    toast('简历资料已保存');
   }
 }
 
@@ -292,6 +301,7 @@ export function initResumeHandlers() {
       ensureCompanyLinks();
       state.resume.company_links.push(normalizeCompanyLink({}, state.resume.company_links.length));
       renderResumeEditor();
+      scheduleAutoSave();
     };
   }
 }

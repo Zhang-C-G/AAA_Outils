@@ -40,11 +40,12 @@
 
 - 当前轮次：`2026-04-27-post-checkpoint-api-center-ui-polish`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
-- 下一次强制 git 阈值：`还差 3 次完成且测试通过的改动`
+- 当前连续改动次数：`2`
+- 下一次强制 git 阈值：`还差 1 次完成且测试通过的改动`
 - 上一个 git 检查点：`checkpoint: api center ui polish and resume layout`
 - 当前计数说明：
-  - 上一轮 3 次改动已完成 checkpoint 并开始新一轮
+  - 第 1 次：删除 E 模块高级设置中的问答模型 API / 语音模型 API 输入项，并保留已有后端 key
+  - 第 2 次：修正 F 模块字段页与公司页的内容改为从顶部开始显示并向下扩展
 
 ## 5. 维护方式
 
@@ -62,3 +63,10 @@
 
 - 默认远端：`origin`
 - 默认目标：`origin/main`
+## 8. 2026-04-27 Checkpoint Note
+
+- 第 3 次改动已完成并通过测试：
+  - E 模块新增 `悬浮球主色` 色轮配置
+  - 保存链路新增 `overlay_ball_color`
+  - AHK 运行时悬浮窗开始按配置刷新主色
+- 本次提交应作为 `3/3` checkpoint 提交并 push 到 `origin/main`

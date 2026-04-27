@@ -38,6 +38,10 @@ EnsureDataFile() {
         . "`n[App]`n"
         . "active_mode=shortcuts`n"
         . "mode_order=shortcuts,notes,notes_display,capture,assistant,resume,hotkeys,testing,api_center`n"
+        . "shell_theme_mode=solid`n"
+        . "shell_theme_primary=#111111`n"
+        . "shell_theme_secondary=#2A2A2A`n"
+        . "shell_theme_accent=#F3F3F3`n"
         . "capture_dir=" A_ScriptDir "\\captures`n"
         . "`n[Capture]`n"
         . "upload_endpoint=https://0x0.st`n"
@@ -52,6 +56,7 @@ EnsureDataFile() {
         . "active_template=default_template`n"
         . "prompt=编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。`n"
         . "overlay_opacity=75`n"
+        . "overlay_ball_color=#111111`n"
         . "rate_limit_enabled=1`n"
         . "rate_limit_per_hour=100`n"
         . "voice_input_enabled=0`n"
@@ -214,6 +219,10 @@ LoadAppSettings() {
     settings := Map(
         "active_mode", "shortcuts",
         "mode_order", GetDefaultModeOrderCsv(),
+        "shell_theme_mode", "solid",
+        "shell_theme_primary", "#111111",
+        "shell_theme_secondary", "#2A2A2A",
+        "shell_theme_accent", "#F3F3F3",
         "shortcuts_selected_category", "fields",
         "capture_dir", A_ScriptDir "\\captures"
     )
@@ -227,6 +236,24 @@ LoadAppSettings() {
             selected := Trim(row["value"])
             if (selected != "") {
                 settings["shortcuts_selected_category"] := selected
+            }
+        } else if (row["key"] = "shell_theme_mode") {
+            modeValue := StrLower(Trim(row["value"]))
+            settings["shell_theme_mode"] := (modeValue = "gradient") ? "gradient" : "solid"
+        } else if (row["key"] = "shell_theme_primary") {
+            primary := Trim(row["value"])
+            if (primary != "") {
+                settings["shell_theme_primary"] := primary
+            }
+        } else if (row["key"] = "shell_theme_secondary") {
+            secondary := Trim(row["value"])
+            if (secondary != "") {
+                settings["shell_theme_secondary"] := secondary
+            }
+        } else if (row["key"] = "shell_theme_accent") {
+            accent := Trim(row["value"])
+            if (accent != "") {
+                settings["shell_theme_accent"] := accent
             }
         } else if (row["key"] = "capture_dir") {
             dir := Trim(row["value"])
