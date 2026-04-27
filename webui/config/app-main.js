@@ -1,17 +1,10 @@
-﻿import { state, byId, api, toast, setDirty, setModeUi } from './app-common.js';
-import { initShortcutsHandlers, applyShortcutsState, saveShortcuts } from './app-shortcuts.js';
-import { initNotesHandlers, loadNotes, saveCurrentNote } from './app-notes.js';
-import { initNotesDisplayHandlers, loadNotesDisplayNotes, saveCurrentNotesDisplayNote } from './app-notes-display.js';
-import { initCaptureHandlers, refreshCaptureState } from './app-capture.js';
-import { initAssistantHandlers, applyAssistantState, saveAssistantSettings } from './app-assistant.js';
-import { initResumeHandlers, applyResumeState, saveResumeProfile } from './app-resume.js';
-import { initTestingHandlers, runOverlayRecordTest, refreshTestingState } from './app-testing.js';
-import { initApiCenterHandlers, refreshApiCenterState } from './app-api-center.js';
-import { applyShellTheme, mountThemePicker, normalizeThemeSettings } from './theme-picker.js';
+import { state, byId, api, toast, setDirty, setModeUi } from './app-common.js';
 
 let capturePollTimer = 0;
 let shellThemePicker = null;
 const loadedModes = new Set();
+const loadedModules = new Map();
+const initializedModules = new Set();
 const SHORTCUTS_DRAFT_KEY = 'raccourci.shortcutsDraft';
 const SHORTCUTS_DRAFT_RESTORE_KEY = 'raccourci.shortcutsDraftRestorePending';
 const NOTES_DRAFT_KEY = 'raccourci.notesDraft';
@@ -32,7 +25,61 @@ const MODE_BUTTON_IDS = {
   testing: 'modeTestingBtn',
   api_center: 'modeApiCenterBtn'
 };
+const moduleLoaders = {
+  shortcuts: () => import('./app-shortcuts.js'),
+  notes: () => import('./app-notes.js'),
+  notes_display: () => import('./app-notes-display.js'),
+  capture: () => import('./app-capture.js'),
+  assistant: () => import('./app-assistant.js'),
+  resume: () => import('./app-resume.js'),
+  testing: () => import('./app-testing.js'),
+  api_center: () => import('./app-api-center.js'),
+  theme_picker: () => import('./theme-picker.js')
+};
 let draggingModeId = '';
+
+function normalizeModuleKey(mode) {
+  return mode === 'hotkeys' ? 'shortcuts' : mode;
+}
+
+async function getModule(moduleKey) {
+  const normalizedKey = normalizeModuleKey(moduleKey);
+  if (loadedModules.has(normalizedKey)) {
+    return loadedModules.get(normalizedKey);
+  }
+  const loader = moduleLoaders[normalizedKey];
+  if (!loader) {
+    throw new Error(`unknown module: ${normalizedKey}`);
+  }
+  const namespace = await loader();
+  loadedModules.set(normalizedKey, namespace);
+  return namespace;
+}
+
+async function ensureModuleHandlersInitialized(mode) {
+  const moduleKey = normalizeModuleKey(mode);
+  const moduleNs = await getModule(moduleKey);
+  if (initializedModules.has(moduleKey)) {
+    return moduleNs;
+  }
+
+  const initMap = {
+    shortcuts: 'initShortcutsHandlers',
+    notes: 'initNotesHandlers',
+    notes_display: 'initNotesDisplayHandlers',
+    capture: 'initCaptureHandlers',
+    assistant: 'initAssistantHandlers',
+    resume: 'initResumeHandlers',
+    testing: 'initTestingHandlers',
+    api_center: 'initApiCenterHandlers'
+  };
+  const initFnName = initMap[moduleKey];
+  if (initFnName && typeof moduleNs[initFnName] === 'function') {
+    moduleNs[initFnName]();
+  }
+  initializedModules.add(moduleKey);
+  return moduleNs;
+}
 
 function markModeLoaded(mode) {
   loadedModes.add(mode);
@@ -226,7 +273,7 @@ function saveResumeDraft() {
   } catch {}
 }
 
-function tryRestoreShortcutsDraft() {
+async function tryRestoreShortcutsDraft() {
   try {
     if (sessionStorage.getItem(SHORTCUTS_DRAFT_RESTORE_KEY) !== '1') return;
     const raw = sessionStorage.getItem(SHORTCUTS_DRAFT_KEY);
@@ -239,6 +286,7 @@ function tryRestoreShortcutsDraft() {
     }
     if (!Array.isArray(draft?.categories) || typeof draft?.data !== 'object') return;
 
+    const { applyShortcutsState } = await getModule('shortcuts');
     applyShortcutsState({
       categories: draft.categories,
       data: draft.data,
@@ -306,7 +354,7 @@ function tryRestoreNotesDisplayDraft() {
   return false;
 }
 
-function tryRestoreResumeDraft() {
+async function tryRestoreResumeDraft() {
   try {
     if (sessionStorage.getItem(RESUME_DRAFT_RESTORE_KEY) !== '1') return false;
     const raw = sessionStorage.getItem(RESUME_DRAFT_KEY);
@@ -316,6 +364,7 @@ function tryRestoreResumeDraft() {
 
     state.resume.profile = draft.profile;
     state.resume.selectedSectionId = String(draft?.selectedSectionId || '');
+    const { applyResumeState } = await getModule('resume');
     applyResumeState({ resume: { profile: state.resume.profile, flat_map: state.resume.flat_map } });
     toast('已恢复刷新前未保存简历草稿');
     return true;
@@ -360,7 +409,7 @@ function persistAllDraftsForHardRefresh() {
   persistResumeDraftForHardRefresh();
 }
 
-function applyAppShellState(payload) {
+async function applyAppShellState(payload) {
   state.hotkeys = payload.hotkeys || state.hotkeys;
   state.hotkeyDefs = payload.hotkey_defs || state.hotkeyDefs;
   state.app = {
@@ -368,6 +417,7 @@ function applyAppShellState(payload) {
     ...(payload.app || {})
   };
   state.app.mode_order = normalizeModeOrder(state.app?.mode_order);
+  const { normalizeThemeSettings, applyShellTheme } = await getModule('theme_picker');
   const theme = normalizeThemeSettings({
     mode: state.app.shell_theme_mode,
     primary: state.app.shell_theme_primary,
@@ -386,6 +436,7 @@ function applyAppShellState(payload) {
 }
 
 async function persistShellTheme(theme) {
+  const { normalizeThemeSettings, applyShellTheme } = await getModule('theme_picker');
   const normalized = normalizeThemeSettings(theme);
   const accent = normalized.mode === 'gradient' ? normalized.secondary : normalized.primary;
   state.app.shell_theme_mode = normalized.mode;
@@ -427,33 +478,38 @@ async function ensureModeLoaded(mode, options = {}) {
   }
 
   if (effectiveMode === 'shortcuts') {
+    const { applyShortcutsState } = await ensureModuleHandlersInitialized('shortcuts');
     const payload = prefetchedPayload || await api('/api/state');
     applyShortcutsState(payload);
-    applyAppShellState(payload);
+    await applyAppShellState(payload);
     markModeLoaded('shortcuts');
     markModeLoaded('hotkeys');
     return;
   }
 
   if (effectiveMode === 'notes') {
+    const { loadNotes } = await ensureModuleHandlersInitialized('notes');
     await loadNotes();
     markModeLoaded('notes');
     return;
   }
 
   if (effectiveMode === 'notes_display') {
+    const { loadNotesDisplayNotes } = await ensureModuleHandlersInitialized('notes_display');
     await loadNotesDisplayNotes();
     markModeLoaded('notes_display');
     return;
   }
 
   if (effectiveMode === 'capture') {
+    const { refreshCaptureState } = await ensureModuleHandlersInitialized('capture');
     await refreshCaptureState();
     markModeLoaded('capture');
     return;
   }
 
   if (effectiveMode === 'assistant') {
+    const { applyAssistantState } = await ensureModuleHandlersInitialized('assistant');
     const payload = await api('/api/assistant/state');
     const assistantState = payload.state || {};
     applyAssistantState({
@@ -468,6 +524,7 @@ async function ensureModeLoaded(mode, options = {}) {
   }
 
   if (effectiveMode === 'resume') {
+    const { applyResumeState } = await ensureModuleHandlersInitialized('resume');
     const payload = await api('/api/resume/state');
     applyResumeState({ resume: payload.state || state.resume });
     markModeLoaded('resume');
@@ -476,12 +533,14 @@ async function ensureModeLoaded(mode, options = {}) {
 
   if (effectiveMode === 'testing') {
     await ensureModeLoaded('assistant', options);
+    const { refreshTestingState } = await ensureModuleHandlersInitialized('testing');
     await refreshTestingState();
     markModeLoaded('testing');
     return;
   }
 
   if (effectiveMode === 'api_center') {
+    const { refreshApiCenterState } = await ensureModuleHandlersInitialized('api_center');
     await refreshApiCenterState({ silent: true });
     markModeLoaded('api_center');
   }
@@ -496,9 +555,11 @@ async function switchModeInternal(mode, options = {}) {
   }
 
   if (hasModeLoaded('notes') && state.app.active_mode === 'notes' && mode !== 'notes' && state.notes.dirty) {
+    const { saveCurrentNote } = await getModule('notes');
     await saveCurrentNote();
   }
   if (hasModeLoaded('notes_display') && state.app.active_mode === 'notes_display' && mode !== 'notes_display' && state.notesDisplay.dirty) {
+    const { saveCurrentNotesDisplayNote } = await getModule('notes_display');
     await saveCurrentNotesDisplayNote();
   }
 
@@ -540,22 +601,27 @@ async function switchModeInternal(mode, options = {}) {
     tryRestoreNotesDisplayDraft();
   }
   if (mode === 'capture') {
+    const { refreshCaptureState } = await getModule('capture');
     capturePollTimer = setInterval(() => {
       refreshCaptureState().catch(() => {});
     }, 1500);
   }
   if (mode === 'assistant') {
+    const { applyAssistantState } = await getModule('assistant');
     applyAssistantState({ assistant: state.assistant });
   }
   if (mode === 'testing') {
+    const { refreshTestingState } = await getModule('testing');
     await refreshTestingState();
   }
   if (mode === 'api_center') {
+    const { refreshApiCenterState } = await getModule('api_center');
     await refreshApiCenterState({ silent: true });
   }
   if (mode === 'resume') {
+    const { applyResumeState } = await getModule('resume');
     applyResumeState({ resume: state.resume });
-    tryRestoreResumeDraft();
+    await tryRestoreResumeDraft();
   }
 }
 
@@ -566,7 +632,7 @@ async function switchMode(mode) {
 async function reloadAll() {
   loadedModes.clear();
   const payload = await api('/api/app/state');
-  applyAppShellState(payload);
+  await applyAppShellState(payload);
   await switchModeInternal(payload.app?.active_mode || 'shortcuts', { persist: false, forceReload: true, prefetchedPayload: payload });
 }
 
@@ -588,38 +654,44 @@ function bindHeaderActions() {
   const shellThemeBtn = byId('shellThemeBtn');
   const shellThemeHost = byId('shellThemePanelHost');
   if (shellThemeBtn && shellThemeHost && !shellThemePicker) {
-    shellThemePicker = mountThemePicker(shellThemeHost, {
-      value: {
-        mode: state.app.shell_theme_mode,
-        primary: state.app.shell_theme_primary,
-        secondary: state.app.shell_theme_secondary,
-        accent: state.app.shell_theme_accent
-      },
-      onChange: (theme) => {
-        const accent = theme.mode === 'gradient' ? theme.secondary : theme.primary;
-        applyShellTheme({ ...theme, accent });
-      },
-      onSave: persistShellTheme
+    getModule('theme_picker').then(({ mountThemePicker, applyShellTheme }) => {
+      shellThemePicker = mountThemePicker(shellThemeHost, {
+        value: {
+          mode: state.app.shell_theme_mode,
+          primary: state.app.shell_theme_primary,
+          secondary: state.app.shell_theme_secondary,
+          accent: state.app.shell_theme_accent
+        },
+        onChange: (theme) => {
+          const accent = theme.mode === 'gradient' ? theme.secondary : theme.primary;
+          applyShellTheme({ ...theme, accent });
+        },
+        onSave: persistShellTheme
+      });
+
+      shellThemeBtn.onclick = () => {
+        if (!shellThemePicker) return;
+        if (shellThemeHost.classList.contains('hidden')) {
+          shellThemePicker.setValue({
+            mode: state.app.shell_theme_mode,
+            primary: state.app.shell_theme_primary,
+            secondary: state.app.shell_theme_secondary,
+            accent: state.app.shell_theme_accent
+          });
+          shellThemePicker.open();
+        } else {
+          applyShellTheme({
+            mode: state.app.shell_theme_mode,
+            primary: state.app.shell_theme_primary,
+            secondary: state.app.shell_theme_secondary,
+            accent: state.app.shell_theme_accent
+          });
+          shellThemePicker.close();
+        }
+      };
+    }).catch((error) => {
+      toast(`主题面板初始化失败: ${error.message}`);
     });
-    shellThemeBtn.onclick = () => {
-      if (shellThemeHost.classList.contains('hidden')) {
-        shellThemePicker.setValue({
-          mode: state.app.shell_theme_mode,
-          primary: state.app.shell_theme_primary,
-          secondary: state.app.shell_theme_secondary,
-          accent: state.app.shell_theme_accent
-        });
-        shellThemePicker.open();
-      } else {
-        applyShellTheme({
-          mode: state.app.shell_theme_mode,
-          primary: state.app.shell_theme_primary,
-          secondary: state.app.shell_theme_secondary,
-          accent: state.app.shell_theme_accent
-        });
-        shellThemePicker.close();
-      }
-    };
   }
 
   const saveBtn = byId('saveBtn');
@@ -627,21 +699,28 @@ function bindHeaderActions() {
     saveBtn.onclick = async () => {
       try {
         if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
+          const { saveShortcuts } = await getModule('shortcuts');
           await saveShortcuts();
         } else if (state.app.active_mode === 'notes') {
+          const { saveCurrentNote } = await getModule('notes');
           await saveCurrentNote();
         } else if (state.app.active_mode === 'notes_display') {
+          const { saveCurrentNotesDisplayNote, loadNotesDisplayNotes } = await getModule('notes_display');
           await saveCurrentNotesDisplayNote();
           await loadNotesDisplayNotes();
         } else if (state.app.active_mode === 'capture') {
           byId('capSaveSettingsBtn').click();
         } else if (state.app.active_mode === 'resume') {
+          const { saveResumeProfile } = await getModule('resume');
           await saveResumeProfile();
         } else if (state.app.active_mode === 'api_center') {
+          const { refreshApiCenterState } = await getModule('api_center');
           await refreshApiCenterState();
         } else if (state.app.active_mode === 'testing') {
+          const { runOverlayRecordTest } = await getModule('testing');
           await runOverlayRecordTest();
         } else {
+          const { saveAssistantSettings } = await getModule('assistant');
           await saveAssistantSettings();
         }
       } catch (e) {
@@ -660,7 +739,7 @@ function bindHeaderActions() {
         }
         await reloadAll();
         if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
-          tryRestoreShortcutsDraft();
+          await tryRestoreShortcutsDraft();
         }
       } catch (e) {
         toast(`刷新失败: ${e.message}`);
@@ -716,14 +795,6 @@ function bindHeaderActions() {
 }
 
 async function bootstrap() {
-  initShortcutsHandlers();
-  initNotesHandlers();
-  initNotesDisplayHandlers();
-  initCaptureHandlers();
-  initAssistantHandlers();
-  initResumeHandlers();
-  initTestingHandlers();
-  initApiCenterHandlers();
   bindModePanelDrag();
   bindHeaderActions();
 
@@ -731,7 +802,7 @@ async function bootstrap() {
   await reloadAll();
   setDirty(false, 'shortcuts');
   if (state.app.active_mode === 'shortcuts' || state.app.active_mode === 'hotkeys') {
-    tryRestoreShortcutsDraft();
+    await tryRestoreShortcutsDraft();
   }
 }
 
