@@ -6,7 +6,7 @@
   behavior: { auto_refresh_enabled: 1, refresh_every_uses: 3, refresh_every_minutes: 5 },
   app: {
     active_mode: 'shortcuts',
-    mode_order: ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing']
+    mode_order: ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing', 'api_center']
   },
   assistant: {
     enabled: 1,
@@ -49,6 +49,11 @@
   notes: { list: [], currentId: '', dirty: false },
   notesDisplay: { list: [], currentId: '', dirty: false },
   capture: { phoneUrl: '' },
+  apiCenter: {
+    rows: [],
+    last_sync: '',
+    usage_status: '待接入'
+  },
   resume: {
     profile: { version: 1, updated_at: '', sections: [] },
     flat_map: {},
@@ -408,6 +413,7 @@ export function setModeUi(mode) {
   const isResume = mode === 'resume';
   const isTesting = mode === 'testing';
   const isNotesDisplay = mode === 'notes_display';
+  const isApiCenter = mode === 'api_center';
 
   byId('modeShortcutsBtn').classList.toggle('active', isShortcuts);
   byId('modeNotesBtn').classList.toggle('active', mode === 'notes');
@@ -417,6 +423,7 @@ export function setModeUi(mode) {
   byId('modeResumeBtn').classList.toggle('active', isResume);
   byId('modeHotkeysBtn').classList.toggle('active', isHotkeys);
   byId('modeTestingBtn').classList.toggle('active', isTesting);
+  byId('modeApiCenterBtn').classList.toggle('active', isApiCenter);
 
   byId('shortcutsView').classList.toggle('hidden', !isShortcuts);
   byId('hotkeysView').classList.toggle('hidden', !isHotkeys);
@@ -426,4 +433,5 @@ export function setModeUi(mode) {
   byId('assistantView').classList.toggle('hidden', mode !== 'assistant');
   byId('resumeView').classList.toggle('hidden', !isResume);
   byId('testingView').classList.toggle('hidden', !isTesting);
+  byId('apiCenterView').classList.toggle('hidden', !isApiCenter);
 }

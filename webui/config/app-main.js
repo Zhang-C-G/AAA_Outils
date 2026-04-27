@@ -6,6 +6,7 @@ import { initCaptureHandlers, refreshCaptureState } from './app-capture.js';
 import { initAssistantHandlers, applyAssistantState, saveAssistantSettings } from './app-assistant.js';
 import { initResumeHandlers, applyResumeState, saveResumeProfile } from './app-resume.js';
 import { initTestingHandlers, runOverlayRecordTest, refreshTestingState } from './app-testing.js';
+import { initApiCenterHandlers, refreshApiCenterState } from './app-api-center.js';
 
 let capturePollTimer = 0;
 const loadedModes = new Set();
@@ -17,7 +18,7 @@ const NOTES_DISPLAY_DRAFT_KEY = 'raccourci.notesDisplayDraft';
 const NOTES_DISPLAY_DRAFT_RESTORE_KEY = 'raccourci.notesDisplayDraftRestorePending';
 const RESUME_DRAFT_KEY = 'raccourci.resumeDraft';
 const RESUME_DRAFT_RESTORE_KEY = 'raccourci.resumeDraftRestorePending';
-const DEFAULT_MODE_ORDER = ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing'];
+const DEFAULT_MODE_ORDER = ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing', 'api_center'];
 const MODE_BUTTON_IDS = {
   shortcuts: 'modeShortcutsBtn',
   notes: 'modeNotesBtn',
@@ -26,7 +27,8 @@ const MODE_BUTTON_IDS = {
   assistant: 'modeAssistantBtn',
   resume: 'modeResumeBtn',
   hotkeys: 'modeHotkeysBtn',
-  testing: 'modeTestingBtn'
+  testing: 'modeTestingBtn',
+  api_center: 'modeApiCenterBtn'
 };
 let draggingModeId = '';
 
@@ -437,6 +439,12 @@ async function ensureModeLoaded(mode, options = {}) {
     await ensureModeLoaded('assistant', options);
     await refreshTestingState();
     markModeLoaded('testing');
+    return;
+  }
+
+  if (effectiveMode === 'api_center') {
+    await refreshApiCenterState({ silent: true });
+    markModeLoaded('api_center');
   }
 }
 
@@ -444,7 +452,7 @@ async function switchModeInternal(mode, options = {}) {
   const persist = options.persist !== false;
   const forceReload = !!options.forceReload;
   const prefetchedPayload = options.prefetchedPayload || null;
-  if (!['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing'].includes(mode)) {
+  if (!['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing', 'api_center'].includes(mode)) {
     mode = 'shortcuts';
   }
 
@@ -467,7 +475,8 @@ async function switchModeInternal(mode, options = {}) {
       (mode === 'notes_display' ? '保存笔记显示内容' :
       (mode === 'capture' ? '保存截图设置' :
       (mode === 'assistant' ? '保存助手设置' :
-      (mode === 'resume' ? '简历自动保存' : '执行测试'))))));
+      (mode === 'resume' ? '简历自动保存' :
+      (mode === 'api_center' ? '刷新 API 信息' : '执行测试')))))));
   }
 
   const persistedMode = (mode === 'hotkeys' || mode === 'testing') ? 'shortcuts' : mode;
@@ -501,6 +510,9 @@ async function switchModeInternal(mode, options = {}) {
   }
   if (mode === 'testing') {
     await refreshTestingState();
+  }
+  if (mode === 'api_center') {
+    await refreshApiCenterState({ silent: true });
   }
   if (mode === 'resume') {
     applyResumeState({ resume: state.resume });
@@ -549,6 +561,8 @@ function bindHeaderActions() {
           byId('capSaveSettingsBtn').click();
         } else if (state.app.active_mode === 'resume') {
           await saveResumeProfile();
+        } else if (state.app.active_mode === 'api_center') {
+          await refreshApiCenterState();
         } else if (state.app.active_mode === 'testing') {
           await runOverlayRecordTest();
         } else {
@@ -605,6 +619,7 @@ function bindHeaderActions() {
   byId('modeResumeBtn').onclick = () => switchMode('resume').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeHotkeysBtn').onclick = () => switchMode('hotkeys').catch(e => toast(`切换失败: ${e.message}`));
   byId('modeTestingBtn').onclick = () => switchMode('testing').catch(e => toast(`切换失败: ${e.message}`));
+  byId('modeApiCenterBtn').onclick = () => switchMode('api_center').catch(e => toast(`切换失败: ${e.message}`));
 
   window.addEventListener('beforeunload', (e) => {
     persistAllDraftsForHardRefresh();
@@ -632,6 +647,7 @@ async function bootstrap() {
   initAssistantHandlers();
   initResumeHandlers();
   initTestingHandlers();
+  initApiCenterHandlers();
   bindModePanelDrag();
   bindHeaderActions();
 

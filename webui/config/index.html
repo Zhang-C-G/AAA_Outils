@@ -24,6 +24,7 @@
       <button class="mode-btn" id="modeResumeBtn" data-mode="resume" draggable="true">F简历自动填写</button>
       <button class="mode-btn" id="modeHotkeysBtn" data-mode="hotkeys" draggable="true">G快捷键</button>
       <button class="mode-btn" id="modeTestingBtn" data-mode="testing" draggable="true">H测试</button>
+      <button class="mode-btn" id="modeApiCenterBtn" data-mode="api_center" draggable="true">I API管理中心</button>
     </section>
 
     <section id="shortcutsView" class="view">
@@ -321,6 +322,55 @@
               <label><span>测试输出</span><textarea id="testOutput" readonly></textarea></label>
             </div>
           </section>
+        </div>
+      </section>
+    </section>
+
+    <section id="apiCenterView" class="view hidden">
+      <section class="panel api-center-layout">
+        <div class="api-center-title-block">
+          <h2 class="api-center-title">API管理中心</h2>
+          <p class="api-center-subtitle">统一查看当前项目已接入 API、官方用量占位和官方管理入口。</p>
+        </div>
+
+        <div class="assistant-hotkey-explain">
+          API管理中心当前处于第一阶段：先统一展示本项目已接入 API、官方用量占位和官方管理入口。
+          真实官方用量/余额尚未接入时，默认显示 `?`。
+        </div>
+
+        <div class="api-center-head">
+          <div class="api-center-summary">
+            <article class="api-center-card">
+              <span class="api-center-card-label">已登记 API</span>
+              <strong id="apiCenterTotalCount" class="api-center-card-value">0</strong>
+            </article>
+            <article class="api-center-card">
+              <span class="api-center-card-label">官方用量读取</span>
+              <strong id="apiCenterUsageStatus" class="api-center-card-value">待接入</strong>
+            </article>
+            <article class="api-center-card">
+              <span class="api-center-card-label">最近同步</span>
+              <strong id="apiCenterLastSync" class="api-center-card-value">未同步</strong>
+            </article>
+          </div>
+          <div class="api-center-actions">
+            <button id="apiCenterRefreshBtn" class="btn" type="button">刷新本地接入信息</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>接入项目</th>
+                <th>当前接入</th>
+                <th>已使用</th>
+                <th>剩余</th>
+                <th>官方管理中心</th>
+              </tr>
+            </thead>
+            <tbody id="apiCenterRows"></tbody>
+          </table>
         </div>
       </section>
     </section>

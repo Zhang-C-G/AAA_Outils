@@ -37,7 +37,7 @@ EnsureDataFile() {
         . "move_down=Down`n"
         . "`n[App]`n"
         . "active_mode=shortcuts`n"
-        . "mode_order=shortcuts,notes,notes_display,capture,assistant,resume,hotkeys,testing`n"
+        . "mode_order=shortcuts,notes,notes_display,capture,assistant,resume,hotkeys,testing,api_center`n"
         . "capture_dir=" A_ScriptDir "\\captures`n"
         . "`n[Capture]`n"
         . "upload_endpoint=https://0x0.st`n"
@@ -261,11 +261,14 @@ NormalizeModeId(mode) {
     if (m = "testing") {
         return "testing"
     }
+    if (m = "api_center") {
+        return "api_center"
+    }
     return "shortcuts"
 }
 
 GetDefaultModeOrderCsv() {
-    return "shortcuts,notes,notes_display,capture,assistant,resume,hotkeys,testing"
+    return "shortcuts,notes,notes_display,capture,assistant,resume,hotkeys,testing,api_center"
 }
 
 NormalizeModeOrderCsv(raw) {

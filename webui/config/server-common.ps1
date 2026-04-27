@@ -193,12 +193,12 @@ function Get-CategorySection {
 function Normalize-Mode {
   param([string]$Mode)
   $m = ($Mode + '').Trim().ToLowerInvariant()
-  if ($m -in @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')) { return $m }
+  if ($m -in @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing', 'api_center')) { return $m }
   return 'shortcuts'
 }
 
 function Get-DefaultModeOrder {
-  return @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing')
+  return @('shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing', 'api_center')
 }
 
 function Normalize-ModeOrder {

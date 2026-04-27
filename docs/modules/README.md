@@ -30,6 +30,7 @@
 4. `06_assistant_capture_qa.md`
 5. `11_resume_autofill.md`
 6. `12_notes_display.md`
+7. `13_api_management_center.md`
 
 ### 3.2 功能入口或功能壳层
 
@@ -61,4 +62,5 @@
 - 扩展开发规范：`docs/extension/README.md`
 - 更新清单：`docs/UPDATE_CHECKLIST.md`
 - 模块模板：`docs/templates/MODULE_TEMPLATE.md`
-
+- 模块修改过程规则：`docs/modules/CHANGELOG_RULE.md`
+- 模块修改过程索引：`docs/modules/changelog/README.md`
