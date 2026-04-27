@@ -38,3 +38,34 @@
   - 确认仅存在 1 个 `AutoHotkey64.exe` 实例
   - `GET http://127.0.0.1:8798/` 返回 HTML，确认包含 `API管理中心` 与 `接入项目`
 - 测试结果：`通过`
+
+### 2026-04-27 / API 列表结构修正
+- 改动内容：
+  - 表头从 `接入项目` 改回 `API`
+  - API 列表调整为 3 个豆包 API 与 1 个讯飞 API
+  - 删除截图上传 API 行
+  - `当前接入` 改为隐藏 API Key，已配置时显示星号掩码
+  - 豆包管理中心改为火山引擎指定入口
+  - 讯飞管理中心改为 `https://console.xfyun.cn/services/bmc`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-api-center.js`
+  - `rg` 校验表头、掩码 key、火山引擎入口、讯飞入口已写入
+  - `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
+  - 确认仅存在 1 个 `AutoHotkey64.exe` 实例
+  - `GET /` 返回 HTML，确认包含 `API管理中心` 与 `<th>API</th>`
+  - `GET /api/assistant/state` 返回正常，确认存在 3 个豆包模型选项
+- 测试结果：`通过`
+
+### 2026-04-27 / 第一阶段 UI 微调
+- 改动内容：
+  - `当前接入` 列改为“密钥状态”表达：未配置时显示 `未配置`
+  - API 行新增平台归属标签：`豆包 / 火山引擎`、`讯飞`
+  - 官方管理中心列改为统一操作按钮样式，文案统一为 `进入控制台`
+  - 摘要区调整为：`已登记 API`、`已配置密钥数`、`官方读取状态`
+  - 说明条与副标题收紧，整体更贴近管理中心气质
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-api-center.js`
+  - `rg` 校验 `未配置`、平台标签、按钮样式、`apiCenterConfiguredCount`、`官方读取状态` 已接入
+  - `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
+  - 延迟复查后确认当前仅存在 1 个 `AutoHotkey64.exe` 实例
+- 测试结果：`通过`

@@ -10,10 +10,10 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-04-27-post-checkpoint-api-center-title-fix`
+- 轮次标识：`2026-04-27-post-checkpoint-api-center-ui-polish`
 - 当前连续改动次数：`0`
 - 本轮目标：`等待下一轮改动`
-- 上一个 git 检查点：`checkpoint: api center stage1 shell and title fix`
+- 上一个 git 检查点：`checkpoint: api center ui polish and resume layout`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 当前 1-3 次改动窗口

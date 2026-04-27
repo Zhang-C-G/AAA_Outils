@@ -330,12 +330,11 @@
       <section class="panel api-center-layout">
         <div class="api-center-title-block">
           <h2 class="api-center-title">API管理中心</h2>
-          <p class="api-center-subtitle">统一查看当前项目已接入 API、官方用量占位和官方管理入口。</p>
+          <p class="api-center-subtitle">统一查看当前项目已接入 API、密钥状态、官方用量占位和官方管理入口。</p>
         </div>
 
         <div class="assistant-hotkey-explain">
-          API管理中心当前处于第一阶段：先统一展示本项目已接入 API、官方用量占位和官方管理入口。
-          真实官方用量/余额尚未接入时，默认显示 `?`。
+          当前为第一阶段：展示已接入 API 与密钥状态，官方用量和余额未接入时显示 `?`。
         </div>
 
         <div class="api-center-head">
@@ -345,12 +344,12 @@
               <strong id="apiCenterTotalCount" class="api-center-card-value">0</strong>
             </article>
             <article class="api-center-card">
-              <span class="api-center-card-label">官方用量读取</span>
-              <strong id="apiCenterUsageStatus" class="api-center-card-value">待接入</strong>
+              <span class="api-center-card-label">已配置密钥数</span>
+              <strong id="apiCenterConfiguredCount" class="api-center-card-value">0</strong>
             </article>
             <article class="api-center-card">
-              <span class="api-center-card-label">最近同步</span>
-              <strong id="apiCenterLastSync" class="api-center-card-value">未同步</strong>
+              <span class="api-center-card-label">官方读取状态</span>
+              <strong id="apiCenterUsageStatus" class="api-center-card-value">待接入</strong>
             </article>
           </div>
           <div class="api-center-actions">
@@ -362,7 +361,7 @@
           <table>
             <thead>
               <tr>
-                <th>接入项目</th>
+                <th>API</th>
                 <th>当前接入</th>
                 <th>已使用</th>
                 <th>剩余</th>

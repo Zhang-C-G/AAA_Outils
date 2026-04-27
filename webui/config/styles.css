@@ -795,6 +795,25 @@ label span { color: #d2d2d2; font-size: 14px; }
   display: grid;
   gap: 4px;
 }
+.api-center-platform-tag {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  background: rgba(255,255,255,.03);
+  color: #d7d7d7;
+  font-size: 12px;
+  line-height: 1;
+}
+.api-center-platform-tag.volcengine {
+  border-color: rgba(255,255,255,.22);
+}
+.api-center-platform-tag.xunfei {
+  border-color: rgba(255,255,255,.16);
+}
 .api-center-api-name strong {
   color: #f3f3f3;
   font-size: 14px;
@@ -804,11 +823,11 @@ label span { color: #d2d2d2; font-size: 14px; }
   font-size: 12px;
   line-height: 1.55;
 }
-.api-center-endpoint {
+.api-center-access {
   display: grid;
   gap: 4px;
 }
-.api-center-endpoint code {
+.api-center-access code {
   display: inline-block;
   max-width: 100%;
   padding: 5px 8px;
@@ -819,18 +838,39 @@ label span { color: #d2d2d2; font-size: 14px; }
   font-size: 12px;
   word-break: break-all;
 }
+.api-center-access.unconfigured code {
+  color: #b8b8b8;
+  border-style: dashed;
+}
+.api-center-access.configured code {
+  color: #f2f2f2;
+}
 .api-center-metric {
   color: #f3f3f3;
   font-weight: 700;
 }
-.api-center-link {
+.api-center-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  background: #141414;
   color: #ffffff;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.api-center-link.disabled {
-  color: #868686;
   text-decoration: none;
+  transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+.api-center-link-btn:hover {
+  transform: translateY(-1px);
+  border-color: #f1f1f1;
+  background: #1a1a1a;
+}
+.api-center-link-btn.disabled {
+  color: #868686;
+  background: #121212;
+  border-color: #2d2d2d;
   cursor: default;
   pointer-events: none;
 }
@@ -930,8 +970,18 @@ label span { color: #d2d2d2; font-size: 14px; }
 .resume-entry-bar-link.active {
   color: #f1f1f1;
 }
+.resume-subview {
+  display: grid;
+  align-content: start;
+  align-self: start;
+  gap: 12px;
+  min-height: 0;
+}
 .resume-subview.hidden {
   display: none;
+}
+.resume-table-wrap {
+  align-self: start;
 }
 .resume-company-toggle {
   display: inline-flex;

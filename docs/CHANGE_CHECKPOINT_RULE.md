@@ -38,13 +38,13 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-04-27-post-checkpoint-api-center-title-fix`
+- 当前轮次：`2026-04-27-post-checkpoint-api-center-ui-polish`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`0`
 - 下一次强制 git 阈值：`还差 3 次完成且测试通过的改动`
-- 上一个 git 检查点：`checkpoint: api center stage1 shell and title fix`
+- 上一个 git 检查点：`checkpoint: api center ui polish and resume layout`
 - 当前计数说明：
-  - 上一轮 3 次改动已完成 checkpoint 并准备开始新一轮
+  - 上一轮 3 次改动已完成 checkpoint 并开始新一轮
 
 ## 5. 维护方式
 
