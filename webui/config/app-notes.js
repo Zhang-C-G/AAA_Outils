@@ -7,7 +7,30 @@ let notesSaveQueued = false;
 let notesSavePromise = null;
 let notesChangeVersion = 0;
 let draggingNoteId = '';
-let selectedModuleKey = '__all__';
+let selectedDirectoryKey = '__all__';
+let notesExplainCollapsed = true;
+let notesSidebarCompact = false;
+
+function syncNotesExplainBar() {
+  const bar = byId('notesExplainBar');
+  const btn = byId('toggleNotesExplainBtn');
+  if (!bar || !btn) return;
+  bar.classList.toggle('collapsed', notesExplainCollapsed);
+  btn.setAttribute('aria-expanded', notesExplainCollapsed ? 'false' : 'true');
+  const caret = btn.querySelector('.notes-explain-caret');
+  if (caret) {
+    caret.textContent = notesExplainCollapsed ? '展开' : '收起';
+  }
+}
+
+function syncNotesSidebar() {
+  const layout = byId('notesLayoutRoot');
+  const toggleBtn = byId('toggleNotesSidebarBtn');
+  if (!layout || !toggleBtn) return;
+  layout.classList.toggle('sidebar-compact', notesSidebarCompact);
+  toggleBtn.textContent = notesSidebarCompact ? '展开列表' : '收起列表';
+  toggleBtn.setAttribute('aria-expanded', notesSidebarCompact ? 'false' : 'true');
+}
 
 function escapeOutlineText(value) {
   return escapeHtml(String(value || '').trim());
@@ -25,68 +48,107 @@ function slugifyHeading(text, index) {
 function parseNoteStructure(content) {
   const lines = String(content || '').replace(/\r\n/g, '\n').split('\n');
   const headings = [];
-  const modules = [];
-  let currentModuleId = '__root__';
-  let currentModuleName = '未归类';
+  const directories = [];
+  const extracts = [];
+  let currentDirectoryId = '__root__';
+  let currentDirectoryName = '未归类';
 
   lines.forEach((line, index) => {
     const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
-    if (!match) return;
-    const level = match[1].length;
-    const text = match[2].trim();
-    const heading = {
-      id: slugifyHeading(text, index),
-      text,
-      level,
-      moduleId: currentModuleId,
-      moduleName: currentModuleName
-    };
+    if (match) {
+      const level = match[1].length;
+      const text = match[2].trim();
+      const heading = {
+        id: slugifyHeading(text, index),
+        text,
+        level,
+        directoryId: currentDirectoryId,
+        directoryName: currentDirectoryName
+      };
 
-    if (level <= 2) {
-      currentModuleId = heading.id;
-      currentModuleName = text;
-      heading.moduleId = currentModuleId;
-      heading.moduleName = currentModuleName;
-      modules.push({ id: currentModuleId, name: currentModuleName });
-    } else if (!modules.length) {
-      heading.moduleId = '__root__';
-      heading.moduleName = '未归类';
-    } else {
-      heading.moduleId = currentModuleId;
-      heading.moduleName = currentModuleName;
+      if (level <= 2) {
+        currentDirectoryId = heading.id;
+        currentDirectoryName = text;
+        heading.directoryId = currentDirectoryId;
+        heading.directoryName = currentDirectoryName;
+        directories.push({ id: currentDirectoryId, name: currentDirectoryName });
+      } else if (!directories.length) {
+        heading.directoryId = '__root__';
+        heading.directoryName = '未归类';
+      } else {
+        heading.directoryId = currentDirectoryId;
+        heading.directoryName = currentDirectoryName;
+      }
+
+      headings.push(heading);
     }
 
-    headings.push(heading);
+    const labelMatch = /^\*\*(.+?)[:：]\*\*\s*(.*)$/.exec(line.trim());
+    if (labelMatch && labelMatch[1].trim() === '结论式开场') {
+      const parts = [];
+      if (labelMatch[2]) {
+        parts.push(labelMatch[2].trim());
+      }
+      let next = index + 1;
+      while (next < lines.length) {
+        const nextLine = lines[next].trim();
+        if (!nextLine) {
+          next += 1;
+          continue;
+        }
+        if (/^\*\*(.+?)[:：]\*\*/.test(nextLine) || /^(#{1,6})\s+/.test(nextLine)) {
+          break;
+        }
+        parts.push(nextLine);
+        next += 1;
+      }
+      extracts.push({
+        directoryName: currentDirectoryName,
+        text: parts.join(' ').trim() || '当前结论式开场后还没有正文内容。'
+      });
+    }
   });
 
   return {
     headings,
-    modules
+    directories,
+    extracts
   };
 }
 
 function getFilteredHeadings(structure) {
   const headings = Array.isArray(structure?.headings) ? structure.headings : [];
-  if (selectedModuleKey === '__all__') return headings;
-  return headings.filter((heading) => heading.moduleId === selectedModuleKey);
+  if (selectedDirectoryKey === '__all__') return headings;
+  return headings.filter((heading) => heading.directoryId === selectedDirectoryKey);
 }
 
-function renderModuleChips(structure) {
+function getFilteredExtracts(structure) {
+  const extracts = Array.isArray(structure?.extracts) ? structure.extracts : [];
+  if (selectedDirectoryKey === '__all__') return extracts;
+  return extracts.filter((item) => item.directoryName === getSelectedDirectoryName(structure));
+}
+
+function getSelectedDirectoryName(structure) {
+  const directories = Array.isArray(structure?.directories) ? structure.directories : [];
+  return directories.find((item) => item.id === selectedDirectoryKey)?.name || '未归类';
+}
+
+function renderDirectoryChips(structure) {
   const host = byId('notesModuleChips');
   if (!host) return;
-  const modules = Array.isArray(structure?.modules) ? structure.modules : [];
-  if (selectedModuleKey !== '__all__' && !modules.find((module) => module.id === selectedModuleKey)) {
-    selectedModuleKey = '__all__';
+  const directories = Array.isArray(structure?.directories) ? structure.directories : [];
+  if (selectedDirectoryKey !== '__all__' && !directories.find((item) => item.id === selectedDirectoryKey)) {
+    selectedDirectoryKey = '__all__';
   }
 
-  const items = [{ id: '__all__', name: '全部模块' }, ...modules];
+  const items = [{ id: '__all__', name: '全部目录' }, ...directories];
   host.innerHTML = items
-    .map((item) => `<button class="chip ${item.id === selectedModuleKey ? 'active' : ''}" type="button" data-module-id="${escapeOutlineText(item.id)}">${escapeOutlineText(item.name)}</button>`)
+    .map((item) => `<button class="chip ${item.id === selectedDirectoryKey ? 'active' : ''}" type="button" data-directory-id="${escapeOutlineText(item.id)}">${escapeOutlineText(item.name)}</button>`)
     .join('');
 
-  host.querySelectorAll('[data-module-id]').forEach((button) => {
+  host.querySelectorAll('[data-directory-id]').forEach((button) => {
     button.onclick = () => {
-      selectedModuleKey = button.dataset.moduleId || '__all__';
+      selectedDirectoryKey = button.dataset.directoryId || '__all__';
       renderNoteStructure();
     };
   });
@@ -115,20 +177,39 @@ function renderStructureSummary(structure) {
   const host = byId('notesStructureSummary');
   if (!host) return;
   const headings = Array.isArray(structure?.headings) ? structure.headings : [];
-  const modules = Array.isArray(structure?.modules) ? structure.modules : [];
+  const directories = Array.isArray(structure?.directories) ? structure.directories : [];
   if (!headings.length) {
-    host.textContent = '当前笔记还没有可识别的 Markdown 标题。建议后续按模块使用 H2 标题，便于大体量内容拆块。';
+    host.textContent = '当前笔记还没有可识别的 Markdown 标题。建议后续按目录块使用 H1/H2 标题，便于大体量内容拆块。';
     return;
   }
-  host.textContent = `已识别 ${headings.length} 个目录项，${modules.length || 1} 个模块入口。当前第一阶段默认以 H1/H2 作为大块分段基准。`;
+  host.textContent = `已识别 ${headings.length} 个目录项，${directories.length || 1} 个目录块。当前第一阶段默认以 H1/H2 作为笔记目录的分段基准。`;
+}
+
+function renderExtractList(structure) {
+  const host = byId('notesExtractList');
+  if (!host) return;
+  const extracts = getFilteredExtracts(structure);
+  if (!extracts.length) {
+    host.innerHTML = '<div class="notes-outline-empty">检测到 `**结论式开场：**` 后，这里会单独列出提取结果。</div>';
+    return;
+  }
+  host.innerHTML = extracts
+    .map((item, index) => `
+      <div class="notes-extract-item">
+        <strong>结论式开场 ${index + 1}${item.directoryName && item.directoryName !== '未归类' ? ` · ${escapeOutlineText(item.directoryName)}` : ''}</strong>
+        <span>${escapeOutlineText(item.text)}</span>
+      </div>
+    `)
+    .join('');
 }
 
 function renderNoteStructure() {
   const content = byId('noteContent')?.value || '';
   const structure = parseNoteStructure(content);
   renderStructureSummary(structure);
-  renderModuleChips(structure);
+  renderDirectoryChips(structure);
   renderOutlineList(structure);
+  renderExtractList(structure);
 }
 
 function renderNotesList() {
@@ -220,7 +301,7 @@ async function loadNoteContent(id) {
   state.notes.currentId = note.id;
   byId('noteTitle').value = note.title || '';
   byId('noteContent').value = note.content || '';
-  selectedModuleKey = '__all__';
+  selectedDirectoryKey = '__all__';
   notesChangeVersion = 0;
   state.notes.dirty = false;
   setDirty(false, 'notes');
@@ -245,7 +326,7 @@ export async function loadNotes() {
     notesChangeVersion = 0;
     byId('noteTitle').value = '';
     byId('noteContent').value = '';
-    selectedModuleKey = '__all__';
+    selectedDirectoryKey = '__all__';
     renderNoteStructure();
   }
 }
@@ -319,6 +400,16 @@ export async function selectNote(id) {
 }
 
 export function initNotesHandlers() {
+  byId('toggleNotesSidebarBtn').onclick = () => {
+    notesSidebarCompact = !notesSidebarCompact;
+    syncNotesSidebar();
+  };
+
+  byId('toggleNotesExplainBtn').onclick = () => {
+    notesExplainCollapsed = !notesExplainCollapsed;
+    syncNotesExplainBar();
+  };
+
   byId('noteTitle').oninput = () => {
     notesChangeVersion += 1;
     state.notes.dirty = true;
@@ -383,5 +474,8 @@ export function initNotesHandlers() {
     await loadNotes();
     toast('笔记已删除');
   };
+
+  syncNotesExplainBar();
+  syncNotesSidebar();
 }
 

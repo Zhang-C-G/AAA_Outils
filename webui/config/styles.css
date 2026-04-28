@@ -314,18 +314,24 @@ textarea { min-height: 56px; resize: vertical; }
 label { display: grid; gap: 6px; }
 label span { color: #d2d2d2; font-size: 14px; }
 .notes-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 12px; align-items: start; }
+.notes-layout.sidebar-compact { grid-template-columns: 112px minmax(0, 1fr); }
+.notes-left { min-width: 0; }
 .notes-list { border: 1px solid #303030; border-radius: 10px; min-height: 620px; max-height: 620px; overflow: auto; }
 .note-item { padding: 10px 12px; border-bottom: 1px solid #262626; cursor: pointer; }
 .note-item.active { background: #fff; color: #111; font-weight: 600; }
 .note-item.dragging { opacity: .55; }
 .note-item.drag-target { box-shadow: inset 0 0 0 1px #fff; }
+.note-item > div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .notes-shell { display: grid; gap: 12px; min-width: 0; }
 .notes-explain-bar {
   display: grid;
-  gap: 6px;
+  gap: 0;
   border: 1px solid #2f2f2f;
   border-radius: 8px;
-  padding: 10px 12px;
   background:
     repeating-linear-gradient(
       -45deg,
@@ -333,8 +339,28 @@ label span { color: #d2d2d2; font-size: 14px; }
       rgba(255,255,255,.012) 8px 16px
     );
 }
-.notes-explain-bar strong { font-size: 14px; color: #f3f3f3; }
-.notes-explain-bar span { color: #b7b7b7; font-size: 12px; line-height: 1.5; }
+.notes-explain-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.notes-explain-toggle strong { font-size: 14px; color: #f3f3f3; }
+.notes-explain-caret { color: #9f9f9f; font-size: 12px; flex: 0 0 auto; }
+.notes-explain-body {
+  padding: 0 12px 10px;
+  color: #b7b7b7;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.notes-explain-bar.collapsed .notes-explain-body { display: none; }
+.notes-explain-bar.collapsed .notes-explain-toggle { padding-bottom: 9px; }
 .notes-workspace { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; min-width: 0; }
 .notes-structure-panel,
 .notes-right {
@@ -362,10 +388,18 @@ label span { color: #d2d2d2; font-size: 14px; }
 .notes-outline-list {
   border: 1px solid #242424;
   border-radius: 8px;
-  min-height: 470px;
-  max-height: 470px;
+  min-height: 320px;
+  max-height: 320px;
   overflow: auto;
   background: rgba(0,0,0,.16);
+}
+.notes-extract-list {
+  border: 1px solid #242424;
+  border-radius: 8px;
+  min-height: 140px;
+  max-height: 200px;
+  overflow: auto;
+  background: rgba(0,0,0,.12);
 }
 .notes-outline-item {
   width: 100%;
@@ -403,8 +437,45 @@ label span { color: #d2d2d2; font-size: 14px; }
   line-height: 1.6;
   padding: 14px 12px;
 }
+.notes-extract-item {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #202020;
+}
+.notes-extract-item:last-child { border-bottom: 0; }
+.notes-extract-item strong {
+  font-size: 12px;
+  color: #f0f0f0;
+}
+.notes-extract-item span {
+  color: #b7b7b7;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .notes-right textarea { min-height: 560px; }
-.notes-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.notes-actions { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.notes-sidebar-toggle { margin-right: auto; }
+.notes-layout.sidebar-compact .notes-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+.notes-layout.sidebar-compact .notes-actions .btn {
+  width: 100%;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: 12px;
+}
+.notes-layout.sidebar-compact .notes-list {
+  min-height: 620px;
+  max-height: 620px;
+}
+.notes-layout.sidebar-compact .note-item {
+  padding: 9px 8px;
+}
+.notes-layout.sidebar-compact .note-item > div {
+  font-size: 12px;
+}
 .sortable-row { cursor: move; }
 .sortable-row.dragging { opacity: .55; }
 .sortable-row.drag-target { outline: 1px solid #fff; outline-offset: -1px; }
@@ -1366,8 +1437,10 @@ label span { color: #d2d2d2; font-size: 14px; }
   #hotkeys { grid-template-columns: 1fr; }
   #hotkeys .hotkey-group .grid { grid-template-columns: 1fr; }
   .notes-layout { grid-template-columns: 1fr; }
+  .notes-layout.sidebar-compact { grid-template-columns: 1fr; }
   .notes-workspace { grid-template-columns: 1fr; }
-  .notes-outline-list { min-height: 280px; max-height: 280px; }
+  .notes-outline-list { min-height: 240px; max-height: 240px; }
+  .notes-extract-list { min-height: 120px; max-height: 160px; }
   .notes-display-preview { grid-template-columns: 1fr; }
   .capture-grid { grid-template-columns: 1fr; }
   .assistant-grid { grid-template-columns: 1fr; }
