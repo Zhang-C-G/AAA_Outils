@@ -105,7 +105,6 @@ export function mountThemePicker(host, options = {}) {
   if (!host) return null;
 
   const onChange = typeof options.onChange === 'function' ? options.onChange : () => {};
-  const onSave = typeof options.onSave === 'function' ? options.onSave : () => Promise.resolve();
   const initialTheme = normalizeThemeSettings(options.value || DEFAULT_THEME);
   let current = { ...initialTheme };
 
@@ -114,7 +113,7 @@ export function mountThemePicker(host, options = {}) {
       <div class="shell-theme-panel-head">
         <div>
           <strong>主题设置</strong>
-          <span>四个预设 + 自定义色轮，后面其他模块也可复用</span>
+          <span>预设和色轮修改后立即生效</span>
         </div>
         <button type="button" class="btn ghost shell-theme-close">关闭</button>
       </div>
@@ -139,10 +138,6 @@ export function mountThemePicker(host, options = {}) {
             <input id="shellThemeSecondaryText" type="text" readonly />
           </div>
         </label>
-      </div>
-      <div class="shell-theme-actions">
-        <button type="button" class="btn ghost shell-theme-apply">只预览</button>
-        <button type="button" class="btn primary shell-theme-save">保存主题</button>
       </div>
     </div>
   `;
@@ -180,43 +175,36 @@ export function mountThemePicker(host, options = {}) {
     });
   }
 
-  function emitChange(live = true) {
+  function emitChange() {
     current = normalizeThemeSettings(current);
     syncUi();
-    onChange({ ...current, live });
+    onChange({ ...current, live: true });
   }
 
   for (const preset of THEME_PRESETS) {
     presetGrid.appendChild(createPresetButton(preset, (nextPreset) => {
       current = normalizeThemeSettings(nextPreset);
-      emitChange(true);
+      emitChange();
     }));
   }
 
   segmentButtons.forEach((btn) => {
     btn.onclick = () => {
       current.mode = btn.dataset.mode === 'gradient' ? 'gradient' : 'solid';
-      emitChange(true);
+      emitChange();
     };
   });
 
   primary.oninput = () => {
     current.primary = normalizeHex(primary.value, current.primary);
-    emitChange(true);
+    emitChange();
   };
   secondary.oninput = () => {
     current.secondary = normalizeHex(secondary.value, current.secondary);
-    emitChange(true);
+    emitChange();
   };
 
   host.querySelector('.shell-theme-close').onclick = () => {
-    host.classList.add('hidden');
-  };
-  host.querySelector('.shell-theme-apply').onclick = () => {
-    emitChange(true);
-  };
-  host.querySelector('.shell-theme-save').onclick = async () => {
-    await onSave({ ...current });
     host.classList.add('hidden');
   };
 

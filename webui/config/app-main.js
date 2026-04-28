@@ -2,6 +2,7 @@ import { state, byId, api, toast, setDirty, setModeUi } from './app-common.js';
 
 let capturePollTimer = 0;
 let shellThemePicker = null;
+let shellThemePersistTimer = 0;
 const loadedModes = new Set();
 const loadedModules = new Map();
 const initializedModules = new Set();
@@ -435,8 +436,9 @@ async function applyAppShellState(payload) {
   applyModeButtonOrder();
 }
 
-async function persistShellTheme(theme) {
+async function persistShellTheme(theme, options = {}) {
   const { normalizeThemeSettings, applyShellTheme } = await getModule('theme_picker');
+  const silent = options.silent !== false;
   const normalized = normalizeThemeSettings(theme);
   const accent = normalized.mode === 'gradient' ? normalized.secondary : normalized.primary;
   state.app.shell_theme_mode = normalized.mode;
@@ -456,7 +458,21 @@ async function persistShellTheme(theme) {
       shell_theme_accent: accent
     })
   });
-  toast('主题已保存');
+  if (!silent) {
+    toast('主题已保存');
+  }
+}
+
+function queueShellThemePersist(theme) {
+  if (shellThemePersistTimer) {
+    clearTimeout(shellThemePersistTimer);
+  }
+  shellThemePersistTimer = window.setTimeout(() => {
+    shellThemePersistTimer = 0;
+    persistShellTheme(theme, { silent: true }).catch((error) => {
+      toast(`主题保存失败: ${error.message}`);
+    });
+  }, 220);
 }
 
 function getModePrefetchPayload(mode, payload) {
@@ -665,8 +681,8 @@ function bindHeaderActions() {
         onChange: (theme) => {
           const accent = theme.mode === 'gradient' ? theme.secondary : theme.primary;
           applyShellTheme({ ...theme, accent });
-        },
-        onSave: persistShellTheme
+          queueShellThemePersist(theme);
+        }
       });
 
       shellThemeBtn.onclick = () => {

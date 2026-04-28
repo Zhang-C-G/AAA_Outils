@@ -75,9 +75,33 @@
           </div>
           <div id="notesList" class="notes-list"></div>
         </div>
-        <div class="notes-right">
-          <label>标题<input id="noteTitle" type="text" /></label>
-          <label>内容（Markdown）<textarea id="noteContent"></textarea></label>
+        <div class="notes-shell">
+          <div class="notes-explain-bar">
+            <strong>B 笔记重构中</strong>
+            <span>面向大体量私人笔记：当前先搭结构壳，正文仍直接编辑；目录抽取、模块筛选、块状显示将按当前结构继续闭环。</span>
+          </div>
+          <div class="notes-workspace">
+            <aside class="notes-structure-panel">
+              <div class="notes-panel-head">
+                <strong>结构目录</strong>
+                <button id="copyNoteOutlineBtn" class="btn ghost" type="button">复制目录</button>
+              </div>
+              <div id="notesStructureSummary" class="notes-structure-summary">当前笔记还没有可识别的 Markdown 标题。</div>
+              <div class="notes-panel-head compact">
+                <strong>模块筛选</strong>
+              </div>
+              <div id="notesModuleChips" class="notes-module-chips">
+                <button class="chip active" type="button">全部模块</button>
+              </div>
+              <div id="notesOutlineList" class="notes-outline-list">
+                <div class="notes-outline-empty">把一大段 Markdown 贴进右侧后，这里会自动列出目录结构。</div>
+              </div>
+            </aside>
+            <div class="notes-right">
+              <label>标题<input id="noteTitle" type="text" /></label>
+              <label>内容（Markdown）<textarea id="noteContent"></textarea></label>
+            </div>
+          </div>
         </div>
       </section>
     </section>
