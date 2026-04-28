@@ -373,38 +373,17 @@ label span { color: #d2d2d2; font-size: 14px; }
 .notes-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .notes-panel-head.compact { margin-top: 12px; }
 .notes-panel-head strong { font-size: 14px; color: #f1f1f1; }
-.notes-structure-summary {
-  color: #a9a9a9;
-  font-size: 12px;
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-.notes-module-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
-}
 .notes-outline-list {
   border: 1px solid #242424;
   border-radius: 8px;
-  min-height: 320px;
-  max-height: 320px;
+  min-height: 520px;
+  max-height: 520px;
   overflow: auto;
   background: rgba(0,0,0,.16);
-}
-.notes-extract-list {
-  border: 1px solid #242424;
-  border-radius: 8px;
-  min-height: 140px;
-  max-height: 200px;
-  overflow: auto;
-  background: rgba(0,0,0,.12);
 }
 .notes-outline-item {
   width: 100%;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
@@ -414,6 +393,16 @@ label span { color: #d2d2d2; font-size: 14px; }
   text-align: left;
 }
 .notes-outline-item:last-child { border-bottom: 0; }
+.notes-outline-item .outline-indent {
+  flex: 0 0 auto;
+  width: 0;
+  height: 1px;
+}
+.notes-outline-item .outline-indent.depth-1 { width: 14px; }
+.notes-outline-item .outline-indent.depth-2 { width: 28px; }
+.notes-outline-item .outline-indent.depth-3 { width: 42px; }
+.notes-outline-item .outline-indent.depth-4 { width: 56px; }
+.notes-outline-item .outline-indent.depth-5 { width: 70px; }
 .notes-outline-item .level-label {
   color: #8f8f8f;
   font-size: 11px;
@@ -426,32 +415,62 @@ label span { color: #d2d2d2; font-size: 14px; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.notes-outline-item.level-2 { padding-left: 18px; }
-.notes-outline-item.level-3 { padding-left: 28px; }
-.notes-outline-item.level-4 { padding-left: 38px; }
-.notes-outline-item.level-5 { padding-left: 48px; }
-.notes-outline-item.level-6 { padding-left: 58px; }
 .notes-outline-empty {
   color: #8f8f8f;
   font-size: 12px;
   line-height: 1.6;
   padding: 14px 12px;
 }
-.notes-extract-item {
+.notes-extract-tool {
   display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border-bottom: 1px solid #202020;
+  gap: 10px;
+  margin: 10px 0 12px;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(255,255,255,.012);
 }
-.notes-extract-item:last-child { border-bottom: 0; }
-.notes-extract-item strong {
-  font-size: 12px;
-  color: #f0f0f0;
+.notes-extract-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
 }
-.notes-extract-item span {
-  color: #b7b7b7;
+.notes-extract-status {
+  color: #a9a9a9;
   font-size: 12px;
   line-height: 1.5;
+}
+.notes-extract-results {
+  display: grid;
+  gap: 10px;
+  max-height: 280px;
+  overflow: auto;
+}
+.notes-extract-result {
+  border: 1px solid #242424;
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(0,0,0,.12);
+}
+.notes-extract-result-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.notes-extract-result-head strong {
+  font-size: 13px;
+  color: #f2f2f2;
+}
+.notes-extract-result-head span {
+  color: #949494;
+  font-size: 11px;
+}
+.notes-extract-editor {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
 }
 .notes-right textarea { min-height: 560px; }
 .notes-actions { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -1439,8 +1458,8 @@ label span { color: #d2d2d2; font-size: 14px; }
   .notes-layout { grid-template-columns: 1fr; }
   .notes-layout.sidebar-compact { grid-template-columns: 1fr; }
   .notes-workspace { grid-template-columns: 1fr; }
-  .notes-outline-list { min-height: 240px; max-height: 240px; }
-  .notes-extract-list { min-height: 120px; max-height: 160px; }
+  .notes-outline-list { min-height: 300px; max-height: 300px; }
+  .notes-extract-controls { grid-template-columns: 1fr; }
   .notes-display-preview { grid-template-columns: 1fr; }
   .capture-grid { grid-template-columns: 1fr; }
   .assistant-grid { grid-template-columns: 1fr; }
