@@ -94,6 +94,21 @@ while ($true) {
       Set-AppModeOrder -ModeOrder (Get-Prop $payload 'mode_order' @())
       Send-Json $res ([ordered]@{ ok=$true })
     }
+    elseif ($path -eq '/api/app/notes-sidebar' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppNotesSidebarCompact -Compact (Get-Prop $payload 'notes_sidebar_compact' 0)
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
+    elseif ($path -eq '/api/app/notes-display-sidebar' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppNotesDisplaySidebarCompact -Compact (Get-Prop $payload 'notes_display_sidebar_compact' 0)
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
+    elseif ($path -eq '/api/app/notes-extract-collapsed' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppNotesExtractCollapsed -Collapsed (Get-Prop $payload 'notes_extract_collapsed' 0)
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
     elseif ($path -eq '/api/app/theme' -and $method -eq 'POST') {
       $payload = Read-BodyJson $req
       Set-AppTheme -Theme $payload

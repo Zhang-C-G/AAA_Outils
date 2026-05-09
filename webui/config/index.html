@@ -71,44 +71,66 @@
         <div id="notesLeftPane" class="notes-left">
           <div class="notes-actions">
             <button id="toggleNotesSidebarBtn" class="btn ghost notes-sidebar-toggle" type="button">收起列表</button>
-            <button id="newNoteBtn" class="btn">新建笔记</button>
             <button id="deleteNoteBtn" class="btn danger">删除笔记</button>
           </div>
           <div id="notesList" class="notes-list"></div>
         </div>
         <div class="notes-shell">
-          <div id="notesExplainBar" class="notes-explain-bar collapsed">
-            <button id="toggleNotesExplainBtn" class="notes-explain-toggle" type="button" aria-expanded="false">
-              <strong>B 笔记重构中</strong>
-              <span class="notes-explain-caret">展开</span>
-            </button>
-            <div class="notes-explain-body">
-              <span>面向大体量私人笔记：当前先搭结构壳。Markdown 输入后会围绕笔记目录与提取区继续转成适合笔记阅读的结构。</span>
+          <section id="notesExtractTool" class="notes-extract-tool">
+            <div class="notes-extract-stack">
+              <div class="notes-extract-row">
+                <label class="notes-extract-inline-field"><span>从</span><input id="notesExtractStart1" type="text" value="结论式开场：" placeholder="例如：结论式开场：" /></label>
+                <label class="notes-extract-inline-field"><span>到</span><input id="notesExtractEnd1" type="text" value="主体：" placeholder="例如：主体：；留空表示提取到文末" /></label>
+                <div class="mini-actions">
+                  <button id="runNotesExtractBtn1" class="btn ghost" type="button">执行提取</button>
+                </div>
+              </div>
+              <div class="notes-extract-row">
+                <label class="notes-extract-inline-field"><span>从</span><input id="notesExtractStart2" type="text" value="主体：" placeholder="例如：主体：" /></label>
+                <label class="notes-extract-inline-field"><span>到</span><input id="notesExtractEnd2" type="text" value="总结：" placeholder="例如：总结：；留空表示提取到文末" /></label>
+                <div class="mini-actions">
+                  <button id="runNotesExtractBtn2" class="btn ghost" type="button">执行提取</button>
+                </div>
+              </div>
+              <div class="notes-extract-row">
+                <label class="notes-extract-inline-field"><span>从</span><input id="notesExtractStart3" type="text" value="" placeholder="例如：问题：" /></label>
+                <label class="notes-extract-inline-field"><span>到</span><input id="notesExtractEnd3" type="text" value="" placeholder="例如：答案：；留空表示提取到文末" /></label>
+                <div class="mini-actions">
+                  <button id="runNotesExtractBtn3" class="btn ghost" type="button">执行提取</button>
+                </div>
+              </div>
             </div>
-          </div>
+            <div class="notes-extract-footer">
+              <div class="mini-actions">
+                <button id="exitNotesExtractBtn" class="btn ghost" type="button">恢复正文</button>
+                <button id="toggleNotesExtractBtn" class="btn ghost" type="button" aria-expanded="true">隐藏提取</button>
+              </div>
+            </div>
+            <div id="notesExtractStatus" class="notes-extract-status">这里只填中间内容，系统会自动按 `**内容**` 的 Markdown 标记去识别；结果会直接进入主内容框集中显示并允许修改。</div>
+          </section>
           <div class="notes-workspace">
             <aside class="notes-structure-panel">
               <div class="notes-panel-head">
-                <strong>笔记目录</strong>
+                <strong>结构目录</strong>
                 <button id="copyNoteOutlineBtn" class="btn ghost" type="button">复制目录</button>
-              </div>
-              <div id="notesStructureSummary" class="notes-structure-summary">当前笔记还没有可识别的 Markdown 标题。</div>
-              <div id="notesModuleChips" class="notes-module-chips">
-                <button class="chip active" type="button">全部目录</button>
               </div>
               <div id="notesOutlineList" class="notes-outline-list">
                 <div class="notes-outline-empty">把一大段 Markdown 贴进右侧后，这里会自动列出目录结构。</div>
               </div>
-              <div class="notes-panel-head compact">
-                <strong>提取</strong>
-              </div>
-              <div id="notesExtractList" class="notes-extract-list">
-                <div class="notes-outline-empty">检测到 `**结论式开场：**` 后，这里会单独列出提取结果。</div>
-              </div>
             </aside>
             <div class="notes-right">
-              <label>标题<input id="noteTitle" type="text" /></label>
-              <label>内容（Markdown）<textarea id="noteContent"></textarea></label>
+              <input id="noteTitle" type="hidden" />
+              <div class="notes-content-block">
+                <div class="notes-content-head">
+                  <strong>正文部分</strong>
+                  <div class="notes-content-view-switch" role="tablist" aria-label="正文视图切换">
+                    <button id="notesViewMarkdownBtn" class="notes-content-view-btn" type="button" aria-pressed="false">Markdown</button>
+                    <button id="notesViewRenderedBtn" class="notes-content-view-btn active" type="button" aria-pressed="true">最终版本</button>
+                  </div>
+                </div>
+                <textarea id="noteContent" class="notes-source-textarea" aria-hidden="true"></textarea>
+                <div id="notePreviewBody" class="notes-preview-body" contenteditable="true" spellcheck="false"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -116,23 +138,41 @@
     </section>
 
     <section id="notesDisplayView" class="view hidden">
-      <section class="panel notes-display-layout">
-        <div id="notesDisplayHotkeyExplain" class="assistant-hotkey-explain"></div>
-        <section class="notes-layout notes-display-shell">
-          <div class="notes-right notes-display-right">
-            <label>内容（Markdown）<textarea id="notesDisplayContent"></textarea></label>
-            <section class="notes-display-preview">
-              <div class="notes-display-preview-toc">
-                <div class="notes-display-preview-head">目录</div>
-                <div id="notesDisplayPreviewToc" class="notes-display-preview-toc-list"></div>
-              </div>
-              <div class="notes-display-preview-body-wrap">
-                <div class="notes-display-preview-head">正文预览</div>
-                <div id="notesDisplayPreviewBody" class="notes-display-preview-body"></div>
-              </div>
-            </section>
+      <section id="notesDisplayLayoutRoot" class="panel notes-layout notes-display-layout">
+        <div class="notes-left">
+          <div class="notes-actions">
+            <button id="toggleNotesDisplaySidebarBtn" class="btn ghost notes-sidebar-toggle" type="button">收起列表</button>
+            <button id="deleteNotesDisplayBtn" class="btn danger" type="button">删除内容</button>
           </div>
-        </section>
+          <div id="notesDisplayList" class="notes-list"></div>
+        </div>
+        <div class="notes-shell">
+        <div id="notesDisplayHotkeyExplain" class="assistant-hotkey-explain"></div>
+          <div class="notes-workspace">
+            <aside class="notes-structure-panel">
+              <div class="notes-panel-head">
+                <strong>结构目录</strong>
+                <button id="copyNotesDisplayOutlineBtn" class="btn ghost" type="button">复制目录</button>
+              </div>
+              <div id="notesDisplayOutlineList" class="notes-outline-list">
+                <div class="notes-outline-empty">把一大段 Markdown 贴进右侧后，这里会自动列出目录结构。</div>
+              </div>
+            </aside>
+            <div class="notes-right">
+              <div class="notes-content-block">
+                <div class="notes-content-head">
+                  <strong>正文部分</strong>
+                  <div class="notes-content-view-switch" role="tablist" aria-label="笔记显示正文视图切换">
+                    <button id="notesDisplayViewMarkdownBtn" class="notes-content-view-btn" type="button" aria-pressed="false">Markdown</button>
+                    <button id="notesDisplayViewRenderedBtn" class="notes-content-view-btn active" type="button" aria-pressed="true">最终版本</button>
+                  </div>
+                </div>
+                <textarea id="notesDisplayContent" class="notes-source-textarea" aria-hidden="true"></textarea>
+                <div id="notesDisplayPreviewBody" class="notes-preview-body" contenteditable="true" spellcheck="false"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </section>
 

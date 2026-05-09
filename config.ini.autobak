@@ -2,20 +2,29 @@
 fields=字段
 prompts=提示词
 quick_fields=快捷字段
+cat_1777196053431=Codex
+cat_1777200228087=GPT
 
 [Fields]
 297=2970654645@qq.com
 A75=A757850510A
 @zcg=@zcgZCG757850510
 16=16680512973
-2112=212
 
 [Prompts]
-笔记制作=你是记录并优化笔记的记录官，不做和记录笔记之外的 模版：（所有东西都写在一个代码框中，不） 深拷贝与浅拷贝 浅拷贝：只复制对象本身， 对象内部的引用类型成员变量依旧指向原对象的内存地址， 新旧对象共享子对象，修改子对象会互相影响。 也就是新旧对象之间存在内存共享的问题。 比如书包里面装着书，我们只是复制了书包。 递归深拷贝：不仅复制对象本身，还会复制内部所有内容以及嵌套的对象。 所谓递归，就是层层向下进行拷贝。 先复制最外层对象，若对象存在多层嵌套结构， 便会逐层向下拷贝所有子对象， 全程不存在任何内存共享问题。
-yhwa=????
 
 [QuickFields]
 更新=更新动作记录文档并同步各模块文档；若文件过大则自动拆分为子文件，防止文件臃肿并保持结构清晰。
+
+[Category_cat_1777196053431]
+codex-第一阶段=我们进入第一阶段开发，只聚焦UI，请遵循第一阶段开发文档，开始开发。我的需求如下：
+codex-第二阶段=第一阶段已经完毕，现在进入第二阶段开发，请遵循对应文档开始开发。
+codex-第二阶段-修复=
+codex-全局个性新增=将下列的东西增加到全局个性文档中，你需要自己判断他是属于哪个子文档中，或者新建的对应文档。
+codex-第一阶段-补充优化=我们目前该模块的UI设计差不多了，需要你通过我们的需求，考虑UI界面是否有优化的方向，如果有，则直接告诉我。
+
+[Category_cat_1777200228087]
+GPT-笔记制作=
 
 [Hotkeys]
 toggle_panel=!q
@@ -26,11 +35,17 @@ move_up=Up
 move_down=Down
 assistant_capture=F2
 assistant_capture_now=F1
+assistant_voice_input=F3
+notes_display_overlay=F4
+notes_overlay_up=Up
+notes_overlay_down=Down
 assistant_overlay_up=!Up
 assistant_overlay_down=!Down
 
 [App]
 active_mode=shortcuts
+mode_order=shortcuts,notes,notes_display,assistant,resume,hotkeys,testing,capture
+shortcuts_selected_category=cat_1777196053431
 
 [Capture]
 upload_endpoint=https://0x0.st
@@ -41,16 +56,19 @@ bridge_port=8797
 enabled=1
 api_endpoint=https://ark.cn-beijing.volces.com/api/v3/responses
 api_key=
-api_key_protected=01000000d08c9ddf0115d1118c7a00c04fc297eb01000000a25785de7507ff4aa17919da6dae624100000000020000000000106600000001000020000000a10e6c6054cb8cf9469a0230ea830b4c0a3f8512bc4e21fc48905230f5fd19f2000000000e80000000020000200000009bddca684f259250c243cd35d0b577855f3164f4fbe836ad5e28e975d9bee579b0000000c204e2a98d9a09ca76477c0b7de52a2c9aa5b190ffb7a7c763014fcf02b0e1f0275b05ee38cd54c8d4e19c58331b6cc385c8df08b2c7dffb1a1f786922e4657479a007c3b7c09dc958ee00bda37a726bef6c3e05d5a6cc197653a228f792831352e1814231c23aad2ea8901611131539098b4502461c5c4e17a5ff3ca3b9a21aa836c19607c14e2a85f769dd50ad0a14c8271eaa1610fb30f10d9bfee04afd425c22a10131acc3604ca9f4661a1d5e654000000049d6644eb61b882ae59d9488dcb821437d51024ddb6bad8114dc563a03cdde08e046de13ef9e34936b4277e6d9b18d46f1518258cbfacd1a0ab86570055913c3
-model=doubao-seed-2-0-lite-260215
-active_template=default_template
-prompt=编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。
-overlay_opacity=56
+api_key_protected=01000000d08c9ddf0115d1118c7a00c04fc297eb01000000a25785de7507ff4aa17919da6dae6241000000000200000000001066000000010000200000006cac0a0fb6ee181cfc0a1c851f4d906a1d36e9c91a5d45a28182521e55d1fe5f000000000e8000000002000020000000b023562bcf568c46f8371861cdec02063ff37dc6cd92f273dde44b51359d26082001000030d49f01f6c2185cfe5d7b0493dcb02e1e831f555520e9f79f6bd52c50adb86fd42fa7fe347132c55f5381083554739ad82ad4b8ac1a7a0bb778bd1d794e8deb10df09d813b480326687c01c3093ebd9b3c1bee4f7a12cd1b043171d1ea84a851cd9f95c710eb93ae8cd37698319b55142aa7cd97b5d8fe82d4a588a2357ad22f810116cb73ef06c1ec360adfcbb636572ac899e16ea5919eb3cef1901147f831fc14b00efbd524500d8e6455d6998556b889e7be38ce80453013dd56c8ee6821184a34252a02f82fcf055a2f317eb055a3f022e959652636595cef1aad68c4d095e2ae7e743790918f073c1e9856c1d1835acb735fbd2a74150f2b2093f539b4d4c13da5eaddab43f3210614f57ed4186168731c099edad7fe6da9bcaf9b2484000000017adb5903d84b97432b86294394115ef6b1116b5ab5debe8c6c56427fb304c23536881a191ff90b75dcce768a16040f15a24094428f675d01b70056b40fc7d15
+model=doubao-seed-2-0-pro-260215
+active_template=AI一面
+prompt=编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。 选择题：先写15字以内题目总结，再直接给答案，不要分析过程。
+overlay_opacity=100
+enhanced_capture_mode=1
+disable_copy=1
 rate_limit_enabled=1
 rate_limit_per_hour=100
 
 [AssistantTemplates]
 default_template=编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。
+AI一面=编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。 选择题：先写15字以内题目总结，再直接给答案，不要分析过程。
 
 [Behavior]
 auto_refresh_enabled=1

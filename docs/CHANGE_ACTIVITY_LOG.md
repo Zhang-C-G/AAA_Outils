@@ -16,7 +16,7 @@
   - 收掉 B 模块目录区里不需要的说明和筛选占位
   - 只保留目录主体
   - 把提取功能改成真正可手动定义范围、跨笔记查看和修改的工具
-  - 让结构目录的层级缩进更接近正常目录
+  - 让提取结果只使用主内容框显示
 - 上一个 git 检查点：`checkpoint: compact notes sidebar`
 - 历史追溯方式：`git log` / 远端提交记录
 
@@ -67,17 +67,19 @@
 ### 第3次改动
 - 时间：`2026-04-28`
 - 内容：
-  - 将结构目录中的层级缩进从整体 padding 改成真实前导空位
-  - 让 `H2 / H3 / H4` 在目录前方保留明确的空位层级
-  - 目录视觉上更接近标准文档目录，而不是单列列表
+  - 删除提取结果专用结果框
+  - 提取后直接将跨笔记结果写入主内容框
+  - 主内容框进入“提取视图”后可直接编辑，并自动回写到各原笔记
+  - 新增“恢复正文”按钮，从提取视图返回当前笔记正文
 - 影响文件：
-  - `webui/config/app-notes.js`
+  - `webui/config/index.html`
   - `webui/config/styles.css`
+  - `webui/config/app-notes.js`
   - `docs/CHANGE_ACTIVITY_LOG.md`
   - `docs/CHANGE_CHECKPOINT_RULE.md`
 - 测试：
   - `node --check --experimental-default-type=module webui/config/app-notes.js`
-  - `rg -n "outline-indent|depth-1|depth-2|depth-3|depth-4|depth-5" webui/config/app-notes.js webui/config/styles.css`
+  - `rg -n "notesExtractResults|renderExtractResults|notes-extract-result|notes-extract-editor|extractViewActive|saveExtractAggregateView|queueExtractAggregateSave|exitExtractView|exitNotesExtractBtn" webui/config/index.html webui/config/styles.css webui/config/app-notes.js`
   - `scripts/restart_main_ahk.ps1`
   - 重启后确认当前仅存在 `1` 个 `AutoHotkey64.exe`
 - 测试结果：`通过`

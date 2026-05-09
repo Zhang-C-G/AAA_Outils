@@ -21,11 +21,6 @@ function Get-MainAhkProcesses {
 }
 
 $existing = @(Get-MainAhkProcesses -ScriptPath $mainScript)
-foreach ($proc in $existing) {
-  Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
-}
-
-Start-Sleep -Milliseconds 800
 
 $ahkExe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $ahkExe) {
@@ -33,11 +28,15 @@ if (-not $ahkExe) {
 }
 
 Start-Process -FilePath $ahkExe -ArgumentList @($mainScript)
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 3
 
 $running = @(Get-MainAhkProcesses -ScriptPath $mainScript)
 if ($running.Count -lt 1) {
   throw "Failed to start $mainScript"
+}
+
+if ($running.Count -gt 1) {
+  throw "Multiple main.ahk instances detected after restart"
 }
 
 $running |

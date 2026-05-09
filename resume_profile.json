@@ -1,11 +1,11 @@
 ﻿{
     "version":  1,
-    "updated_at":  "2026-04-24 00:07:41",
+    "updated_at":  "2026-04-27 10:41:46",
     "sections":  [
                      {
                          "id":  "basic_info",
                          "title":  "基本信息",
-                         "description":  "姓名、性别、联系方式、出生日期、城市等基础资料。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "full_name",
@@ -173,7 +173,7 @@
                      {
                          "id":  "job_expectation",
                          "title":  "求职期望",
-                         "description":  "目标岗位、城市、薪资、到岗时间等期望信息。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "target_role",
@@ -229,7 +229,7 @@
                      {
                          "id":  "education",
                          "title":  "教育经历",
-                         "description":  "学校、专业、学历、时间、课程与成绩。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "school",
@@ -327,7 +327,7 @@
                      {
                          "id":  "internship",
                          "title":  "实习经历",
-                         "description":  "实习单位、岗位、时间和工作内容。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "intern_company",
@@ -369,7 +369,7 @@
                      {
                          "id":  "project",
                          "title":  "项目经历",
-                         "description":  "项目名称、角色、时间与项目亮点。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "project_name",
@@ -418,7 +418,7 @@
                      {
                          "id":  "campus_position",
                          "title":  "在校职务",
-                         "description":  "学生组织、班级或社团中的职务与职责。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "position_org",
@@ -467,7 +467,7 @@
                      {
                          "id":  "campus_activity",
                          "title":  "校园活动",
-                         "description":  "比赛、活动、志愿服务等经历。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "activity_name",
@@ -509,7 +509,7 @@
                      {
                          "id":  "family",
                          "title":  "家庭成员",
-                         "description":  "家庭成员相关补充信息。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "family_info",
@@ -523,7 +523,7 @@
                      {
                          "id":  "awards",
                          "title":  "获奖经历",
-                         "description":  "奖项、时间、级别及说明。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "award_name",
@@ -586,7 +586,7 @@
                      {
                          "id":  "english",
                          "title":  "英语能力",
-                         "description":  "等级成绩与语言能力补充说明。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "english_level",
@@ -663,7 +663,7 @@
                      {
                          "id":  "certificates",
                          "title":  "证书信息",
-                         "description":  "资格证书、时间与补充说明。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "certificate_name",
@@ -712,7 +712,7 @@
                      {
                          "id":  "self_intro",
                          "title":  "自我介绍",
-                         "description":  "用于招聘系统中的长文本自我介绍。",
+                         "description":  "",
                          "rows":  [
                                       {
                                           "id":  "self_intro",

@@ -7,6 +7,9 @@
   app: {
     active_mode: 'shortcuts',
     mode_order: ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing', 'api_center'],
+    notes_sidebar_compact: 0,
+    notes_display_sidebar_compact: 0,
+    notes_extract_collapsed: 0,
     shell_theme_mode: 'solid',
     shell_theme_primary: '#111111',
     shell_theme_secondary: '#2A2A2A',
@@ -361,10 +364,23 @@ export async function api(path, options = {}) {
     'Content-Type': 'application/json; charset=utf-8',
     ...(options.headers || {})
   };
-  const res = await fetch(path, {
-    ...options,
-    headers
-  });
+  let res;
+  try {
+    res = await fetch(path, {
+      ...options,
+      headers
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      await new Promise((resolve) => window.setTimeout(resolve, 220));
+      res = await fetch(path, {
+        ...options,
+        headers
+      });
+    } else {
+      throw error;
+    }
+  }
 
   const txt = await res.text();
   let payload = {};

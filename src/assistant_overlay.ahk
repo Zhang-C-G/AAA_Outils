@@ -1,6 +1,7 @@
 ﻿; Screenshot assistant runtime overlay
 
 gAssistantOverlayGui := ""
+gAssistantOverlayTitleText := ""
 gAssistantOverlayText := ""
 gAssistantOverlayTextHint := ""
 gAssistantOverlayStatusText := ""
@@ -87,20 +88,72 @@ GetAssistantOverlayMutedTextColorFor(bgColor) {
     return (GetAssistantOverlayTextColorFor(bgColor) = "111111") ? "4F4F4F" : "C8C8C8"
 }
 
+MixOverlayThemeHex(colorA, colorB, ratio := 0.5) {
+    left := NormalizeOverlayThemeHex(colorA, "111111")
+    right := NormalizeOverlayThemeHex(colorB, "111111")
+    weight := Max(0, Min(1, ratio + 0))
+
+    leftR := Integer("0x" SubStr(left, 1, 2))
+    leftG := Integer("0x" SubStr(left, 3, 2))
+    leftB := Integer("0x" SubStr(left, 5, 2))
+    rightR := Integer("0x" SubStr(right, 1, 2))
+    rightG := Integer("0x" SubStr(right, 3, 2))
+    rightB := Integer("0x" SubStr(right, 5, 2))
+
+    outR := Format("{:02X}", Round(leftR + ((rightR - leftR) * weight)))
+    outG := Format("{:02X}", Round(leftG + ((rightG - leftG) * weight)))
+    outB := Format("{:02X}", Round(leftB + ((rightB - leftB) * weight)))
+    return outR outG outB
+}
+
+GetAssistantOverlayFrameColor() {
+    accent := GetAssistantOverlayAccentColor()
+    opacity := GetAssistantOverlayTargetOpacity()
+    if (opacity >= 100) {
+        return accent
+    }
+    fadeRatio := (100 - opacity) / 100
+    return MixOverlayThemeHex(accent, "050505", 0.36 + (fadeRatio * 0.18))
+}
+
+GetAssistantOverlayPanelColor() {
+    frame := GetAssistantOverlayFrameColor()
+    opacity := GetAssistantOverlayTargetOpacity()
+    if (opacity >= 100) {
+        return MixOverlayThemeHex(frame, "111111", 0.14)
+    }
+    fadeRatio := (100 - opacity) / 100
+    return MixOverlayThemeHex(frame, "020202", 0.28 + (fadeRatio * 0.22))
+}
+
+GetAssistantOverlayButtonColor() {
+    frame := GetAssistantOverlayFrameColor()
+    opacity := GetAssistantOverlayTargetOpacity()
+    if (opacity >= 100) {
+        return MixOverlayThemeHex(frame, "FFFFFF", 0.06)
+    }
+    fadeRatio := (100 - opacity) / 100
+    return MixOverlayThemeHex(frame, "FFFFFF", 0.10 + (fadeRatio * 0.08))
+}
+
 RefreshAssistantOverlayTheme() {
-    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayStatusText, gAssistantOverlayTextHint, gAssistantOverlayCaptureBtn
+    global gAssistantOverlayGui, gAssistantOverlayTitleText, gAssistantOverlayText, gAssistantOverlayStatusText, gAssistantOverlayTextHint, gAssistantOverlayCaptureBtn
     if !IsObject(gAssistantOverlayGui) {
         return
     }
 
-    accent := GetAssistantOverlayAccentColor()
-    textColor := GetAssistantOverlayTextColorFor(accent)
-    mutedColor := GetAssistantOverlayMutedTextColorFor(accent)
-    gAssistantOverlayGui.BackColor := accent
-    try gAssistantOverlayText.Opt("c" textColor " Background" accent)
+    frameColor := GetAssistantOverlayFrameColor()
+    panelColor := GetAssistantOverlayPanelColor()
+    buttonColor := GetAssistantOverlayButtonColor()
+    frameTextColor := GetAssistantOverlayTextColorFor(frameColor)
+    panelTextColor := GetAssistantOverlayTextColorFor(panelColor)
+    mutedColor := GetAssistantOverlayMutedTextColorFor(panelColor)
+    gAssistantOverlayGui.BackColor := frameColor
+    try gAssistantOverlayTitleText.Opt("c" frameTextColor)
+    try gAssistantOverlayText.Opt("c" panelTextColor " Background" panelColor)
     try gAssistantOverlayStatusText.Opt("c" mutedColor)
     try gAssistantOverlayTextHint.Opt("c" mutedColor)
-    try gAssistantOverlayCaptureBtn.Opt("Background" accent " c" textColor)
+    try gAssistantOverlayCaptureBtn.Opt("Background" buttonColor " c" GetAssistantOverlayTextColorFor(buttonColor))
 }
 
 BuildAssistantOverlayIdleStatus() {
@@ -191,6 +244,13 @@ IsAssistantOverlayProtectionMode() {
     return gAssistantOverlayAffinityEnabled || gAssistantOverlayRecordingProtectionActive
 }
 
+ShouldAssistantOverlayUseAffinityProtection() {
+    if IsAssistantEnhancedCaptureModeEnabled() {
+        return true
+    }
+    return GetAssistantOverlayTargetOpacity() >= 100
+}
+
 GetAssistantOverlayTargetOpacity() {
     global gAssistantSettings
     opacity := 100
@@ -199,30 +259,47 @@ GetAssistantOverlayTargetOpacity() {
 }
 
 GetAssistantOverlayEffectiveOpacity() {
-    if IsAssistantOverlayProtectionMode() {
-        return 100
-    }
     return GetAssistantOverlayTargetOpacity()
 }
 
 ShouldAssistantOverlayProtectionBeActive() {
-    if IsAssistantOverlayProtectionMode() {
+    if gAssistantOverlayRecordingProtectionActive {
         return true
     }
-    return ShouldAssistantOverlayRearmProtection()
+    return ShouldAssistantOverlayUseAffinityProtection()
 }
 
 ShouldAssistantOverlayRearmProtection() {
-    return GetAssistantOverlayTargetOpacity() >= 100
+    return ShouldAssistantOverlayUseAffinityProtection()
+}
+
+SyncAssistantOverlayProtectionPolicy(reason := "") {
+    global gAssistantOverlayAffinityEnabled, gAssistantOverlayVisible
+    nextEnabled := ShouldAssistantOverlayUseAffinityProtection()
+    if (gAssistantOverlayAffinityEnabled = nextEnabled) {
+        return
+    }
+
+    gAssistantOverlayAffinityEnabled := nextEnabled
+    if nextEnabled {
+        WriteLog("assistant_overlay_policy_change", "policy=affinity_on reason=" reason)
+        if gAssistantOverlayVisible {
+            QueueAssistantOverlayProtectionRearm(reason != "" ? reason : "policy_affinity_on")
+        }
+        return
+    }
+
+    WriteLog("assistant_overlay_policy_change", "policy=affinity_off reason=" reason)
+    DisableAssistantOverlayCaptureProtection(reason != "" ? reason : "policy_affinity_off")
 }
 
 SyncAssistantOverlayAfterSettingsChange() {
     global gAssistantOverlayVisible, gAssistantOverlayRecordingProtectionActive, gAssistantOverlayAffinityEnabled
+    SyncAssistantOverlayProtectionPolicy("settings_reload")
+    opacity := GetAssistantOverlayTargetOpacity()
     if !gAssistantOverlayVisible {
         return
     }
-
-    opacity := GetAssistantOverlayTargetOpacity()
     RefreshAssistantOverlayTheme()
     if (!gAssistantOverlayAffinityEnabled && !gAssistantOverlayRecordingProtectionActive && opacity < 100) {
         DisableAssistantOverlayCaptureProtection("semi_transparent_settings")
@@ -825,7 +902,7 @@ CaptureAssistantScreenSafely(path, restoreAfterCapture := false) {
 }
 
 EnsureAssistantOverlayGui() {
-    global gAssistantOverlayGui, gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayStatusText
+    global gAssistantOverlayGui, gAssistantOverlayTitleText, gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayStatusText
     global gAssistantOverlayCaptureBtn
     global gAppName, gTheme, gAssistantSettings
 
@@ -834,23 +911,26 @@ EnsureAssistantOverlayGui() {
     }
 
     ; Keep the overlay non-activating and out of taskbar / Alt-Tab surfaces.
-    accent := GetAssistantOverlayAccentColor()
-    textColor := GetAssistantOverlayTextColorFor(accent)
-    mutedColor := GetAssistantOverlayMutedTextColorFor(accent)
+    frameColor := GetAssistantOverlayFrameColor()
+    panelColor := GetAssistantOverlayPanelColor()
+    buttonColor := GetAssistantOverlayButtonColor()
+    frameTextColor := GetAssistantOverlayTextColorFor(frameColor)
+    panelTextColor := GetAssistantOverlayTextColorFor(panelColor)
+    mutedColor := GetAssistantOverlayMutedTextColorFor(panelColor)
     gAssistantOverlayGui := Gui("+AlwaysOnTop +ToolWindow", gAppName " - Assistant")
-    gAssistantOverlayGui.BackColor := accent
+    gAssistantOverlayGui.BackColor := frameColor
     gAssistantOverlayGui.SetFont("s10", "Microsoft YaHei UI")
 
-    title := gAssistantOverlayGui.AddText("x16 y12 w300 h24 c" textColor, "截图问答助手")
-    title.SetFont("s12 w700", "Segoe UI")
+    gAssistantOverlayTitleText := gAssistantOverlayGui.AddText("x16 y12 w300 h24 c" frameTextColor, "截图问答助手")
+    gAssistantOverlayTitleText.SetFont("s12 w700", "Segoe UI")
 
-    gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x332 y18 w170 h28 Background" accent " c" textColor, "截图问答")
+    gAssistantOverlayCaptureBtn := gAssistantOverlayGui.AddButton("x332 y18 w170 h28 Background" buttonColor " c" GetAssistantOverlayTextColorFor(buttonColor), "截图问答")
     gAssistantOverlayCaptureBtn.OnEvent("Click", OnAssistantOverlayCaptureButton)
 
     gAssistantOverlayStatusText := gAssistantOverlayGui.AddText("x16 y46 w486 h20 c" mutedColor, BuildAssistantOverlayIdleStatus())
 
     gAssistantOverlayTextHint := gAssistantOverlayGui.AddText("x330 y88 w172 h14 Right c" mutedColor, "Alt+Up / Alt+Down 滚动")
-    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y104 w486 h342 +Multi ReadOnly -VScroll c" textColor " Background" accent, "")
+    gAssistantOverlayText := gAssistantOverlayGui.AddEdit("x16 y104 w486 h342 +Multi ReadOnly -VScroll c" panelTextColor " Background" panelColor, "")
     gAssistantOverlayText.SetFont("s10", "Consolas")
 
     gAssistantOverlayGui.OnEvent("Close", OnAssistantOverlayClose)
@@ -865,6 +945,7 @@ ShowAssistantOverlay(answerText) {
     global gAssistantOverlayVisible, gAssistantSettings, gAssistantOverlayRiskHidden, gAssistantOverlayPlaced, gAssistantOverlayRecordingProtectionActive, gAssistantOverlayAffinityEnabled
 
     EnsureAssistantOverlayGui()
+    SyncAssistantOverlayProtectionPolicy("show_overlay")
     ResetAssistantOverlayProtectionStability()
     BeginAssistantOverlayOpenGrace()
 
@@ -1014,13 +1095,6 @@ SetAssistantOverlayOpacity(opacity) {
     }
 
     val := ClampAssistantOpacity(opacity)
-    if IsAssistantOverlayProtectionMode() {
-        if (gAssistantOverlayLastAppliedOpacity != 100) {
-            try WinSetTransparent("Off", "ahk_id " gAssistantOverlayGui.Hwnd)
-            gAssistantOverlayLastAppliedOpacity := 100
-        }
-        return
-    }
     if (val = gAssistantOverlayLastAppliedOpacity) {
         return
     }
@@ -1073,11 +1147,7 @@ ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
         return true
     }
 
-    ; Protection mode always uses a plain, non-layered window. Avoid repeated
-    ; transparency toggles and frame redraws here because they are the main
-    ; source of flicker on some Windows setups.
     gAssistantOverlayLastAppliedOpacity := -1
-    try WinSetTransparent("Off", "ahk_id " hwnd)
     if forceReset {
         try DllCall("user32\SetWindowDisplayAffinity", "Ptr", hwnd, "UInt", 0, "Int")
     }
@@ -1095,7 +1165,7 @@ ApplyAssistantOverlayCaptureProtection(forceReset := false, reason := "") {
         if !wasActive {
             WriteLog("assistant_overlay_protect_enabled", "mode=WDA_EXCLUDEFROMCAPTURE")
         }
-        SetAssistantOverlayOpacity(100)
+        SetAssistantOverlayOpacity(GetAssistantOverlayEffectiveOpacity())
         return true
     }
 

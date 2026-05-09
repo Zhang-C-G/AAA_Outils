@@ -149,6 +149,21 @@ GetWebConfigSourceLatestWriteTime() {
     root := A_ScriptDir "\\webui\\config"
     latest := ""
 
+    Loop Files, root "\\*.html", "F" {
+        if (latest = "" || A_LoopFileTimeModified > latest) {
+            latest := A_LoopFileTimeModified
+        }
+    }
+    Loop Files, root "\\*.css", "F" {
+        if (latest = "" || A_LoopFileTimeModified > latest) {
+            latest := A_LoopFileTimeModified
+        }
+    }
+    Loop Files, root "\\*.js", "F" {
+        if (latest = "" || A_LoopFileTimeModified > latest) {
+            latest := A_LoopFileTimeModified
+        }
+    }
     Loop Files, root "\\server*.ps1", "F" {
         if (latest = "" || A_LoopFileTimeModified > latest) {
             latest := A_LoopFileTimeModified

@@ -305,7 +305,7 @@ async function tryRestoreShortcutsDraft() {
   }
 }
 
-function tryRestoreNotesDraft() {
+async function tryRestoreNotesDraft() {
   try {
     if (sessionStorage.getItem(NOTES_DRAFT_RESTORE_KEY) !== '1') return false;
     const raw = sessionStorage.getItem(NOTES_DRAFT_KEY);
@@ -314,11 +314,16 @@ function tryRestoreNotesDraft() {
     const id = String(draft?.id || '').trim();
     if (!id) return false;
 
-    state.notes.currentId = id;
-    if (byId('noteTitle')) byId('noteTitle').value = String(draft?.title || '');
-    if (byId('noteContent')) byId('noteContent').value = String(draft?.content || '');
-    state.notes.dirty = true;
-    setDirty(true, 'notes');
+    const notesModule = await getModule('notes');
+    if (typeof notesModule.applyNotesDraftState === 'function') {
+      notesModule.applyNotesDraftState(draft);
+    } else {
+      state.notes.currentId = id;
+      if (byId('noteTitle')) byId('noteTitle').value = String(draft?.title || '');
+      if (byId('noteContent')) byId('noteContent').value = String(draft?.content || '');
+      state.notes.dirty = true;
+      setDirty(true, 'notes');
+    }
     toast('已恢复刷新前未保存笔记草稿');
     return true;
   } catch {}
@@ -611,7 +616,7 @@ async function switchModeInternal(mode, options = {}) {
   await ensureModeLoaded(mode, { forceReload, prefetchedPayload });
 
   if (mode === 'notes') {
-    tryRestoreNotesDraft();
+    await tryRestoreNotesDraft();
   }
   if (mode === 'notes_display') {
     tryRestoreNotesDisplayDraft();

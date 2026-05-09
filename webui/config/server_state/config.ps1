@@ -234,6 +234,9 @@ function Get-ConfigState {
   $app = [ordered]@{
     active_mode = 'shortcuts'
     mode_order = (Get-DefaultModeOrder)
+    notes_sidebar_compact = 0
+    notes_display_sidebar_compact = 0
+    notes_extract_collapsed = 0
     shell_theme_mode = 'solid'
     shell_theme_primary = '#111111'
     shell_theme_secondary = '#2A2A2A'
@@ -245,6 +248,15 @@ function Get-ConfigState {
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('mode_order')) {
     $app['mode_order'] = Normalize-ModeOrder([string]$ini['App']['mode_order'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_sidebar_compact')) {
+    $app['notes_sidebar_compact'] = if ([string]$ini['App']['notes_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_sidebar_compact')) {
+    $app['notes_display_sidebar_compact'] = if ([string]$ini['App']['notes_display_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_extract_collapsed')) {
+    $app['notes_extract_collapsed'] = if ([string]$ini['App']['notes_extract_collapsed'] -eq '1') { 1 } else { 0 }
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('shortcuts_selected_category')) {
     $selectedCategory = ([string]$ini['App']['shortcuts_selected_category']).Trim()
@@ -297,6 +309,9 @@ function Get-AppShellState {
   $app = [ordered]@{
     active_mode = 'shortcuts'
     mode_order = (Get-DefaultModeOrder)
+    notes_sidebar_compact = 0
+    notes_display_sidebar_compact = 0
+    notes_extract_collapsed = 0
     shell_theme_mode = 'solid'
     shell_theme_primary = '#111111'
     shell_theme_secondary = '#2A2A2A'
@@ -308,6 +323,15 @@ function Get-AppShellState {
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('mode_order')) {
     $app['mode_order'] = Normalize-ModeOrder([string]$ini['App']['mode_order'])
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_sidebar_compact')) {
+    $app['notes_sidebar_compact'] = if ([string]$ini['App']['notes_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_sidebar_compact')) {
+    $app['notes_display_sidebar_compact'] = if ([string]$ini['App']['notes_display_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_extract_collapsed')) {
+    $app['notes_extract_collapsed'] = if ([string]$ini['App']['notes_extract_collapsed'] -eq '1') { 1 } else { 0 }
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('shortcuts_selected_category')) {
     $selectedCategory = ([string]$ini['App']['shortcuts_selected_category']).Trim()
@@ -436,6 +460,9 @@ function Write-ConfigState {
   $lines.Add('[App]')
   $currentMode = 'shortcuts'
   $currentOrder = Get-DefaultModeOrder
+  $currentNotesSidebarCompact = 0
+  $currentNotesDisplaySidebarCompact = 0
+  $currentNotesExtractCollapsed = 0
   $currentSelectedCategory = 'fields'
   $currentThemeMode = 'solid'
   $currentThemePrimary = '#111111'
@@ -446,6 +473,15 @@ function Write-ConfigState {
   }
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('mode_order')) {
     $currentOrder = Normalize-ModeOrder([string]$currentIni['App']['mode_order'])
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('notes_sidebar_compact')) {
+    $currentNotesSidebarCompact = if ([string]$currentIni['App']['notes_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('notes_display_sidebar_compact')) {
+    $currentNotesDisplaySidebarCompact = if ([string]$currentIni['App']['notes_display_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('notes_extract_collapsed')) {
+    $currentNotesExtractCollapsed = if ([string]$currentIni['App']['notes_extract_collapsed'] -eq '1') { 1 } else { 0 }
   }
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('shortcuts_selected_category')) {
     $selectedCategory = ([string]$currentIni['App']['shortcuts_selected_category']).Trim()
@@ -468,6 +504,9 @@ function Write-ConfigState {
   $appPayload = Get-Prop $Payload 'app' $null
   $mode = Normalize-Mode([string](Get-Prop $appPayload 'active_mode' $currentMode))
   $modeOrder = Normalize-ModeOrder((Get-Prop $appPayload 'mode_order' $currentOrder))
+  $notesSidebarCompact = if ([string](Get-Prop $appPayload 'notes_sidebar_compact' $currentNotesSidebarCompact) -eq '1') { 1 } else { 0 }
+  $notesDisplaySidebarCompact = if ([string](Get-Prop $appPayload 'notes_display_sidebar_compact' $currentNotesDisplaySidebarCompact) -eq '1') { 1 } else { 0 }
+  $notesExtractCollapsed = if ([string](Get-Prop $appPayload 'notes_extract_collapsed' $currentNotesExtractCollapsed) -eq '1') { 1 } else { 0 }
   $selectedCategory = ([string](Get-Prop $appPayload 'shortcuts_selected_category' $currentSelectedCategory)).Trim()
   $themeMode = Normalize-AppThemeMode ([string](Get-Prop $appPayload 'shell_theme_mode' $currentThemeMode))
   $themePrimary = Normalize-AppThemeColor ([string](Get-Prop $appPayload 'shell_theme_primary' $currentThemePrimary)) '#111111'
@@ -478,6 +517,9 @@ function Write-ConfigState {
   }
   $lines.Add('active_mode=' + $mode)
   $lines.Add('mode_order=' + [string]::Join(',', $modeOrder))
+  $lines.Add('notes_sidebar_compact=' + $notesSidebarCompact)
+  $lines.Add('notes_display_sidebar_compact=' + $notesDisplaySidebarCompact)
+  $lines.Add('notes_extract_collapsed=' + $notesExtractCollapsed)
   $lines.Add('shell_theme_mode=' + $themeMode)
   $lines.Add('shell_theme_primary=' + $themePrimary)
   $lines.Add('shell_theme_secondary=' + $themeSecondary)
@@ -633,6 +675,78 @@ function Set-AppModeOrder {
 
   [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
   Write-AppLog 'mode_order_save' ('mode_order=' + $ini['App']['mode_order'])
+}
+
+function Set-AppNotesSidebarCompact {
+  param($Compact)
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+  $ini['App']['notes_sidebar_compact'] = if ([string]$Compact -eq '1') { '1' } else { '0' }
+  Write-Ini $ini
+
+  [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
+  Write-AppLog 'notes_sidebar_save' ('notes_sidebar_compact=' + $ini['App']['notes_sidebar_compact'])
+}
+
+function Set-AppNotesDisplaySidebarCompact {
+  param($Compact)
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+  $ini['App']['notes_display_sidebar_compact'] = if ([string]$Compact -eq '1') { '1' } else { '0' }
+  Write-Ini $ini
+
+  [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
+  Write-AppLog 'notes_display_sidebar_save' ('notes_display_sidebar_compact=' + $ini['App']['notes_display_sidebar_compact'])
+}
+
+function Set-AppNotesExtractCollapsed {
+  param($Collapsed)
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+  $ini['App']['notes_extract_collapsed'] = if ([string]$Collapsed -eq '1') { '1' } else { '0' }
+  Write-Ini $ini
+
+  [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
+  Write-AppLog 'notes_extract_save' ('notes_extract_collapsed=' + $ini['App']['notes_extract_collapsed'])
 }
 
 function Set-AppTheme {

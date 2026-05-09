@@ -18,6 +18,7 @@ gNotesOverlayTempRestoreToken := 0
 gNotesOverlayProtectionGuardRunning := false
 gNotesOverlayManualCloseLock := false
 gNotesOverlayAutoRestoreEnabled := false
+gNotesOverlayLastWheelTick := 0
 
 WriteNotesOverlayStateLog(action, details := "") {
     global gNotesOverlayVisible, gNotesOverlayTempHidden, gNotesOverlayTempRestoreMs
@@ -152,6 +153,7 @@ EnsureNotesOverlayGui() {
     gNotesOverlayContentEdit := gNotesOverlayGui.AddEdit("x208 y16 w476 h454 +Multi ReadOnly -VScroll c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
     gNotesOverlayContentEdit.SetFont("s10", "Consolas")
 
+    OnMessage(0x20A, NotesOverlayOnMouseWheel) ; WM_MOUSEWHEEL
     gNotesOverlayGui.OnEvent("Close", OnNotesOverlayClose)
 }
 
@@ -378,6 +380,47 @@ ScrollNotesOverlayContentToLine(targetLine) {
     firstVisible := SendMessage(0x00CE, 0, 0, , "ahk_id " gNotesOverlayContentEdit.Hwnd)
     delta := (targetLine - 1) - firstVisible
     SendMessage(0x00B6, 0, delta, , "ahk_id " gNotesOverlayContentEdit.Hwnd)
+}
+
+NotesOverlayOnMouseWheel(wParam, lParam, msg, hwnd) {
+    global gNotesOverlayVisible, gNotesOverlayGui, gNotesOverlayContentEdit, gNotesOverlayTocList, gNotesOverlayLastWheelTick
+    if !gNotesOverlayVisible || !IsObject(gNotesOverlayGui) {
+        return
+    }
+    if !IsObject(gNotesOverlayContentEdit) || !IsObject(gNotesOverlayTocList) {
+        return
+    }
+
+    root := DllCall("user32\GetAncestor", "Ptr", hwnd, "UInt", 2, "Ptr")
+    if !root {
+        root := hwnd
+    }
+    if (root != gNotesOverlayGui.Hwnd) {
+        return
+    }
+
+    delta := (wParam >> 16) & 0xFFFF
+    if (delta >= 0x8000) {
+        delta -= 0x10000
+    }
+
+    nowTick := A_TickCount
+    if ((nowTick - gNotesOverlayLastWheelTick) < 60) {
+        return 0
+    }
+    gNotesOverlayLastWheelTick := nowTick
+
+    if (hwnd = gNotesOverlayTocList.Hwnd) {
+        NotesOverlayMoveSelection(delta > 0 ? -1 : 1)
+        return 0
+    }
+
+    if (delta > 0) {
+        SendMessage(0x00B6, 0, -3, , "ahk_id " gNotesOverlayContentEdit.Hwnd)
+    } else if (delta < 0) {
+        SendMessage(0x00B6, 0, 3, , "ahk_id " gNotesOverlayContentEdit.Hwnd)
+    }
+    return 0
 }
 
 NormalizeNotesOverlayWindowStyles() {
