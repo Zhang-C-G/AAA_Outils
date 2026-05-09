@@ -1441,21 +1441,71 @@ label span { color: #d2d2d2; font-size: 14px; }
 .resume-subview.hidden {
   display: none;
 }
-.resume-company-filters {
+.resume-company-filter-bar {
   display: grid;
-  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(120px, 1fr)) auto;
   gap: 10px;
-  align-items: end;
+  padding: 12px 14px;
+  border: 1px solid #2f2f2f;
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255,255,255,0.028) 0,
+      rgba(255,255,255,0.028) 8px,
+      rgba(255,255,255,0.012) 8px,
+      rgba(255,255,255,0.012) 16px
+    ),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
 }
-.resume-company-filters label {
-  margin: 0;
+.resume-company-filter-bar.hidden {
+  display: none;
 }
-.resume-company-filters .mini-actions {
-  margin-bottom: 0;
-  align-items: end;
+.resume-company-filter-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.resume-company-filter-bar-head strong {
+  color: #f1f1f1;
+  font-size: 14px;
+}
+.resume-company-filter-bar-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 360px);
+  gap: 10px;
 }
 .resume-table-wrap {
   align-self: start;
+}
+.resume-column-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.resume-filter-dot {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  color: #dcdcdc;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
+}
+.resume-filter-dot:hover {
+  transform: translateY(-1px);
+  border-color: #f1f1f1;
+}
+.resume-filter-dot.active {
+  border-color: rgba(105, 194, 109, .65);
+  background: rgba(105, 194, 109, .20);
+  color: #8fe28b;
+  font-weight: 700;
 }
 .resume-company-toggle {
   display: inline-flex;
@@ -1490,10 +1540,95 @@ label span { color: #d2d2d2; font-size: 14px; }
   border-radius: 10px;
   background: #141414;
   color: #f2f2f2;
+  font-weight: 600;
 }
 .resume-company-select:focus {
   outline: none;
   border-color: #ffffff;
+}
+.resume-company-select[data-value="empty"] {
+  color: #b5b5b5;
+  background: #141414;
+}
+.resume-company-select[data-role="company_type"][data-value="state_owned"] {
+  color: #8fd0ff;
+  background: rgba(63, 121, 176, .18);
+  border-color: rgba(95, 168, 255, .45);
+}
+.resume-company-select[data-role="company_type"][data-value="private"] {
+  color: #9be28f;
+  background: rgba(61, 128, 74, .18);
+  border-color: rgba(105, 194, 109, .45);
+}
+.resume-company-select[data-role="company_type"][data-value="foreign"] {
+  color: #f2bf7d;
+  background: rgba(160, 107, 38, .18);
+  border-color: rgba(242, 191, 125, .42);
+}
+.resume-company-select[data-role="company_scale"][data-value="large"] {
+  color: #ffcf86;
+  background: rgba(156, 105, 31, .18);
+  border-color: rgba(255, 207, 134, .42);
+}
+.resume-company-select[data-role="company_scale"][data-value="medium"] {
+  color: #8fd0ff;
+  background: rgba(52, 98, 140, .18);
+  border-color: rgba(95, 168, 255, .42);
+}
+.resume-company-select[data-role="company_scale"][data-value="small"] {
+  color: #bcbcbc;
+  background: rgba(110, 110, 110, .16);
+  border-color: rgba(188, 188, 188, .28);
+}
+.resume-company-select[data-role="job_type"][data-value="daily_intern"] {
+  color: #8fd0ff;
+  background: rgba(52, 98, 140, .18);
+  border-color: rgba(95, 168, 255, .42);
+}
+.resume-company-select[data-role="job_type"][data-value="conversion_intern"] {
+  color: #cba7ff;
+  background: rgba(100, 66, 146, .18);
+  border-color: rgba(203, 167, 255, .40);
+}
+.resume-company-select[data-role="job_type"][data-value="full_time"] {
+  color: #9be28f;
+  background: rgba(61, 128, 74, .18);
+  border-color: rgba(105, 194, 109, .45);
+}
+.resume-company-select[data-role="progress"][data-value="not_applied"] {
+  color: #d0d0d0;
+  background: rgba(90, 90, 90, .18);
+  border-color: rgba(160, 160, 160, .30);
+}
+.resume-company-select[data-role="progress"][data-value="applied"] {
+  color: #8fd0ff;
+  background: rgba(52, 98, 140, .18);
+  border-color: rgba(95, 168, 255, .42);
+}
+.resume-company-select[data-role="progress"][data-value="rejected"] {
+  color: #ff9f9f;
+  background: rgba(133, 48, 48, .20);
+  border-color: rgba(255, 146, 146, .42);
+}
+.resume-company-select[data-role="progress"][data-value="first_interview"] {
+  color: #f2bf7d;
+  background: rgba(160, 107, 38, .18);
+  border-color: rgba(242, 191, 125, .42);
+}
+.resume-company-select[data-role="progress"][data-value="second_interview"] {
+  color: #cba7ff;
+  background: rgba(100, 66, 146, .18);
+  border-color: rgba(203, 167, 255, .40);
+}
+.resume-company-select[data-role="progress"][data-value="offer"] {
+  color: #9be28f;
+  background: rgba(61, 128, 74, .18);
+  border-color: rgba(105, 194, 109, .45);
+}
+.resume-company-select[data-role="progress"][data-value="paused"] {
+  color: #ffd98a;
+  background: rgba(146, 116, 34, .18);
+  border-color: rgba(255, 217, 138, .40);
 }
 .resume-company-empty {
   text-align: center;
@@ -1502,32 +1637,33 @@ label span { color: #d2d2d2; font-size: 14px; }
 }
 .resume-company-url-cell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
+  align-items: start;
 }
-.resume-company-url-link {
-  display: block;
-  width: 100%;
-  padding: 9px 10px;
-  border: 1px solid #2f2f2f;
-  border-radius: 10px;
-  background: rgba(255,255,255,.03);
-  color: #f3f3f3;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  word-break: break-all;
-  line-height: 1.45;
+.resume-company-url-open {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  color: #f4f4f4;
+  cursor: pointer;
   transition: border-color .16s ease, background .16s ease, transform .16s ease;
 }
-.resume-company-url-link:hover {
+.resume-company-url-open:hover {
   transform: translateY(-1px);
   border-color: #f1f1f1;
-  background: rgba(255,255,255,.06);
+  background: rgba(255,255,255,.08);
 }
-.resume-company-url-link.disabled {
+.resume-company-url-open.disabled,
+.resume-company-url-open:disabled {
   color: #8f8f8f;
-  text-decoration: none;
+  border-color: #2b2b2b;
+  background: rgba(255,255,255,.02);
   cursor: default;
-  pointer-events: none;
+  transform: none;
 }
 .resume-table-wrap textarea {
   min-height: 72px;
@@ -1677,7 +1813,7 @@ label span { color: #d2d2d2; font-size: 14px; }
   .notes-extract-row { grid-template-columns: 1fr; align-items: stretch; }
   .notes-extract-row .mini-actions { justify-content: flex-start; }
   .notes-display-layout { grid-template-columns: 1fr; }
-  .resume-company-filters { grid-template-columns: 1fr; }
+  .resume-company-filter-bar-body { grid-template-columns: 1fr; }
   .capture-grid { grid-template-columns: 1fr; }
   .assistant-grid { grid-template-columns: 1fr; }
   .capture-status { grid-template-columns: 1fr; }

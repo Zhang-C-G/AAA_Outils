@@ -32,13 +32,15 @@
 
 - 当前轮次：`2026-05-09-post-resume-module-library-checkpoint`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
-- 下一次强制 git 阈值：`下一次达到 3/3 时，必须执行 checkpoint commit 并 push 到 origin/main`
+- 当前连续改动次数：`3`
+- 下一次强制 git 阈值：`已达到本轮 3/3，应执行 checkpoint commit 并 push 到 origin/main`
 - 上一个 git 检查点：`checkpoint: sync resume table and module library`
 - 当前计数说明：
+  - 第1次：F 模块公司投递表改为列头圆点筛选，并将链接列收口为“单一编辑框 + 跳转按钮”
+  - 第2次：F 模块公司投递表不同选择值补颜色区分
+  - 第3次：F 模块公司投递表改为“列头触发 + 表格顶部筛选条”，筛按钮激活态改为绿色
   - 上一轮 3 次改动已完成 checkpoint
   - 远端 push 已成功完成
-  - 本轮从 `0` 开始重新计数
 
 ## 5. 维护方式
 

@@ -39,11 +39,13 @@ const COMPANY_PROGRESS_OPTIONS = [
 ];
 
 const resumeCompanyFilters = {
-  keyword: '',
+  company: '',
+  url: '',
   company_type: '',
   company_scale: '',
   job_type: '',
-  progress: ''
+  progress: '',
+  openKey: ''
 };
 
 function normalizeRow(row, index = 0) {
@@ -221,21 +223,18 @@ function syncCompanyRowFromDom(index, tr) {
   }, index);
 }
 
-function syncCompanyUrlPreview(tr, rawUrl) {
-  const linkEl = tr.querySelector('[data-k="url-preview"]');
-  if (!linkEl) return;
+function syncCompanyUrlButtonState(tr, rawUrl) {
+  const buttonEl = tr.querySelector('[data-k="open-url"]');
+  if (!buttonEl) return;
   const finalUrl = normalizeExternalUrl(rawUrl);
-  if (!finalUrl) {
-    linkEl.textContent = '暂无链接';
-    linkEl.removeAttribute('href');
-    linkEl.setAttribute('aria-disabled', 'true');
-    linkEl.classList.add('disabled');
-    return;
-  }
-  linkEl.textContent = finalUrl;
-  linkEl.href = finalUrl;
-  linkEl.removeAttribute('aria-disabled');
-  linkEl.classList.remove('disabled');
+  buttonEl.disabled = !finalUrl;
+  buttonEl.classList.toggle('disabled', !finalUrl);
+}
+
+function syncCompanySelectTheme(selectEl) {
+  if (!selectEl) return;
+  const value = String(selectEl.value || '').trim().toLowerCase();
+  selectEl.dataset.value = value || 'empty';
 }
 
 function getSelectedCompanyRows() {
@@ -244,44 +243,140 @@ function getSelectedCompanyRows() {
     .filter((index) => Number.isInteger(index) && index >= 0 && index < (state.resume.company_links || []).length);
 }
 
-function syncCompanyFilterBar() {
-  const keywordEl = byId('resumeCompanyFilterKeyword');
-  const typeEl = byId('resumeCompanyFilterType');
-  const scaleEl = byId('resumeCompanyFilterScale');
-  const jobTypeEl = byId('resumeCompanyFilterJobType');
-  const progressEl = byId('resumeCompanyFilterProgress');
-  if (keywordEl) keywordEl.value = resumeCompanyFilters.keyword;
-  if (typeEl) typeEl.value = resumeCompanyFilters.company_type;
-  if (scaleEl) scaleEl.value = resumeCompanyFilters.company_scale;
-  if (jobTypeEl) jobTypeEl.value = resumeCompanyFilters.job_type;
-  if (progressEl) progressEl.value = resumeCompanyFilters.progress;
+function syncCompanyFilterUi() {
+  const filterDefs = [
+    ['company', 'resumeCompanyFilterCompanyBtn'],
+    ['company_type', 'resumeCompanyFilterTypeBtn'],
+    ['company_scale', 'resumeCompanyFilterScaleBtn'],
+    ['job_type', 'resumeCompanyFilterJobTypeBtn'],
+    ['progress', 'resumeCompanyFilterProgressBtn'],
+    ['url', 'resumeCompanyFilterUrlBtn']
+  ];
+
+  filterDefs.forEach(([key, btnId]) => {
+    const btn = byId(btnId);
+    const hasValue = !!String(resumeCompanyFilters[key] || '').trim();
+    const isOpen = resumeCompanyFilters.openKey === key;
+    if (btn) {
+      btn.classList.toggle('active', hasValue || isOpen);
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+  });
+
+  renderResumeCompanyFilterBar();
 }
 
 function renderCompanyFilterOptions() {
-  const typeEl = byId('resumeCompanyFilterType');
-  const scaleEl = byId('resumeCompanyFilterScale');
-  const jobTypeEl = byId('resumeCompanyFilterJobType');
-  const progressEl = byId('resumeCompanyFilterProgress');
-  if (typeEl && !typeEl.dataset.ready) {
-    typeEl.innerHTML = renderOptionList([{ value: '', label: '全部类型' }, ...COMPANY_TYPE_OPTIONS.slice(1)], resumeCompanyFilters.company_type);
-    typeEl.dataset.ready = '1';
+}
+
+function getResumeCompanyFilterMeta() {
+  return {
+    company: {
+      title: '公司名称筛选',
+      render: () => `
+        <label>
+          <span>公司名称</span>
+          <input id="resumeCompanyFilterCompany" type="text" placeholder="输入公司名称" value="${escAttr(resumeCompanyFilters.company)}" />
+        </label>
+      `
+    },
+    company_type: {
+      title: '公司类型筛选',
+      render: () => `
+        <label>
+          <span>公司类型</span>
+          <select id="resumeCompanyFilterType">
+            ${renderOptionList([{ value: '', label: '全部类型' }, ...COMPANY_TYPE_OPTIONS.slice(1)], resumeCompanyFilters.company_type)}
+          </select>
+        </label>
+      `
+    },
+    company_scale: {
+      title: '公司规模筛选',
+      render: () => `
+        <label>
+          <span>公司规模</span>
+          <select id="resumeCompanyFilterScale">
+            ${renderOptionList([{ value: '', label: '全部规模' }, ...COMPANY_SCALE_OPTIONS.slice(1)], resumeCompanyFilters.company_scale)}
+          </select>
+        </label>
+      `
+    },
+    job_type: {
+      title: '岗位类型筛选',
+      render: () => `
+        <label>
+          <span>岗位类型</span>
+          <select id="resumeCompanyFilterJobType">
+            ${renderOptionList([{ value: '', label: '全部岗位类型' }, ...COMPANY_JOB_TYPE_OPTIONS.slice(1)], resumeCompanyFilters.job_type)}
+          </select>
+        </label>
+      `
+    },
+    progress: {
+      title: '投递进度筛选',
+      render: () => `
+        <label>
+          <span>投递进度</span>
+          <select id="resumeCompanyFilterProgress">
+            ${renderOptionList([{ value: '', label: '全部进度' }, ...COMPANY_PROGRESS_OPTIONS], resumeCompanyFilters.progress)}
+          </select>
+        </label>
+      `
+    },
+    url: {
+      title: '链接地址筛选',
+      render: () => `
+        <label>
+          <span>链接地址</span>
+          <input id="resumeCompanyFilterUrl" type="text" placeholder="输入链接关键词" value="${escAttr(resumeCompanyFilters.url)}" />
+        </label>
+      `
+    }
+  };
+}
+
+function renderResumeCompanyFilterBar() {
+  const host = byId('resumeCompanyFilterBar');
+  const title = byId('resumeCompanyFilterBarTitle');
+  const body = byId('resumeCompanyFilterBarBody');
+  if (!host || !title || !body) return;
+
+  const meta = getResumeCompanyFilterMeta();
+  const openKey = String(resumeCompanyFilters.openKey || '');
+  if (!openKey || !meta[openKey]) {
+    host.classList.add('hidden');
+    body.innerHTML = '';
+    return;
   }
-  if (scaleEl && !scaleEl.dataset.ready) {
-    scaleEl.innerHTML = renderOptionList([{ value: '', label: '全部规模' }, ...COMPANY_SCALE_OPTIONS.slice(1)], resumeCompanyFilters.company_scale);
-    scaleEl.dataset.ready = '1';
-  }
-  if (jobTypeEl && !jobTypeEl.dataset.ready) {
-    jobTypeEl.innerHTML = renderOptionList([{ value: '', label: '全部岗位类型' }, ...COMPANY_JOB_TYPE_OPTIONS.slice(1)], resumeCompanyFilters.job_type);
-    jobTypeEl.dataset.ready = '1';
-  }
-  if (progressEl && !progressEl.dataset.ready) {
-    progressEl.innerHTML = renderOptionList([{ value: '', label: '全部进度' }, ...COMPANY_PROGRESS_OPTIONS], resumeCompanyFilters.progress);
-    progressEl.dataset.ready = '1';
-  }
+
+  host.classList.remove('hidden');
+  title.textContent = meta[openKey].title;
+  body.innerHTML = meta[openKey].render();
+
+  const bindings = [
+    ['resumeCompanyFilterCompany', 'company', 'input'],
+    ['resumeCompanyFilterType', 'company_type', 'change'],
+    ['resumeCompanyFilterScale', 'company_scale', 'change'],
+    ['resumeCompanyFilterJobType', 'job_type', 'change'],
+    ['resumeCompanyFilterProgress', 'progress', 'change'],
+    ['resumeCompanyFilterUrl', 'url', 'input']
+  ];
+
+  bindings.forEach(([id, key, evt]) => {
+    const el = byId(id);
+    if (!el || el.dataset.bound === '1') return;
+    el.dataset.bound = '1';
+    el.addEventListener(evt, () => {
+      resumeCompanyFilters[key] = String(el.value || '');
+      renderCompanyRows();
+    });
+  });
 }
 
 function getFilteredCompanyLinks() {
-  const keyword = String(resumeCompanyFilters.keyword || '').trim().toLowerCase();
+  const companyKeyword = String(resumeCompanyFilters.company || '').trim().toLowerCase();
+  const urlKeyword = String(resumeCompanyFilters.url || '').trim().toLowerCase();
   return (state.resume.company_links || [])
     .map((row, index) => ({ row, index }))
     .filter(({ row }) => {
@@ -289,9 +384,9 @@ function getFilteredCompanyLinks() {
       if (resumeCompanyFilters.company_scale && row.company_scale !== resumeCompanyFilters.company_scale) return false;
       if (resumeCompanyFilters.job_type && row.job_type !== resumeCompanyFilters.job_type) return false;
       if (resumeCompanyFilters.progress && row.progress !== resumeCompanyFilters.progress) return false;
-      if (!keyword) return true;
-      const haystack = [row.company, row.url].join(' ').toLowerCase();
-      return haystack.includes(keyword);
+      if (companyKeyword && !String(row.company || '').toLowerCase().includes(companyKeyword)) return false;
+      if (urlKeyword && !String(row.url || '').toLowerCase().includes(urlKeyword)) return false;
+      return true;
     });
 }
 
@@ -299,8 +394,7 @@ function renderCompanyRows() {
   const body = byId('resumeCompanyRows');
   if (!body) return;
   body.innerHTML = '';
-  renderCompanyFilterOptions();
-  syncCompanyFilterBar();
+  syncCompanyFilterUi();
 
   const visibleRows = getFilteredCompanyLinks();
   if (!visibleRows.length) {
@@ -335,8 +429,8 @@ function renderCompanyRows() {
       </td>
       <td>
         <div class="resume-company-url-cell">
-          <a data-k="url-preview" class="resume-company-url-link ${row.url ? '' : 'disabled'}" ${row.url ? `href="${escAttr(normalizeExternalUrl(row.url))}" target="_blank" rel="noopener noreferrer"` : 'aria-disabled="true"'}>${escText(row.url ? normalizeExternalUrl(row.url) : '暂无链接')}</a>
           <textarea data-k="url" placeholder="公司投递或招聘链接">${escText(row.url)}</textarea>
+          <button class="resume-company-url-open" type="button" data-k="open-url" ${row.url ? '' : 'disabled'}>开</button>
         </div>
       </td>
       <td><button class="btn ghost" type="button" data-k="delete">删除</button></td>
@@ -345,19 +439,39 @@ function renderCompanyRows() {
     tr.querySelectorAll('textarea').forEach((el) => {
       autoResizeResumeTextarea(el);
     });
+    tr.querySelector('[data-k="company_type"]').dataset.role = 'company_type';
+    tr.querySelector('[data-k="company_scale"]').dataset.role = 'company_scale';
+    tr.querySelector('[data-k="job_type"]').dataset.role = 'job_type';
+    tr.querySelector('[data-k="progress"]').dataset.role = 'progress';
+    tr.querySelectorAll('.resume-company-select').forEach((el) => {
+      syncCompanySelectTheme(el);
+    });
+    syncCompanyUrlButtonState(tr, row.url);
 
     tr.querySelectorAll('textarea, select').forEach((el) => {
       el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
         if (el.tagName === 'TEXTAREA') {
           autoResizeResumeTextarea(el);
+        } else {
+          syncCompanySelectTheme(el);
         }
         syncCompanyRowFromDom(index, tr);
         if (el.getAttribute('data-k') === 'url') {
-          syncCompanyUrlPreview(tr, el.value);
+          syncCompanyUrlButtonState(tr, el.value);
         }
         scheduleAutoSave();
       });
     });
+
+    tr.querySelector('[data-k="open-url"]').onclick = () => {
+      const currentUrl = tr.querySelector('[data-k="url"]')?.value;
+      const finalUrl = normalizeExternalUrl(currentUrl);
+      if (!finalUrl) {
+        toast('当前还没有可用链接');
+        return;
+      }
+      window.open(finalUrl, '_blank', 'noopener');
+    };
 
     tr.querySelector('[data-k="delete"]').onclick = () => {
       state.resume.company_links.splice(index, 1);
@@ -412,35 +526,50 @@ function renderResumeEditor() {
   renderResumeSubview();
 }
 
-function initCompanyFilterHandlers() {
-  const bindings = [
-    ['resumeCompanyFilterKeyword', 'keyword', 'input'],
-    ['resumeCompanyFilterType', 'company_type', 'change'],
-    ['resumeCompanyFilterScale', 'company_scale', 'change'],
-    ['resumeCompanyFilterJobType', 'job_type', 'change'],
-    ['resumeCompanyFilterProgress', 'progress', 'change']
-  ];
+function setResumeCompanyFilterOpen(key) {
+  resumeCompanyFilters.openKey = resumeCompanyFilters.openKey === key ? '' : key;
+  syncCompanyFilterUi();
+}
 
-  bindings.forEach(([id, key, evt]) => {
+function initCompanyFilterHandlers() {
+  [
+    ['resumeCompanyFilterCompanyBtn', 'company'],
+    ['resumeCompanyFilterTypeBtn', 'company_type'],
+    ['resumeCompanyFilterScaleBtn', 'company_scale'],
+    ['resumeCompanyFilterJobTypeBtn', 'job_type'],
+    ['resumeCompanyFilterProgressBtn', 'progress'],
+    ['resumeCompanyFilterUrlBtn', 'url']
+  ].forEach(([id, key]) => {
     const el = byId(id);
     if (!el || el.dataset.bound === '1') return;
     el.dataset.bound = '1';
-    el.addEventListener(evt, () => {
-      resumeCompanyFilters[key] = String(el.value || '');
-      renderCompanyRows();
-    });
+    el.onclick = (event) => {
+      event.stopPropagation();
+      setResumeCompanyFilterOpen(key);
+    };
   });
 
   const resetBtn = byId('resumeCompanyFilterResetBtn');
   if (resetBtn && resetBtn.dataset.bound !== '1') {
     resetBtn.dataset.bound = '1';
     resetBtn.onclick = () => {
-      resumeCompanyFilters.keyword = '';
+      resumeCompanyFilters.company = '';
+      resumeCompanyFilters.url = '';
       resumeCompanyFilters.company_type = '';
       resumeCompanyFilters.company_scale = '';
       resumeCompanyFilters.job_type = '';
       resumeCompanyFilters.progress = '';
+      resumeCompanyFilters.openKey = '';
       renderCompanyRows();
+    };
+  }
+
+  const closeBtn = byId('resumeCompanyFilterBarCloseBtn');
+  if (closeBtn && closeBtn.dataset.bound !== '1') {
+    closeBtn.dataset.bound = '1';
+    closeBtn.onclick = () => {
+      resumeCompanyFilters.openKey = '';
+      syncCompanyFilterUi();
     };
   }
 }

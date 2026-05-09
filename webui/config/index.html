@@ -338,26 +338,63 @@
           </div>
 
           <div id="resumeCompanyPanel" class="resume-subview hidden">
-            <div class="resume-company-filters">
-              <label><span>搜索</span><input id="resumeCompanyFilterKeyword" type="text" placeholder="公司名称或链接" /></label>
-              <label><span>公司类型</span><select id="resumeCompanyFilterType"></select></label>
-              <label><span>公司规模</span><select id="resumeCompanyFilterScale"></select></label>
-              <label><span>岗位类型</span><select id="resumeCompanyFilterJobType"></select></label>
-              <label><span>投递进度</span><select id="resumeCompanyFilterProgress"></select></label>
-              <div class="mini-actions">
-                <button id="resumeCompanyFilterResetBtn" class="btn ghost" type="button">清空筛选</button>
+            <div id="resumeCompanyFilterBar" class="resume-company-filter-bar hidden">
+              <div class="resume-company-filter-bar-head">
+                <strong id="resumeCompanyFilterBarTitle">筛选</strong>
+                <button id="resumeCompanyFilterBarCloseBtn" class="btn ghost" type="button">收起筛选</button>
               </div>
+              <div id="resumeCompanyFilterBarBody" class="resume-company-filter-bar-body"></div>
             </div>
             <div class="table-wrap resume-table-wrap">
               <table>
                 <thead>
-                  <tr><th>选择</th><th>公司名称</th><th>公司类型</th><th>公司规模</th><th>岗位类型</th><th>投递进度</th><th>链接地址</th><th>操作</th></tr>
+                  <tr>
+                    <th>选择</th>
+                    <th>
+                      <div class="resume-column-filter">
+                        <span>公司名称</span>
+                        <button id="resumeCompanyFilterCompanyBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="resume-column-filter">
+                        <span>公司类型</span>
+                        <button id="resumeCompanyFilterTypeBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="resume-column-filter">
+                        <span>公司规模</span>
+                        <button id="resumeCompanyFilterScaleBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="resume-column-filter">
+                        <span>岗位类型</span>
+                        <button id="resumeCompanyFilterJobTypeBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="resume-column-filter">
+                        <span>投递进度</span>
+                        <button id="resumeCompanyFilterProgressBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="resume-column-filter">
+                        <span>链接地址</span>
+                        <button id="resumeCompanyFilterUrlBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
+                      </div>
+                    </th>
+                    <th>操作</th>
+                  </tr>
                 </thead>
                 <tbody id="resumeCompanyRows"></tbody>
               </table>
             </div>
 
             <div class="row-actions">
+              <button id="resumeCompanyFilterResetBtn" class="btn ghost" type="button">清空筛选</button>
               <button id="resumeApplySelectedCompaniesBtn" class="btn ghost" type="button">投递选中公司</button>
               <button id="resumeAddCompanyRowBtn" class="btn">新增公司</button>
             </div>

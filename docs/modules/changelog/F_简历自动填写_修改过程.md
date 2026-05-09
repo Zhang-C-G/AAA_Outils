@@ -109,3 +109,33 @@
   - `node --experimental-default-type=module --check webui/config/app-resume.js`
   - `rg -n "resume-company-url|url-preview|normalizeExternalUrl" webui/config/app-resume.js webui/config/styles.css`
 - 测试结果：`已通过`
+
+### 2026-05-09 / 公司投递表改为列头圆点筛选，链接列收口为单编辑框
+- 改动内容：
+  - 删除 F 模块公司投递表顶部整排筛选器
+  - 改为在每个可筛选列标题右侧仅保留一个小圆按钮，点击后再展开对应筛选项
+  - 链接地址列不再同时显示“链接文本 + 输入框”两个入口
+  - 改为“单一可编辑链接框 + 单独跳转按钮”组合，既能修改，也能点击跳转
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resumeCompanyFilterKeyword|resume-company-filters|url-preview|resume-company-url-link|resume-filter-dot|resumeCompanyFilterCompany|open-url" webui/config/app-resume.js webui/config/index.html webui/config/styles.css`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 公司投递表选择项按值着色
+- 改动内容：
+  - F 模块公司类型、公司规模、岗位类型、投递进度改为“不同选项值对应不同颜色”
+  - 让国企/民企/外企、大/中/小、实习/转正/正式、未投递/已投递/OFFER/已挂等状态更容易一眼区分
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "syncCompanySelectTheme|data-role=|data-value=|resume-company-select\\[data-role" webui/config/app-resume.js webui/config/styles.css`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 公司投递表筛选改为顶部筛选条
+- 改动内容：
+  - 列头 `筛` 按钮不再弹出悬浮筛选框
+  - 改为点击后按钮进入绿色激活态，并在表格上方出现对应筛选条
+  - 筛选条为顶部固定区域，不悬浮在表头旁边
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resumeCompanyFilterBar|resume-filter-popover|resumeCompanyFilterCompanyPanel|resume-company-filter-bar|resume-filter-dot.active" webui/config/app-resume.js webui/config/index.html webui/config/styles.css`
+- 测试结果：`已通过`
