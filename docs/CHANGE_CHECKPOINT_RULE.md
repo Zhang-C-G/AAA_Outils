@@ -37,6 +37,7 @@
 - 上一个 git 检查点：`checkpoint: sync resume table and module library`
 - 当前计数说明：
   - 上一轮 3 次改动已完成 checkpoint
+  - 远端 push 已成功完成
   - 本轮从 `0` 开始重新计数
 
 ## 5. 维护方式
