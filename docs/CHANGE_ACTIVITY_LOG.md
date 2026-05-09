@@ -1,6 +1,6 @@
 # 改动流水文档
 
-最近同步：`2026-04-28`
+最近同步：`2026-05-09`
 状态：`active`
 
 ## 1. 文档定位
@@ -10,77 +10,79 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-04-28-post-notes-sidebar-checkpoint`
-- 当前连续改动次数：`3`
+- 轮次标识：`2026-05-09-post-resume-module-library-checkpoint`
+- 当前连续改动次数：`0`
 - 本轮目标：
-  - 收掉 B 模块目录区里不需要的说明和筛选占位
-  - 只保留目录主体
-  - 把提取功能改成真正可手动定义范围、跨笔记查看和修改的工具
-  - 让提取结果只使用主内容框显示
-- 上一个 git 检查点：`checkpoint: compact notes sidebar`
+  - 已完成上一轮 checkpoint，当前计数已清零
+  - 下一轮改动开始后，再继续记录新的 1-3 次改动窗口
+- 上一个 git 检查点：`checkpoint: sync resume table and module library`
 - 历史追溯方式：`git log` / 远端提交记录
 
-## 3. 当前 1-3 次改动窗口
+## 3. 上一轮已归档 checkpoint 摘要
+
+上一轮在进入 checkpoint 前共完成 3 次改动：
 
 ### 第1次改动
-- 时间：`2026-04-28`
+- 时间：`2026-05-09`
 - 内容：
-  - 删除目录区下面的小字说明
-  - 删除目录 chips 和相关筛选语义
-  - 删除提取区及其相关结构
-  - 将目录区收口为只保留“结构目录 / 复制目录 / 目录罗列”
+  - F 模块公司维护表升级为公司投递面板
+  - 增加公司类型、公司规模、岗位类型、投递进度
+  - 增加批量投递入口与筛选器
+  - 补入 50 家目标公司与链接
 - 影响文件：
+  - `webui/config/app-resume.js`
   - `webui/config/index.html`
   - `webui/config/styles.css`
-  - `webui/config/app-notes.js`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `webui/config/server-resume.ps1`
+  - `webui/config/app-main.js`
+  - `webui/config/app-common.js`
+  - `resume_profile.json`
+  - `docs/modules/changelog/F_简历自动填写_修改过程.md`
 - 测试：
-  - `node --check --experimental-default-type=module webui/config/app-notes.js`
-  - `rg -n "selectedDirectoryKey|notesStructureSummary|notesModuleChips|notesExtractList|renderDirectoryChips|renderExtractList|renderStructureSummary" webui/config/app-notes.js webui/config/index.html webui/config/styles.css`
-  - `scripts/restart_main_ahk.ps1`
-  - 重启后确认当前仅存在 `1` 个 `AutoHotkey64.exe`
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - PowerShell 语法解析 `webui/config/server-resume.ps1`
+  - `resume_profile.json | ConvertFrom-Json`
 - 测试结果：`通过`
-- 是否触发 git：`否`
 
 ### 第2次改动
-- 时间：`2026-04-28`
+- 时间：`2026-05-09`
 - 内容：
-  - 在正文区增加“提取工具”
-  - 支持手动输入“从”和“到”的范围标记
-  - 点击“执行提取”后，集中列出每条笔记命中的对应内容
-  - 提取结果允许直接编辑，并自动写回对应原笔记内容
+  - 补建“文档低耦合与拆分规则”
+  - 建立“模块库总索引 / 模块母版清单”
+  - 将新规则接入开发规范入口、总图、清单与总索引
+  - 补齐 `18_表格与筛选器偏好.md` 索引，并加入分页偏好
 - 影响文件：
-  - `webui/config/index.html`
-  - `webui/config/styles.css`
-  - `webui/config/app-notes.js`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+  - `docs/extension/DOC_CREATION_GUIDE.md`
+  - `docs/extension/NEW_MODE_CHECKLIST.md`
+  - `docs/extension/README.md`
+  - `docs/extension/全局私人偏好文档.md`
+  - `docs/extension/文档体系总图.md`
+  - `docs/extension/文档低耦合与拆分规则.md`
+  - `docs/extension/模块库总索引.md`
+  - `docs/extension/模块母版清单.md`
+  - `docs/extension/global_preferences/00_通用偏好结论.md`
+  - `docs/extension/global_preferences/components/18_表格与筛选器偏好.md`
 - 测试：
-  - `node --check --experimental-default-type=module webui/config/app-notes.js`
-  - `rg -n "notesExtractStart|notesExtractEnd|runNotesExtractBtn|notesExtractResults|runNotesExtraction|extractRange|saveExtractResult|queueExtractSave" webui/config/index.html webui/config/styles.css webui/config/app-notes.js`
-  - `scripts/restart_main_ahk.ps1`
-  - 重启后确认当前仅存在 `1` 个 `AutoHotkey64.exe`
+  - `rg -n "文档低耦合与拆分规则|模块库总索引|模块母版清单|18_表格与筛选器偏好" docs/extension`
+  - 文档交叉索引人工复查
 - 测试结果：`通过`
-- 是否触发 git：`否`
 
 ### 第3次改动
-- 时间：`2026-04-28`
+- 时间：`2026-05-09`
 - 内容：
-  - 删除提取结果专用结果框
-  - 提取后直接将跨笔记结果写入主内容框
-  - 主内容框进入“提取视图”后可直接编辑，并自动回写到各原笔记
-  - 新增“恢复正文”按钮，从提取视图返回当前笔记正文
+  - F 模块链接地址列支持直接点击跳转
+  - 保留原输入框继续编辑
+  - 链接缺少协议头时自动补全为 `https://`
 - 影响文件：
-  - `webui/config/index.html`
+  - `webui/config/app-resume.js`
   - `webui/config/styles.css`
-  - `webui/config/app-notes.js`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/modules/changelog/F_简历自动填写_修改过程.md`
 - 测试：
-  - `node --check --experimental-default-type=module webui/config/app-notes.js`
-  - `rg -n "notesExtractResults|renderExtractResults|notes-extract-result|notes-extract-editor|extractViewActive|saveExtractAggregateView|queueExtractAggregateSave|exitExtractView|exitNotesExtractBtn" webui/config/index.html webui/config/styles.css webui/config/app-notes.js`
-  - `scripts/restart_main_ahk.ps1`
-  - 重启后确认当前仅存在 `1` 个 `AutoHotkey64.exe`
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resume-company-url|url-preview|normalizeExternalUrl" webui/config/app-resume.js webui/config/styles.css`
 - 测试结果：`通过`
-- 是否触发 git：`是，已达到 3/3 checkpoint 阈值`
+
+## 4. 当前 1-3 次改动窗口
+
+当前为空，等待下一轮改动开始记录。

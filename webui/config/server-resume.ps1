@@ -196,6 +196,8 @@ function New-ResumeProfileDefault {
     version = 1
     updated_at = $ts
     sections = (Get-ResumeSectionDefaults)
+    company_links = @()
+    editor_mode = 'profile'
   }
 }
 
@@ -297,10 +299,57 @@ function Normalize-ResumeProfile {
     $incomingSections = $defaults.sections
   }
 
+  $companyLinks = @()
+  $companyIndex = 0
+  foreach ($company in @(Get-Prop $Profile 'company_links' @())) {
+    $id = ([string](Get-Prop $company 'id' '')).Trim()
+    if ($id -eq '') {
+      $id = 'company_' + ($companyIndex + 1)
+    }
+
+    $companyType = ([string](Get-Prop $company 'company_type' '')).Trim().ToLowerInvariant()
+    if ($companyType -notin @('', 'state_owned', 'private', 'foreign')) {
+      $companyType = ''
+    }
+
+    $companyScale = ([string](Get-Prop $company 'company_scale' '')).Trim().ToLowerInvariant()
+    if ($companyScale -notin @('', 'large', 'medium', 'small')) {
+      $companyScale = ''
+    }
+
+    $jobType = ([string](Get-Prop $company 'job_type' '')).Trim().ToLowerInvariant()
+    if ($jobType -notin @('', 'daily_intern', 'conversion_intern', 'full_time')) {
+      $jobType = ''
+    }
+
+    $progress = ([string](Get-Prop $company 'progress' 'not_applied')).Trim().ToLowerInvariant()
+    if ($progress -notin @('not_applied', 'applied', 'rejected', 'first_interview', 'second_interview', 'offer', 'paused')) {
+      $progress = 'not_applied'
+    }
+
+    $companyLinks += [ordered]@{
+      id = $id
+      company = ([string](Get-Prop $company 'company' '')).Trim()
+      url = ([string](Get-Prop $company 'url' '')).Trim()
+      company_type = $companyType
+      company_scale = $companyScale
+      job_type = $jobType
+      progress = $progress
+    }
+    $companyIndex += 1
+  }
+
+  $editorMode = ([string](Get-Prop $Profile 'editor_mode' 'profile')).Trim().ToLowerInvariant()
+  if ($editorMode -notin @('profile', 'companies')) {
+    $editorMode = 'profile'
+  }
+
   return [ordered]@{
     version = 1
     updated_at = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     sections = $incomingSections
+    company_links = $companyLinks
+    editor_mode = $editorMode
   }
 }
 
@@ -350,6 +399,8 @@ function Get-ResumeState {
   return [ordered]@{
     profile = $profile
     flat_map = (Get-ResumeFlatMap -Profile $profile)
+    company_links = @(Get-Prop $profile 'company_links' @())
+    editor_mode = [string](Get-Prop $profile 'editor_mode' 'profile')
   }
 }
 
@@ -357,9 +408,16 @@ function Save-ResumeProfile {
   param($Payload)
 
   Ensure-ResumeProfileFile
-  $source = Get-Prop $Payload 'profile' $Payload
+  $rawProfile = Get-Prop $Payload 'profile' $Payload
+  $source = [ordered]@{
+    version = Get-Prop $rawProfile 'version' 1
+    updated_at = Get-Prop $rawProfile 'updated_at' ''
+    sections = @(Get-Prop $rawProfile 'sections' @())
+    company_links = @(Get-Prop $Payload 'company_links' (Get-Prop $rawProfile 'company_links' @()))
+    editor_mode = [string](Get-Prop $Payload 'editor_mode' (Get-Prop $rawProfile 'editor_mode' 'profile'))
+  }
   $profile = Normalize-ResumeProfile -Profile $source
   [IO.File]::WriteAllText($ResumeProfileFile, (To-JsonNoBom $profile 20), [Text.Encoding]::UTF8)
-  Write-AppLog 'resume_profile_save' ('sections=' + @($profile.sections).Count)
+  Write-AppLog 'resume_profile_save' ('sections=' + @($profile.sections).Count + ' company_links=' + @($profile.company_links).Count)
   return (Get-ResumeState)
 }

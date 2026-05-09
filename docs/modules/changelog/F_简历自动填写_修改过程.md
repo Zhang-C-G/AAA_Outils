@@ -62,3 +62,50 @@
   - 通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
   - 延迟复查后确认当前仅存在 1 个 `AutoHotkey64.exe` 实例
 - 测试结果：`通过`
+- 
+### 2026-05-09 / 公司链接维护改为公司投递面板
+- 改动内容：
+  - F 模块公司维护表由“公司 / 链接地址 / 允许填充”调整为“选择 / 公司名称 / 公司类型 / 投递进度 / 链接地址 / 操作”
+  - 公司类型改为固定选项：`国企 / 民企 / 外企`
+  - 投递进度改为固定选项：`未投递 / 已投递 / 已挂 / 已经一面 / 已经二面 / OFFER / 暂不投递`
+  - 默认新建公司记录的投递进度为 `未投递`
+  - 新增“投递选中公司”按钮，可批量勾选多家公司后统一打开对应投递链接
+  - 批量投递后，已成功打开链接的公司会自动把进度切到 `已投递`
+  - 公司维护数据已接入后端保存链路，不再只是前端临时 UI
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `[System.Management.Automation.Language.Parser]::ParseFile(...)`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 公司投递面板补公司规模、岗位类型与筛选器
+- 改动内容：
+  - 在 F 模块公司维护表中新增 `公司规模` 列：`大 / 中 / 小`
+  - 在 F 模块公司维护表中新增 `岗位类型` 列：`日常实习 / 转正实习 / 正式工作`
+  - 公司投递表顶部新增筛选器区域，支持按 `关键词 / 公司类型 / 公司规模 / 岗位类型 / 投递进度` 过滤
+  - 对齐私人偏好：多维维护表默认优先采用“筛选器 + 表格”组合，而不是只做纯表格横向堆列
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `[System.Management.Automation.Language.Parser]::ParseFile(...)`
+  - `Invoke-WebRequest http://127.0.0.1:8798/api/resume/state`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 公司投递面板补官方链接
+- 改动内容：
+  - 为 `resume_profile.json` 中的 50 家目标公司补入链接
+  - 优先填写官方招聘页；如未单独维护稳定招聘入口，则回填官方站点或官方公司页
+  - 便于后续在 F 模块中直接点击进入公司侧页面继续投递或二次维护
+- 测试：
+  - `Get-Content -Raw -Encoding UTF8 resume_profile.json | ConvertFrom-Json`
+  - 校验 `company_links.Count = 50`
+  - 校验空链接数量为 `0`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 公司链接地址支持点击跳转
+- 改动内容：
+  - F 模块公司投递表的链接地址列改为“上方直接跳转链接 + 下方继续编辑输入框”
+  - 链接为空时显示 `暂无链接`
+  - 输入未带协议头时，跳转时自动补全为 `https://`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resume-company-url|url-preview|normalizeExternalUrl" webui/config/app-resume.js webui/config/styles.css`
+- 测试结果：`已通过`

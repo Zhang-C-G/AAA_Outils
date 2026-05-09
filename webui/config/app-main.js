@@ -268,7 +268,9 @@ function saveResumeDraft() {
     const draft = {
       ts: Date.now(),
       selectedSectionId: state.resume.selectedSectionId || '',
-      profile: state.resume.profile
+      profile: state.resume.profile,
+      company_links: Array.isArray(state.resume.company_links) ? state.resume.company_links : [],
+      editor_mode: String(state.resume.editor_mode || 'profile')
     };
     sessionStorage.setItem(RESUME_DRAFT_KEY, JSON.stringify(draft));
   } catch {}
@@ -370,8 +372,17 @@ async function tryRestoreResumeDraft() {
 
     state.resume.profile = draft.profile;
     state.resume.selectedSectionId = String(draft?.selectedSectionId || '');
+    state.resume.company_links = Array.isArray(draft?.company_links) ? draft.company_links : [];
+    state.resume.editor_mode = String(draft?.editor_mode || 'profile');
     const { applyResumeState } = await getModule('resume');
-    applyResumeState({ resume: { profile: state.resume.profile, flat_map: state.resume.flat_map } });
+    applyResumeState({
+      resume: {
+        profile: state.resume.profile,
+        flat_map: state.resume.flat_map,
+        company_links: state.resume.company_links,
+        editor_mode: state.resume.editor_mode
+      }
+    });
     toast('已恢复刷新前未保存简历草稿');
     return true;
   } catch {}

@@ -1,6 +1,6 @@
 ﻿{
     "version":  1,
-    "updated_at":  "2026-04-27 10:41:46",
+    "updated_at":  "2026-05-09 12:03:37",
     "sections":  [
                      {
                          "id":  "basic_info",
@@ -723,5 +723,458 @@
                                       }
                                   ]
                      }
-                 ]
+                 ],
+    "company_links":  [
+                          {
+                              "id":  "company_01",
+                              "company":  "阿里巴巴",
+                              "url":  "https://talent.alibaba.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "daily_intern",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_02",
+                              "company":  "腾讯",
+                              "url":  "https://join.qq.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_03",
+                              "company":  "字节跳动",
+                              "url":  "https://jobs.bytedance.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_04",
+                              "company":  "百度",
+                              "url":  "https://talent.baidu.com/jobs",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_05",
+                              "company":  "京东",
+                              "url":  "https://campus.jd.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_06",
+                              "company":  "美团",
+                              "url":  "https://zhaopin.meituan.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_07",
+                              "company":  "拼多多",
+                              "url":  "https://careers.pinduoduo.com/jobs",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_08",
+                              "company":  "华为",
+                              "url":  "https://career.huawei.com/reccampportal/portal5/index.html",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_09",
+                              "company":  "小米",
+                              "url":  "https://hr.xiaomi.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_10",
+                              "company":  "网易",
+                              "url":  "https://campus.163.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_11",
+                              "company":  "快手",
+                              "url":  "https://zhaopin.kuaishou.cn/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_12",
+                              "company":  "哔哩哔哩",
+                              "url":  "https://jobs.bilibili.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_13",
+                              "company":  "滴滴",
+                              "url":  "https://talent.didiglobal.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_14",
+                              "company":  "蚂蚁集团",
+                              "url":  "https://talent.antgroup.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_15",
+                              "company":  "携程",
+                              "url":  "https://campus.ctrip.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_16",
+                              "company":  "SHEIN",
+                              "url":  "https://careers.shein.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_17",
+                              "company":  "科大讯飞",
+                              "url":  "https://career.iflytek.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_18",
+                              "company":  "联想",
+                              "url":  "https://job.lenovo.com.cn/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_19",
+                              "company":  "中兴通讯",
+                              "url":  "https://job.zte.com.cn/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_20",
+                              "company":  "顺丰科技",
+                              "url":  "https://hr.sf-express.com/",
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_21",
+                              "company":  "Boss直聘",
+                              "url":  "https://www.zhipin.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_22",
+                              "company":  "同程旅行",
+                              "url":  "https://campus.ly.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_23",
+                              "company":  "途虎养车",
+                              "url":  "https://www.tuhu.cn/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_24",
+                              "company":  "得物",
+                              "url":  "https://www.poizon.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_25",
+                              "company":  "叠纸游戏",
+                              "url":  "https://jobs.papegames.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_26",
+                              "company":  "莉莉丝",
+                              "url":  "https://careers.lilith.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_27",
+                              "company":  "虎牙",
+                              "url":  "https://hr.huya.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_28",
+                              "company":  "欢聚时代",
+                              "url":  "https://hr.yy.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_29",
+                              "company":  "完美世界",
+                              "url":  "https://jobs.wanmei.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_30",
+                              "company":  "用友",
+                              "url":  "https://career.yonyou.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_31",
+                              "company":  "金蝶",
+                              "url":  "https://career.kingdee.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_32",
+                              "company":  "深信服",
+                              "url":  "https://hr.sangfor.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_33",
+                              "company":  "青藤云安全",
+                              "url":  "https://www.qingteng.cn/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_34",
+                              "company":  "帆软",
+                              "url":  "https://join.fanruan.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_35",
+                              "company":  "神策数据",
+                              "url":  "https://www.sensorsdata.cn/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_36",
+                              "company":  "GrowingIO",
+                              "url":  "https://www.growingio.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_37",
+                              "company":  "涂鸦智能",
+                              "url":  "https://www.tuya.com/cn/about",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_38",
+                              "company":  "蘑菇街",
+                              "url":  "https://www.mogu.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_39",
+                              "company":  "挚文集团",
+                              "url":  "https://ir.hello-group.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_40",
+                              "company":  "乐信",
+                              "url":  "https://www.lexin.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_41",
+                              "company":  "声网",
+                              "url":  "https://www.shengwang.cn/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_42",
+                              "company":  "极验",
+                              "url":  "https://www.geetest.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_43",
+                              "company":  "数梦工场",
+                              "url":  "https://www.dtdream.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_44",
+                              "company":  "袋鼠云",
+                              "url":  "https://www.dtstack.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_45",
+                              "company":  "每日互动",
+                              "url":  "https://www.getui.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_46",
+                              "company":  "虹软科技",
+                              "url":  "https://www.arcsoft.com.cn/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_47",
+                              "company":  "UCloud",
+                              "url":  "https://www.ucloud.cn/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_48",
+                              "company":  "七牛云",
+                              "url":  "https://www.qiniu.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_49",
+                              "company":  "青云科技",
+                              "url":  "https://www.qingcloud.com/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          },
+                          {
+                              "id":  "company_50",
+                              "company":  "泛微网络",
+                              "url":  "https://www.weaver.com.cn/",
+                              "company_type":  "",
+                              "company_scale":  "medium",
+                              "job_type":  "",
+                              "progress":  "not_applied"
+                          }
+                      ],
+    "editor_mode":  "companies"
 }

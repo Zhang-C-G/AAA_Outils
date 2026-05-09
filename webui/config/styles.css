@@ -1441,6 +1441,19 @@ label span { color: #d2d2d2; font-size: 14px; }
 .resume-subview.hidden {
   display: none;
 }
+.resume-company-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(120px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+}
+.resume-company-filters label {
+  margin: 0;
+}
+.resume-company-filters .mini-actions {
+  margin-bottom: 0;
+  align-items: end;
+}
 .resume-table-wrap {
   align-self: start;
 }
@@ -1458,6 +1471,63 @@ label span { color: #d2d2d2; font-size: 14px; }
 .resume-company-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;
+}
+.resume-company-select-cell {
+  width: 68px;
+  text-align: center;
+  vertical-align: top;
+}
+.resume-company-select-cell input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-top: 12px;
+}
+.resume-company-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #2f2f2f;
+  border-radius: 10px;
+  background: #141414;
+  color: #f2f2f2;
+}
+.resume-company-select:focus {
+  outline: none;
+  border-color: #ffffff;
+}
+.resume-company-empty {
+  text-align: center;
+  color: #a7a7a7;
+  padding: 18px 12px;
+}
+.resume-company-url-cell {
+  display: grid;
+  gap: 8px;
+}
+.resume-company-url-link {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #2f2f2f;
+  border-radius: 10px;
+  background: rgba(255,255,255,.03);
+  color: #f3f3f3;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  word-break: break-all;
+  line-height: 1.45;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.resume-company-url-link:hover {
+  transform: translateY(-1px);
+  border-color: #f1f1f1;
+  background: rgba(255,255,255,.06);
+}
+.resume-company-url-link.disabled {
+  color: #8f8f8f;
+  text-decoration: none;
+  cursor: default;
+  pointer-events: none;
 }
 .resume-table-wrap textarea {
   min-height: 72px;
@@ -1607,6 +1677,7 @@ label span { color: #d2d2d2; font-size: 14px; }
   .notes-extract-row { grid-template-columns: 1fr; align-items: stretch; }
   .notes-extract-row .mini-actions { justify-content: flex-start; }
   .notes-display-layout { grid-template-columns: 1fr; }
+  .resume-company-filters { grid-template-columns: 1fr; }
   .capture-grid { grid-template-columns: 1fr; }
   .assistant-grid { grid-template-columns: 1fr; }
   .capture-status { grid-template-columns: 1fr; }

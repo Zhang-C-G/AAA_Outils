@@ -1,6 +1,6 @@
 # 改动计数与 Git 检查点规则
 
-最近同步：`2026-04-28`
+最近同步：`2026-05-09`
 状态：`active`
 
 ## 1. 目的
@@ -30,15 +30,14 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-04-28-post-notes-sidebar-checkpoint`
+- 当前轮次：`2026-05-09-post-resume-module-library-checkpoint`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`3`
-- 下一次强制 git 阈值：`已达到本轮 3/3，应执行 checkpoint commit 并 push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: compact notes sidebar`
+- 当前连续改动次数：`0`
+- 下一次强制 git 阈值：`下一次达到 3/3 时，必须执行 checkpoint commit 并 push 到 origin/main`
+- 上一个 git 检查点：`checkpoint: sync resume table and module library`
 - 当前计数说明：
-  - 第1次：将 B 模块目录区收口为纯主体区，只保留“结构目录 / 复制目录 / 目录罗列”
-  - 第2次：将 B 模块提取区改为手动输入“从 / 到”的真实提取工具，并支持跨笔记集中编辑与自动回写
-  - 第3次：将提取结果并回主内容框显示和编辑，不再另开结果框
+  - 上一轮 3 次改动已完成 checkpoint
+  - 本轮从 `0` 开始重新计数
 
 ## 5. 维护方式
 

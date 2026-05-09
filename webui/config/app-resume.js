@@ -1,9 +1,49 @@
 import { state, byId, api, toast } from './app-common.js';
 
 let resumeAutoSaveTimer = 0;
+
 const RESUME_EDITOR_MODES = {
   PROFILE: 'profile',
   COMPANIES: 'companies'
+};
+
+const COMPANY_TYPE_OPTIONS = [
+  { value: '', label: '未选择' },
+  { value: 'state_owned', label: '国企' },
+  { value: 'private', label: '民企' },
+  { value: 'foreign', label: '外企' }
+];
+
+const COMPANY_SCALE_OPTIONS = [
+  { value: '', label: '未选择' },
+  { value: 'large', label: '大' },
+  { value: 'medium', label: '中' },
+  { value: 'small', label: '小' }
+];
+
+const COMPANY_JOB_TYPE_OPTIONS = [
+  { value: '', label: '未选择' },
+  { value: 'daily_intern', label: '日常实习' },
+  { value: 'conversion_intern', label: '转正实习' },
+  { value: 'full_time', label: '正式工作' }
+];
+
+const COMPANY_PROGRESS_OPTIONS = [
+  { value: 'not_applied', label: '未投递' },
+  { value: 'applied', label: '已投递' },
+  { value: 'rejected', label: '已挂' },
+  { value: 'first_interview', label: '已经一面' },
+  { value: 'second_interview', label: '已经二面' },
+  { value: 'offer', label: 'OFFER' },
+  { value: 'paused', label: '暂不投递' }
+];
+
+const resumeCompanyFilters = {
+  keyword: '',
+  company_type: '',
+  company_scale: '',
+  job_type: '',
+  progress: ''
 };
 
 function normalizeRow(row, index = 0) {
@@ -26,11 +66,18 @@ function normalizeSection(section, index = 0) {
 }
 
 function normalizeCompanyLink(row, index = 0) {
+  const type = String(row?.company_type || '').trim().toLowerCase();
+  const scale = String(row?.company_scale || '').trim().toLowerCase();
+  const jobType = String(row?.job_type || '').trim().toLowerCase();
+  const progress = String(row?.progress || 'not_applied').trim().toLowerCase();
   return {
     id: String(row?.id || `company_${index + 1}`).trim() || `company_${index + 1}`,
     company: String(row?.company || '').trim(),
     url: String(row?.url || '').trim(),
-    enabled: Number(row?.enabled ?? 1) === 0 ? 0 : 1
+    company_type: COMPANY_TYPE_OPTIONS.some((item) => item.value === type) ? type : '',
+    company_scale: COMPANY_SCALE_OPTIONS.some((item) => item.value === scale) ? scale : '',
+    job_type: COMPANY_JOB_TYPE_OPTIONS.some((item) => item.value === jobType) ? jobType : '',
+    progress: COMPANY_PROGRESS_OPTIONS.some((item) => item.value === progress) ? progress : 'not_applied'
   };
 }
 
@@ -84,6 +131,18 @@ function autoResizeResumeTextarea(el) {
   if (!el) return;
   el.style.height = 'auto';
   el.style.height = `${Math.max(el.scrollHeight, 72)}px`;
+}
+
+function normalizeExternalUrl(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function renderOptionList(options, selectedValue) {
+  return options
+    .map((item) => `<option value="${escAttr(item.value)}" ${item.value === selectedValue ? 'selected' : ''}>${escText(item.label)}</option>`)
+    .join('');
 }
 
 function syncRowFromDom(sectionId, rowIndex, tr) {
@@ -155,21 +214,131 @@ function syncCompanyRowFromDom(index, tr) {
     ...state.resume.company_links[index],
     company: tr.querySelector('[data-k="company"]').value,
     url: tr.querySelector('[data-k="url"]').value,
-    enabled: tr.querySelector('[data-k="enabled"]').checked ? 1 : 0
+    company_type: tr.querySelector('[data-k="company_type"]').value,
+    company_scale: tr.querySelector('[data-k="company_scale"]').value,
+    job_type: tr.querySelector('[data-k="job_type"]').value,
+    progress: tr.querySelector('[data-k="progress"]').value
   }, index);
+}
+
+function syncCompanyUrlPreview(tr, rawUrl) {
+  const linkEl = tr.querySelector('[data-k="url-preview"]');
+  if (!linkEl) return;
+  const finalUrl = normalizeExternalUrl(rawUrl);
+  if (!finalUrl) {
+    linkEl.textContent = '暂无链接';
+    linkEl.removeAttribute('href');
+    linkEl.setAttribute('aria-disabled', 'true');
+    linkEl.classList.add('disabled');
+    return;
+  }
+  linkEl.textContent = finalUrl;
+  linkEl.href = finalUrl;
+  linkEl.removeAttribute('aria-disabled');
+  linkEl.classList.remove('disabled');
+}
+
+function getSelectedCompanyRows() {
+  return Array.from(document.querySelectorAll('#resumeCompanyRows [data-k="selected"]:checked'))
+    .map((el) => Number(el.getAttribute('data-index')))
+    .filter((index) => Number.isInteger(index) && index >= 0 && index < (state.resume.company_links || []).length);
+}
+
+function syncCompanyFilterBar() {
+  const keywordEl = byId('resumeCompanyFilterKeyword');
+  const typeEl = byId('resumeCompanyFilterType');
+  const scaleEl = byId('resumeCompanyFilterScale');
+  const jobTypeEl = byId('resumeCompanyFilterJobType');
+  const progressEl = byId('resumeCompanyFilterProgress');
+  if (keywordEl) keywordEl.value = resumeCompanyFilters.keyword;
+  if (typeEl) typeEl.value = resumeCompanyFilters.company_type;
+  if (scaleEl) scaleEl.value = resumeCompanyFilters.company_scale;
+  if (jobTypeEl) jobTypeEl.value = resumeCompanyFilters.job_type;
+  if (progressEl) progressEl.value = resumeCompanyFilters.progress;
+}
+
+function renderCompanyFilterOptions() {
+  const typeEl = byId('resumeCompanyFilterType');
+  const scaleEl = byId('resumeCompanyFilterScale');
+  const jobTypeEl = byId('resumeCompanyFilterJobType');
+  const progressEl = byId('resumeCompanyFilterProgress');
+  if (typeEl && !typeEl.dataset.ready) {
+    typeEl.innerHTML = renderOptionList([{ value: '', label: '全部类型' }, ...COMPANY_TYPE_OPTIONS.slice(1)], resumeCompanyFilters.company_type);
+    typeEl.dataset.ready = '1';
+  }
+  if (scaleEl && !scaleEl.dataset.ready) {
+    scaleEl.innerHTML = renderOptionList([{ value: '', label: '全部规模' }, ...COMPANY_SCALE_OPTIONS.slice(1)], resumeCompanyFilters.company_scale);
+    scaleEl.dataset.ready = '1';
+  }
+  if (jobTypeEl && !jobTypeEl.dataset.ready) {
+    jobTypeEl.innerHTML = renderOptionList([{ value: '', label: '全部岗位类型' }, ...COMPANY_JOB_TYPE_OPTIONS.slice(1)], resumeCompanyFilters.job_type);
+    jobTypeEl.dataset.ready = '1';
+  }
+  if (progressEl && !progressEl.dataset.ready) {
+    progressEl.innerHTML = renderOptionList([{ value: '', label: '全部进度' }, ...COMPANY_PROGRESS_OPTIONS], resumeCompanyFilters.progress);
+    progressEl.dataset.ready = '1';
+  }
+}
+
+function getFilteredCompanyLinks() {
+  const keyword = String(resumeCompanyFilters.keyword || '').trim().toLowerCase();
+  return (state.resume.company_links || [])
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => {
+      if (resumeCompanyFilters.company_type && row.company_type !== resumeCompanyFilters.company_type) return false;
+      if (resumeCompanyFilters.company_scale && row.company_scale !== resumeCompanyFilters.company_scale) return false;
+      if (resumeCompanyFilters.job_type && row.job_type !== resumeCompanyFilters.job_type) return false;
+      if (resumeCompanyFilters.progress && row.progress !== resumeCompanyFilters.progress) return false;
+      if (!keyword) return true;
+      const haystack = [row.company, row.url].join(' ').toLowerCase();
+      return haystack.includes(keyword);
+    });
 }
 
 function renderCompanyRows() {
   const body = byId('resumeCompanyRows');
   if (!body) return;
   body.innerHTML = '';
+  renderCompanyFilterOptions();
+  syncCompanyFilterBar();
 
-  for (const [index, row] of (state.resume.company_links || []).entries()) {
+  const visibleRows = getFilteredCompanyLinks();
+  if (!visibleRows.length) {
+    body.innerHTML = '<tr><td colspan="8" class="resume-company-empty">当前筛选条件下没有公司记录</td></tr>';
+    return;
+  }
+
+  for (const { index, row } of visibleRows) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td class="resume-company-select-cell"><input type="checkbox" data-k="selected" data-index="${index}" aria-label="选择公司 ${escAttr(row.company || `公司${index + 1}`)}" /></td>
       <td><textarea data-k="company" placeholder="公司名称">${escText(row.company)}</textarea></td>
-      <td><textarea data-k="url" placeholder="公司投递或招聘链接">${escText(row.url)}</textarea></td>
-      <td><label class="resume-company-toggle"><input type="checkbox" data-k="enabled" ${row.enabled ? 'checked' : ''} /><span>可填充</span></label></td>
+      <td>
+        <select data-k="company_type" class="resume-company-select">
+          ${renderOptionList(COMPANY_TYPE_OPTIONS, row.company_type)}
+        </select>
+      </td>
+      <td>
+        <select data-k="company_scale" class="resume-company-select">
+          ${renderOptionList(COMPANY_SCALE_OPTIONS, row.company_scale)}
+        </select>
+      </td>
+      <td>
+        <select data-k="job_type" class="resume-company-select">
+          ${renderOptionList(COMPANY_JOB_TYPE_OPTIONS, row.job_type)}
+        </select>
+      </td>
+      <td>
+        <select data-k="progress" class="resume-company-select">
+          ${renderOptionList(COMPANY_PROGRESS_OPTIONS, row.progress)}
+        </select>
+      </td>
+      <td>
+        <div class="resume-company-url-cell">
+          <a data-k="url-preview" class="resume-company-url-link ${row.url ? '' : 'disabled'}" ${row.url ? `href="${escAttr(normalizeExternalUrl(row.url))}" target="_blank" rel="noopener noreferrer"` : 'aria-disabled="true"'}>${escText(row.url ? normalizeExternalUrl(row.url) : '暂无链接')}</a>
+          <textarea data-k="url" placeholder="公司投递或招聘链接">${escText(row.url)}</textarea>
+        </div>
+      </td>
       <td><button class="btn ghost" type="button" data-k="delete">删除</button></td>
     `;
 
@@ -177,13 +346,15 @@ function renderCompanyRows() {
       autoResizeResumeTextarea(el);
     });
 
-    tr.querySelectorAll('input, textarea').forEach((el) => {
-      const evt = el.type === 'checkbox' ? 'change' : 'input';
-      el.addEventListener(evt, () => {
+    tr.querySelectorAll('textarea, select').forEach((el) => {
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
         if (el.tagName === 'TEXTAREA') {
           autoResizeResumeTextarea(el);
         }
         syncCompanyRowFromDom(index, tr);
+        if (el.getAttribute('data-k') === 'url') {
+          syncCompanyUrlPreview(tr, el.value);
+        }
         scheduleAutoSave();
       });
     });
@@ -228,17 +399,87 @@ function renderResumeEditor() {
 
   const title = byId('resumeSectionTitle');
   if (!section) {
-    title.textContent = '简历自动填写';
+    if (title) title.textContent = '简历自动填写';
     byId('resumeRows').innerHTML = '';
     renderCompanyRows();
     renderResumeSubview();
     return;
   }
 
-  title.textContent = section.title;
+  if (title) title.textContent = section.title;
   renderRows(section);
   renderCompanyRows();
   renderResumeSubview();
+}
+
+function initCompanyFilterHandlers() {
+  const bindings = [
+    ['resumeCompanyFilterKeyword', 'keyword', 'input'],
+    ['resumeCompanyFilterType', 'company_type', 'change'],
+    ['resumeCompanyFilterScale', 'company_scale', 'change'],
+    ['resumeCompanyFilterJobType', 'job_type', 'change'],
+    ['resumeCompanyFilterProgress', 'progress', 'change']
+  ];
+
+  bindings.forEach(([id, key, evt]) => {
+    const el = byId(id);
+    if (!el || el.dataset.bound === '1') return;
+    el.dataset.bound = '1';
+    el.addEventListener(evt, () => {
+      resumeCompanyFilters[key] = String(el.value || '');
+      renderCompanyRows();
+    });
+  });
+
+  const resetBtn = byId('resumeCompanyFilterResetBtn');
+  if (resetBtn && resetBtn.dataset.bound !== '1') {
+    resetBtn.dataset.bound = '1';
+    resetBtn.onclick = () => {
+      resumeCompanyFilters.keyword = '';
+      resumeCompanyFilters.company_type = '';
+      resumeCompanyFilters.company_scale = '';
+      resumeCompanyFilters.job_type = '';
+      resumeCompanyFilters.progress = '';
+      renderCompanyRows();
+    };
+  }
+}
+
+function openSelectedCompanyLinks() {
+  ensureCompanyLinks();
+  const indexes = getSelectedCompanyRows();
+  if (!indexes.length) {
+    toast('请先选择要投递的公司');
+    return;
+  }
+
+  const selectedRows = indexes
+    .map((index) => state.resume.company_links[index])
+    .filter(Boolean);
+  const validRows = selectedRows.filter((row) => String(row.url || '').trim());
+  if (!validRows.length) {
+    toast('选中的公司里还没有可用链接');
+    return;
+  }
+
+  validRows.forEach((row) => {
+    const finalUrl = normalizeExternalUrl(row.url);
+    window.open(finalUrl, '_blank', 'noopener');
+  });
+
+  let hasChanged = false;
+  selectedRows.forEach((row) => {
+    if (row.progress !== 'applied') {
+      row.progress = 'applied';
+      hasChanged = true;
+    }
+  });
+
+  renderCompanyRows();
+  if (hasChanged) {
+    scheduleAutoSave();
+  }
+  toast(`已打开 ${validRows.length} 个投递链接`);
 }
 
 export function applyResumeState(payload) {
@@ -251,17 +492,24 @@ export function applyResumeState(payload) {
     sections: Array.isArray(profile.sections) ? profile.sections.map((section, index) => normalizeSection(section, index)) : []
   };
   state.resume.flat_map = incoming.flat_map || {};
-  state.resume.company_links = Array.isArray(state.resume.company_links) ? state.resume.company_links : [];
-  state.resume.editor_mode = String(state.resume.editor_mode || RESUME_EDITOR_MODES.PROFILE);
+  state.resume.company_links = Array.isArray(incoming.company_links)
+    ? incoming.company_links.map((row, index) => normalizeCompanyLink(row, index))
+    : (Array.isArray(state.resume.company_links) ? state.resume.company_links.map((row, index) => normalizeCompanyLink(row, index)) : []);
+  state.resume.editor_mode = String(incoming.editor_mode || state.resume.editor_mode || RESUME_EDITOR_MODES.PROFILE);
   ensureSelectedSection();
   renderResumeEditor();
 }
 
 export async function saveResumeProfile(options = {}) {
   const silent = !!options.silent;
+  ensureCompanyLinks();
   const payload = await api('/api/resume/save', {
     method: 'POST',
-    body: JSON.stringify({ profile: state.resume.profile })
+    body: JSON.stringify({
+      profile: state.resume.profile,
+      company_links: state.resume.company_links,
+      editor_mode: state.resume.editor_mode
+    })
   });
   if (!payload.ok) {
     throw new Error(payload.error || 'save resume failed');
@@ -273,6 +521,7 @@ export async function saveResumeProfile(options = {}) {
 }
 
 export function initResumeHandlers() {
+  initCompanyFilterHandlers();
   const toggleCompanyBtn = byId('resumeToggleCompanyViewBtn');
   if (toggleCompanyBtn) {
     toggleCompanyBtn.onclick = () => {
@@ -302,6 +551,13 @@ export function initResumeHandlers() {
       state.resume.company_links.push(normalizeCompanyLink({}, state.resume.company_links.length));
       renderResumeEditor();
       scheduleAutoSave();
+    };
+  }
+
+  const applyBtn = byId('resumeApplySelectedCompaniesBtn');
+  if (applyBtn) {
+    applyBtn.onclick = () => {
+      openSelectedCompanyLinks();
     };
   }
 }

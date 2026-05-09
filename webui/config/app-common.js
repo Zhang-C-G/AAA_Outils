@@ -65,7 +65,9 @@
   resume: {
     profile: { version: 1, updated_at: '', sections: [] },
     flat_map: {},
-    selectedSectionId: ''
+    selectedSectionId: '',
+    editor_mode: 'profile',
+    company_links: []
   }
 };
 
