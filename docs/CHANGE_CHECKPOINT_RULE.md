@@ -32,13 +32,13 @@
 
 - 当前轮次：`2026-05-09-post-resume-filter-checkpoint`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
-- 下一次强制 git 阈值：`下一次达到 3/3 时，必须执行 checkpoint commit 并 push 到 origin/main`
+- 当前连续改动次数：`3`
+- 下一次强制 git 阈值：`当前已到 3/3，必须立即执行 checkpoint commit 并 push 到 origin/main`
 - 上一个 git 检查点：`checkpoint: refine resume table filtering`
 - 当前计数说明：
-  - 上一轮 3 次改动已完成 checkpoint
-  - 远端 push 已成功完成
-  - 本轮从 `0` 开始重新计数
+  - 第1次：F 模块公司投递表下拉框恢复原色，颜色区分改由左侧色标承载
+  - 第2次：F 模块公司投递表补充分页，分页状态接入保存与草稿恢复，公司名称输入框改为字段贴合宽度，并沉淀表格偏好与模版
+  - 第3次：F 模块公司投递表顶部筛选条支持多项同时展开，多个筛按钮允许同时绿色激活
 
 ## 5. 维护方式
 

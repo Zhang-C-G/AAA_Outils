@@ -139,3 +139,44 @@
   - `node --experimental-default-type=module --check webui/config/app-resume.js`
   - `rg -n "resumeCompanyFilterBar|resume-filter-popover|resumeCompanyFilterCompanyPanel|resume-company-filter-bar|resume-filter-dot.active" webui/config/app-resume.js webui/config/index.html webui/config/styles.css`
 - 测试结果：`已通过`
+
+### 2026-05-09 / 颜色保留为侧边色标，下拉框恢复原色
+- 改动内容：
+  - 保留不同选项值的颜色区分
+  - 颜色不再直接作用到下拉框本体
+  - 下拉框恢复原本黑白风，颜色信息改为左侧小色标承载
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resume-company-select-wrap|resume-company-select-indicator|syncCompanySelectTheme" webui/config/app-resume.js webui/config/styles.css`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 公司投递表补分页，并修正公司名称输入框宽度
+- 改动内容：
+  - F 模块公司投递表增加底部分页区
+  - 分页支持 `上一页 / 下一页 / 每页条数`
+  - 当前页与每页条数接入保存链路与前端草稿恢复链路
+  - 公司名称输入框不再横向撑满整格，改为按字段自身宽度贴合
+  - 将本轮表格规则沉淀到“表格与筛选器偏好”，并建立第一个统一表格模版
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resumeCompanyPagination|company_table_view|resume-company-name-input|TABLE_STAGE1_TEMPLATE" webui/config/app-resume.js webui/config/index.html webui/config/styles.css webui/config/app-main.js docs/templates/TABLE_STAGE1_TEMPLATE.md`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 顶部筛选条支持多个筛同时绿色
+- 改动内容：
+  - F 模块公司投递表的顶部筛选条从“单开一项”改为“可同时展开多项”
+  - 多个 `筛` 按钮在同时使用时，允许同时保持绿色激活态
+  - 顶部筛选区改为承载多个筛选块，而不是一次只显示一个
+  - 表头 `选择` 改为 `全选`，点击后可把当前表中可见公司一键全部打勾
+  - 顶部筛选条增加结果统计，筛选时直接显示当前命中的公司总数
+  - 删除 `收起筛选` 按钮；筛选面板的展开与取消仅通过对应列头圆点控制
+  - 公司名称与链接地址输入框改为默认单行显示，只有手动回车后才扩展为多行
+  - 顶部筛选区整体压缩为更紧凑的工具条样式，减少高度与留白占用
+  - 修正公司名称与链接地址输入框的视觉高度，避免被表格通用 `textarea` 样式继续撑成多行外观
+  - 删除筛选卡片里的重复字段名，只保留一层标题，避免“公司名称筛选 / 公司名称”双重命名
+  - 收窄公司名称列宽度，减少表格横向占用
+  - 删除表头 `全选` 文字，仅保留勾选框本体
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resumeCompanySelectAll|aria-label=\\\"全选当前表格公司\\\"" webui/config/index.html`
+- 测试结果：`已通过`

@@ -1443,10 +1443,10 @@ label span { color: #d2d2d2; font-size: 14px; }
 }
 .resume-company-filter-bar {
   display: grid;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid #2f2f2f;
-  border-radius: 12px;
+  border-radius: 10px;
   background:
     repeating-linear-gradient(
       -45deg,
@@ -1468,15 +1468,77 @@ label span { color: #d2d2d2; font-size: 14px; }
 }
 .resume-company-filter-bar-head strong {
   color: #f1f1f1;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.35;
 }
 .resume-company-filter-bar-body {
   display: grid;
-  grid-template-columns: minmax(220px, 360px);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 260px));
+  gap: 8px;
+}
+.resume-company-filter-card {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(255,255,255,.02);
+}
+.resume-company-filter-card-title {
+  color: #f1f1f1;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.resume-company-filter-card label {
+  gap: 4px;
+}
+.resume-company-filter-card label span {
+  color: #bdbdbd;
+  font-size: 12px;
+}
+.resume-company-filter-card input[type="text"],
+.resume-company-filter-card select {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 .resume-table-wrap {
   align-self: start;
+}
+.resume-company-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #2f2f2f;
+  border-radius: 12px;
+  background: rgba(255,255,255,.02);
+}
+.resume-company-pagination.hidden {
+  display: none;
+}
+.resume-company-pagination-meta {
+  color: #d4d4d4;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.resume-company-pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.resume-company-page-size-field {
+  display: inline-grid;
+  grid-template-columns: auto 78px;
+  align-items: center;
+  gap: 8px;
+}
+.resume-company-page-size-field span {
+  color: #cfcfcf;
+  font-size: 13px;
 }
 .resume-column-filter {
   display: inline-flex;
@@ -1527,10 +1589,41 @@ label span { color: #d2d2d2; font-size: 14px; }
   text-align: center;
   vertical-align: top;
 }
+.resume-company-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #dcdcdc;
+  font-size: 13px;
+  line-height: 1;
+}
+.resume-company-select-all input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
 .resume-company-select-cell input[type="checkbox"] {
   width: 16px;
   height: 16px;
   margin-top: 12px;
+}
+.resume-company-name-cell {
+  width: 160px;
+}
+.resume-company-name-input {
+  width: min(160px, 100%);
+  min-width: 0;
+  justify-self: start;
+}
+.resume-company-inline-textarea {
+  min-height: 44px;
+  height: 44px;
+  max-height: 44px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  overflow-y: hidden;
+  resize: vertical;
 }
 .resume-company-select {
   width: 100%;
@@ -1546,89 +1639,69 @@ label span { color: #d2d2d2; font-size: 14px; }
   outline: none;
   border-color: #ffffff;
 }
-.resume-company-select[data-value="empty"] {
-  color: #b5b5b5;
-  background: #141414;
+.resume-company-select-wrap {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
 }
-.resume-company-select[data-role="company_type"][data-value="state_owned"] {
-  color: #8fd0ff;
-  background: rgba(63, 121, 176, .18);
-  border-color: rgba(95, 168, 255, .45);
+.resume-company-select-indicator {
+  width: 8px;
+  min-width: 8px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
 }
-.resume-company-select[data-role="company_type"][data-value="private"] {
-  color: #9be28f;
-  background: rgba(61, 128, 74, .18);
-  border-color: rgba(105, 194, 109, .45);
+.resume-company-select-indicator[data-value="empty"] {
+  background: rgba(255,255,255,.16);
 }
-.resume-company-select[data-role="company_type"][data-value="foreign"] {
-  color: #f2bf7d;
-  background: rgba(160, 107, 38, .18);
-  border-color: rgba(242, 191, 125, .42);
+.resume-company-select-indicator[data-role="company_type"][data-value="state_owned"] {
+  background: #5fa8ff;
 }
-.resume-company-select[data-role="company_scale"][data-value="large"] {
-  color: #ffcf86;
-  background: rgba(156, 105, 31, .18);
-  border-color: rgba(255, 207, 134, .42);
+.resume-company-select-indicator[data-role="company_type"][data-value="private"] {
+  background: #69c26d;
 }
-.resume-company-select[data-role="company_scale"][data-value="medium"] {
-  color: #8fd0ff;
-  background: rgba(52, 98, 140, .18);
-  border-color: rgba(95, 168, 255, .42);
+.resume-company-select-indicator[data-role="company_type"][data-value="foreign"] {
+  background: #f2bf7d;
 }
-.resume-company-select[data-role="company_scale"][data-value="small"] {
-  color: #bcbcbc;
-  background: rgba(110, 110, 110, .16);
-  border-color: rgba(188, 188, 188, .28);
+.resume-company-select-indicator[data-role="company_scale"][data-value="large"] {
+  background: #ffcf86;
 }
-.resume-company-select[data-role="job_type"][data-value="daily_intern"] {
-  color: #8fd0ff;
-  background: rgba(52, 98, 140, .18);
-  border-color: rgba(95, 168, 255, .42);
+.resume-company-select-indicator[data-role="company_scale"][data-value="medium"] {
+  background: #5fa8ff;
 }
-.resume-company-select[data-role="job_type"][data-value="conversion_intern"] {
-  color: #cba7ff;
-  background: rgba(100, 66, 146, .18);
-  border-color: rgba(203, 167, 255, .40);
+.resume-company-select-indicator[data-role="company_scale"][data-value="small"] {
+  background: #a8a8a8;
 }
-.resume-company-select[data-role="job_type"][data-value="full_time"] {
-  color: #9be28f;
-  background: rgba(61, 128, 74, .18);
-  border-color: rgba(105, 194, 109, .45);
+.resume-company-select-indicator[data-role="job_type"][data-value="daily_intern"] {
+  background: #5fa8ff;
 }
-.resume-company-select[data-role="progress"][data-value="not_applied"] {
-  color: #d0d0d0;
-  background: rgba(90, 90, 90, .18);
-  border-color: rgba(160, 160, 160, .30);
+.resume-company-select-indicator[data-role="job_type"][data-value="conversion_intern"] {
+  background: #cba7ff;
 }
-.resume-company-select[data-role="progress"][data-value="applied"] {
-  color: #8fd0ff;
-  background: rgba(52, 98, 140, .18);
-  border-color: rgba(95, 168, 255, .42);
+.resume-company-select-indicator[data-role="job_type"][data-value="full_time"] {
+  background: #69c26d;
 }
-.resume-company-select[data-role="progress"][data-value="rejected"] {
-  color: #ff9f9f;
-  background: rgba(133, 48, 48, .20);
-  border-color: rgba(255, 146, 146, .42);
+.resume-company-select-indicator[data-role="progress"][data-value="not_applied"] {
+  background: #a8a8a8;
 }
-.resume-company-select[data-role="progress"][data-value="first_interview"] {
-  color: #f2bf7d;
-  background: rgba(160, 107, 38, .18);
-  border-color: rgba(242, 191, 125, .42);
+.resume-company-select-indicator[data-role="progress"][data-value="applied"] {
+  background: #5fa8ff;
 }
-.resume-company-select[data-role="progress"][data-value="second_interview"] {
-  color: #cba7ff;
-  background: rgba(100, 66, 146, .18);
-  border-color: rgba(203, 167, 255, .40);
+.resume-company-select-indicator[data-role="progress"][data-value="rejected"] {
+  background: #ff9292;
 }
-.resume-company-select[data-role="progress"][data-value="offer"] {
-  color: #9be28f;
-  background: rgba(61, 128, 74, .18);
-  border-color: rgba(105, 194, 109, .45);
+.resume-company-select-indicator[data-role="progress"][data-value="first_interview"] {
+  background: #f2bf7d;
 }
-.resume-company-select[data-role="progress"][data-value="paused"] {
-  color: #ffd98a;
-  background: rgba(146, 116, 34, .18);
-  border-color: rgba(255, 217, 138, .40);
+.resume-company-select-indicator[data-role="progress"][data-value="second_interview"] {
+  background: #cba7ff;
+}
+.resume-company-select-indicator[data-role="progress"][data-value="offer"] {
+  background: #69c26d;
+}
+.resume-company-select-indicator[data-role="progress"][data-value="paused"] {
+  background: #ffd98a;
 }
 .resume-company-empty {
   text-align: center;
@@ -1674,6 +1747,26 @@ label span { color: #d2d2d2; font-size: 14px; }
   padding-top: 10px;
   padding-bottom: 10px;
   vertical-align: top;
+}
+.resume-table-wrap .resume-company-inline-textarea {
+  min-height: 44px;
+  height: 44px;
+  max-height: 44px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: pre;
+}
+.resume-company-name-cell textarea {
+  display: block;
+}
+@media (max-width: 960px) {
+  .resume-company-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .resume-company-pagination-controls {
+    justify-content: flex-start;
+  }
 }
 .toast-host {
   position: fixed;

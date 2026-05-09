@@ -67,7 +67,11 @@
     flat_map: {},
     selectedSectionId: '',
     editor_mode: 'profile',
-    company_links: []
+    company_links: [],
+    company_table_view: {
+      page: 1,
+      page_size: 10
+    }
   }
 };
 

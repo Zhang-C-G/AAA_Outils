@@ -11,10 +11,11 @@
 ## 2. 当前轮次
 
 - 轮次标识：`2026-05-09-post-resume-filter-checkpoint`
-- 当前连续改动次数：`0`
+- 当前连续改动次数：`3`
 - 本轮目标：
-  - 已完成上一轮 checkpoint，当前计数已清零
-  - 下一轮改动开始后，再继续记录新的 1-3 次改动窗口
+  - 保留 F 模块公司投递表的颜色区分
+  - 让下拉框恢复原本黑白风
+  - 将颜色信息改为侧边色标承载
 - 上一个 git 检查点：`checkpoint: refine resume table filtering`
 - 历史追溯方式：`git log` / 远端提交记录
 
@@ -76,4 +77,72 @@
 
 ## 4. 当前 1-3 次改动窗口
 
-当前为空，等待下一轮改动开始记录。
+### 第1次改动
+- 时间：`2026-05-09`
+- 内容：
+  - 保留 F 模块不同选择值的颜色区分
+  - 下拉框本体恢复原色
+  - 颜色改由左侧小色标承载
+- 影响文件：
+  - `webui/config/app-resume.js`
+  - `webui/config/styles.css`
+  - `docs/modules/changelog/F_简历自动填写_修改过程.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resume-company-select-wrap|resume-company-select-indicator|syncCompanySelectTheme" webui/config/app-resume.js webui/config/styles.css`
+- 测试结果：`通过`
+- 是否触发 git：`否`
+
+### 第2次改动
+- 时间：`2026-05-09`
+- 内容：
+  - F 模块公司投递表补充分页
+  - 分页状态接入保存与草稿恢复
+  - 公司名称输入框改为字段贴合宽度
+  - 表格规则写入私人偏好，并建立第一个统一表格模版
+- 影响文件：
+  - `webui/config/app-common.js`
+  - `webui/config/app-main.js`
+  - `webui/config/app-resume.js`
+  - `webui/config/index.html`
+  - `webui/config/styles.css`
+  - `docs/extension/global_preferences/components/18_表格与筛选器偏好.md`
+  - `docs/templates/TABLE_STAGE1_TEMPLATE.md`
+  - `docs/modules/changelog/F_简历自动填写_修改过程.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resumeCompanyPagination|company_table_view|resume-company-name-input|TABLE_STAGE1_TEMPLATE" webui/config/app-resume.js webui/config/index.html webui/config/styles.css webui/config/app-main.js docs/templates/TABLE_STAGE1_TEMPLATE.md`
+- 测试结果：`通过`
+- 是否触发 git：`否`
+
+### 第3次改动
+- 时间：`2026-05-09`
+- 内容：
+  - F 模块公司投递表的顶部筛选条支持多项同时展开
+  - 多个 `筛` 按钮允许同时保持绿色激活态
+  - 顶部筛选区改为承载多个筛选块
+  - 表头 `选择` 改为 `全选`，点击后可一键勾选当前表中可见公司
+  - 顶部筛选条增加结果统计，筛选时直接显示当前命中的公司总数
+  - 删除 `收起筛选` 按钮；筛选面板的展开与取消仅通过对应列头圆点控制
+  - 公司名称与链接地址输入框改为默认单行显示，只有手动回车后才扩展为多行
+  - 顶部筛选区整体压缩为更紧凑的工具条样式，减少高度与留白占用
+  - 修正公司名称与链接地址输入框的视觉高度，避免被表格通用 `textarea` 样式继续撑成多行外观
+  - 删除筛选卡片里的重复字段名，只保留一层标题
+  - 收窄公司名称列宽度，减少表格横向占用
+  - 删除表头 `全选` 文字，仅保留勾选框本体
+- 影响文件：
+  - `webui/config/app-resume.js`
+  - `webui/config/styles.css`
+  - `docs/extension/global_preferences/components/18_表格与筛选器偏好.md`
+  - `docs/modules/changelog/F_简历自动填写_修改过程.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - `rg -n "resumeCompanySelectAll|aria-label=\\\"全选当前表格公司\\\"" webui/config/index.html`
+- 测试结果：`通过`
+- 是否触发 git：`是，本次达到 3/3，需执行 checkpoint commit 并 push`

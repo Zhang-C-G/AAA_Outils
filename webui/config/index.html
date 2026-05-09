@@ -341,7 +341,6 @@
             <div id="resumeCompanyFilterBar" class="resume-company-filter-bar hidden">
               <div class="resume-company-filter-bar-head">
                 <strong id="resumeCompanyFilterBarTitle">筛选</strong>
-                <button id="resumeCompanyFilterBarCloseBtn" class="btn ghost" type="button">收起筛选</button>
               </div>
               <div id="resumeCompanyFilterBarBody" class="resume-company-filter-bar-body"></div>
             </div>
@@ -349,7 +348,11 @@
               <table>
                 <thead>
                   <tr>
-                    <th>选择</th>
+                    <th>
+                      <label class="resume-company-select-all">
+                        <input id="resumeCompanySelectAll" type="checkbox" aria-label="全选当前表格公司" />
+                      </label>
+                    </th>
                     <th>
                       <div class="resume-column-filter">
                         <span>公司名称</span>
@@ -391,6 +394,21 @@
                 </thead>
                 <tbody id="resumeCompanyRows"></tbody>
               </table>
+            </div>
+            <div id="resumeCompanyPagination" class="resume-company-pagination hidden">
+              <div id="resumeCompanyPaginationMeta" class="resume-company-pagination-meta">第 1 页</div>
+              <div class="resume-company-pagination-controls">
+                <label class="resume-company-page-size-field">
+                  <span>每页</span>
+                  <select id="resumeCompanyPageSize">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                  </select>
+                </label>
+                <button id="resumeCompanyPrevPageBtn" class="btn ghost" type="button">上一页</button>
+                <button id="resumeCompanyNextPageBtn" class="btn ghost" type="button">下一页</button>
+              </div>
             </div>
 
             <div class="row-actions">
