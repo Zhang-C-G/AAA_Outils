@@ -150,6 +150,8 @@ GetAssistantDefaultSettings() {
         "api_key", "",
         "api_key_protected", "",
         "has_api_key", 0,
+        "voice_model", "local_windows_default",
+        "voice_model_enabled", 0,
         "model", "doubao-seed-2-0-lite-260215",
         "prompt", GetAssistantDefaultPrompt(),
         "active_template", "default_template",
@@ -168,9 +170,47 @@ GetAssistantDefaultSettings() {
     )
 }
 
+GetAssistantVoiceModelId(settings) {
+    voiceModel := ""
+    try voiceModel := Trim(settings["voice_model"])
+    if (voiceModel = "") {
+        voiceModel := "local_windows_default"
+    }
+    if (voiceModel != "local_windows_default" && voiceModel != "xunfei_websocket_asr") {
+        voiceModel := "local_windows_default"
+    }
+    return voiceModel
+}
+
+IsAssistantVoiceModelEnabled(settings) {
+    try {
+        return settings.Has("voice_model_enabled") && settings["voice_model_enabled"] ? true : false
+    }
+    return false
+}
+
+GetAssistantVoiceRuntimeProvider(settings) {
+    explicitProvider := ""
+    try explicitProvider := Trim(settings["voice_input_provider"])
+    if (explicitProvider = "mock_local") {
+        return "mock_local"
+    }
+    voiceModel := GetAssistantVoiceModelId(settings)
+    if !IsAssistantVoiceModelEnabled(settings) {
+        return "local_windows"
+    }
+    switch voiceModel {
+        case "local_windows_default":
+            return "local_windows"
+        case "xunfei_websocket_asr":
+            return "xunfei_websocket_asr"
+        default:
+            return "local_windows"
+    }
+}
+
 GetAssistantVoiceInputProvider(settings) {
-    provider := ""
-    try provider := Trim(settings["voice_input_provider"])
+    provider := GetAssistantVoiceRuntimeProvider(settings)
     if (provider = "") {
         provider := "local_windows"
     }
@@ -178,14 +218,25 @@ GetAssistantVoiceInputProvider(settings) {
 }
 
 GetAssistantVoiceProviderLabel(settings) {
-    provider := StrLower(GetAssistantVoiceInputProvider(settings))
-    switch provider {
-        case "local_windows":
-            return "本地语音识别"
-        case "mock_local":
-            return "本地模拟语音识别"
+    if !IsAssistantVoiceModelEnabled(settings) {
+        return "本地默认语音识别"
+    }
+    voiceModel := GetAssistantVoiceModelId(settings)
+    switch voiceModel {
+        case "local_windows_default":
+            return "本地默认语音识别"
+        case "xunfei_websocket_asr":
+            return "讯飞 WebSocket 语音识别"
         default:
-            return provider
+            provider := StrLower(GetAssistantVoiceInputProvider(settings))
+            switch provider {
+                case "local_windows":
+                    return "本地语音识别"
+                case "mock_local":
+                    return "本地模拟语音识别"
+                default:
+                    return provider
+            }
     }
 }
 
@@ -241,6 +292,12 @@ LoadAssistantSettings() {
                 legacyApiKey := value
             case "api_key_protected":
                 settings["api_key_protected"] := value
+            case "voice_model":
+                if (value != "") {
+                    settings["voice_model"] := value
+                }
+            case "voice_model_enabled":
+                settings["voice_model_enabled"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
             case "model":
                 if (value != "") {
                     settings["model"] := value
@@ -317,8 +374,11 @@ LoadAssistantSettings() {
     settings["enabled"] := 1
     settings["enhanced_capture_mode"] := settings.Has("enhanced_capture_mode") ? (settings["enhanced_capture_mode"] ? 1 : 0) : 0
     settings["disable_copy"] := settings.Has("disable_copy") ? (settings["disable_copy"] ? 1 : 0) : 1
+    settings["voice_model"] := GetAssistantVoiceModelId(settings)
+    settings["voice_model_enabled"] := settings.Has("voice_model_enabled") ? (settings["voice_model_enabled"] ? 1 : 0) : 0
     settings["voice_input_enabled"] := settings.Has("voice_input_enabled") ? (settings["voice_input_enabled"] ? 1 : 0) : 0
     settings["voice_input_device_id"] := settings.Has("voice_input_device_id") ? Trim(settings["voice_input_device_id"]) : ""
+    settings["voice_input_provider"] := GetAssistantVoiceInputProvider(settings)
     settings["rate_limit_per_hour"] := ClampAssistantRatePerHour(settings["rate_limit_per_hour"])
     EnsureAssistantTemplates(settings)
     return settings

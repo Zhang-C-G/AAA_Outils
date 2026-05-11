@@ -17,6 +17,19 @@
   - 链路测试完成后已纳入 incident / handoff 体系
 - 测试结果：`通过`
 
+### 2026-05-11 / 语音模型真实接入到自动保存与待命展示
+- 改动内容：
+  - 修复 E 模块中 `语音模型激活` 仅停留在前端界面、未真实写入后端配置与 AHK 运行态的问题
+  - 语音模型选择新增 `本地默认语音识别`，并作为默认候选接入完整保存链路
+  - 前端、PowerShell 配置服务、AHK 本地配置读取与写回统一新增 `voice_model`、`voice_model_enabled`
+  - F2 截图问答悬浮窗在待命状态下新增语音模型展示，格式改为 `状态：待命：问答=... | 语音=...`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-assistant.js`
+  - `node --experimental-default-type=module --check webui/config/app-common.js`
+  - PowerShell Parser 校验 `webui/config/server_state/assistant.ps1`
+  - `rg -n "voice_model|voice_model_enabled|local_windows_default|BuildAssistantOverlayIdleStatus|GetAssistantCurrentVoiceModelLabel" webui/config/app-assistant.js webui/config/server_state/assistant.ps1 src/storage/assistant.ahk src/storage/data_save.ahk src/storage/data_load.ahk src/assistant_overlay.ahk -S`
+- 测试结果：`通过`
+
 ### 2026-04-26 / 语音模型收敛为讯飞
 - 改动内容：
   - E 模块中的“语音模型选择”不再把豆包模型当作语音模型候选

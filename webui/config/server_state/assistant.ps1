@@ -82,6 +82,8 @@ function Get-AssistantDefaults {
     voice_model_api_key = ''
     voice_model_api_key_protected = ''
     has_voice_model_api_key = 0
+    voice_model = (Resolve-AssistantVoiceModel -Requested 'local_windows_default')
+    voice_model_enabled = 0
     model = (Resolve-AssistantModel -Requested 'doubao-seed-2-0-lite-260215')
     prompt = $prompt
     active_template = 'default_template'
@@ -119,6 +121,59 @@ function Clamp-AssistantRatePerHour {
   $v = 100
   [int]::TryParse([string]$Limit, [ref]$v) | Out-Null
   return [Math]::Min(10000, [Math]::Max(1, $v))
+}
+
+function Get-AssistantVoiceModelCatalog {
+  return @(
+    [ordered]@{
+      id = 'local_windows_default'
+      name = '本地默认语音识别'
+      provider = 'local_windows'
+      enabled = 1
+    },
+    [ordered]@{
+      id = 'xunfei_websocket_asr'
+      name = '讯飞 WebSocket 语音识别'
+      provider = 'xunfei_websocket_asr'
+      enabled = 1
+    }
+  )
+}
+
+function Resolve-AssistantVoiceModel {
+  param(
+    [string]$Requested,
+    [string]$Fallback = 'local_windows_default'
+  )
+  $catalog = Get-AssistantVoiceModelCatalog
+  $candidate = ([string]$Requested).Trim()
+  $fallback = ([string]$Fallback).Trim()
+  if ($candidate -ne '') {
+    foreach ($m in $catalog) {
+      if ([string](Get-Prop $m 'id' '') -eq $candidate) {
+        return $candidate
+      }
+    }
+  }
+  if ($fallback -ne '') {
+    foreach ($m in $catalog) {
+      if ([string](Get-Prop $m 'id' '') -eq $fallback) {
+        return $fallback
+      }
+    }
+  }
+  return [string](Get-Prop $catalog[0] 'id' 'local_windows_default')
+}
+
+function Get-AssistantVoiceProviderByModel {
+  param([string]$VoiceModel)
+  $resolved = Resolve-AssistantVoiceModel -Requested $VoiceModel -Fallback 'local_windows_default'
+  foreach ($m in (Get-AssistantVoiceModelCatalog)) {
+    if ([string](Get-Prop $m 'id' '') -eq $resolved) {
+      return [string](Get-Prop $m 'provider' 'local_windows')
+    }
+  }
+  return 'local_windows'
 }
 
 function Normalize-AssistantOverlayColor {
@@ -285,6 +340,9 @@ function Convert-ToAssistantSettings {
   $settings.voice_model_api_key = ''
   $settings.voice_model_api_key_protected = Resolve-AssistantVoiceModelProtectedKey -PayloadAssistant $PayloadAssistant -Fallback $Fallback
   $settings.has_voice_model_api_key = if ($settings.voice_model_api_key_protected -ne '') { 1 } else { 0 }
+  $requestedVoiceModel = [string](Get-Prop $PayloadAssistant 'voice_model' (Get-Prop $Fallback 'voice_model' 'local_windows_default'))
+  $settings.voice_model = Resolve-AssistantVoiceModel -Requested $requestedVoiceModel -Fallback ([string](Get-Prop $Fallback 'voice_model' 'local_windows_default'))
+  $settings.voice_model_enabled = if ([string](Get-Prop $PayloadAssistant 'voice_model_enabled' (Get-Prop $Fallback 'voice_model_enabled' 0)) -eq '0') { 0 } else { 1 }
 
   $requestedModel = [string](Get-Prop $PayloadAssistant 'model' (Get-Prop $Fallback 'model' 'doubao-seed-2-0-lite-260215'))
   $settings.model = Resolve-AssistantModel -Requested $requestedModel -Fallback ([string](Get-Prop $Fallback 'model' 'doubao-seed-2-0-lite-260215'))
@@ -351,6 +409,13 @@ function Get-AssistantSettings {
     }
     if ($sec.Contains('voice_model_api_key_protected')) {
       $settings.voice_model_api_key_protected = ([string]$sec['voice_model_api_key_protected']).Trim()
+    }
+    if ($sec.Contains('voice_model')) {
+      $tmp = ([string]$sec['voice_model']).Trim()
+      if ($tmp) { $settings.voice_model = (Resolve-AssistantVoiceModel -Requested $tmp -Fallback ([string]$settings.voice_model)) }
+    }
+    if ($sec.Contains('voice_model_enabled')) {
+      $settings.voice_model_enabled = if ([string]$sec['voice_model_enabled'] -eq '0') { 0 } else { 1 }
     }
     if ($sec.Contains('model')) {
       $tmp = ([string]$sec['model']).Trim()
@@ -421,6 +486,8 @@ function Get-AssistantSettings {
   $settings.has_api_key = if ([string]$settings.api_key_protected -ne '') { 1 } else { 0 }
   $settings.voice_model_api_key = ''
   $settings.has_voice_model_api_key = if ([string]$settings.voice_model_api_key_protected -ne '') { 1 } else { 0 }
+  $settings.voice_model = Resolve-AssistantVoiceModel -Requested ([string](Get-Prop $settings 'voice_model' '')) -Fallback 'local_windows_default'
+  $settings.voice_model_enabled = if ([string](Get-Prop $settings 'voice_model_enabled' 0) -eq '0') { 0 } else { 1 }
   $settings.model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' '')) -Fallback 'doubao-seed-2-0-lite-260215'
   $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
@@ -454,6 +521,7 @@ function Get-AssistantPublicSettings {
   $public['voice_model_api_key'] = ''
   $public['has_voice_model_api_key'] = if ([string](Get-Prop $Settings 'voice_model_api_key_protected' '') -ne '') { 1 } else { 0 }
   $public['model_options'] = Get-AssistantModelCatalog
+  $public['voice_model_options'] = Get-AssistantVoiceModelCatalog
   $public['capture_dir'] = [string]$CaptureDir
   $public['latest_capture'] = (Get-CaptureLatestPath)
   return $public
@@ -531,6 +599,8 @@ function Save-AssistantSettings {
   $ini['Assistant']['api_key_protected'] = [string]$settings.api_key_protected
   $ini['Assistant']['voice_model_api_key'] = ''
   $ini['Assistant']['voice_model_api_key_protected'] = [string]$settings.voice_model_api_key_protected
+  $ini['Assistant']['voice_model'] = [string]$settings.voice_model
+  $ini['Assistant']['voice_model_enabled'] = [string]$settings.voice_model_enabled
   $ini['Assistant']['model'] = [string]$settings.model
   $ini['Assistant']['active_template'] = [string]$settings.active_template
   $ini['Assistant']['prompt'] = ([string](Get-AssistantPromptByTemplate -Settings $settings) -replace '[\r\n]+', ' ')
@@ -542,6 +612,7 @@ function Save-AssistantSettings {
   $ini['Assistant']['voice_input_device_id'] = [string]$settings.voice_input_device_id
   $ini['Assistant']['rate_limit_enabled'] = [string]$settings.rate_limit_enabled
   $ini['Assistant']['rate_limit_per_hour'] = [string]$settings.rate_limit_per_hour
+  $ini['Assistant']['voice_input_provider'] = [string](Get-AssistantVoiceProviderByModel -VoiceModel $settings.voice_model)
 
   $ini['AssistantTemplates'] = [ordered]@{}
   foreach ($t in $settings.templates) {

@@ -66,6 +66,8 @@ SaveData() {
     lines.Push("api_endpoint=" gAssistantSettings["api_endpoint"])
     lines.Push("api_key=")
     lines.Push("api_key_protected=" gAssistantSettings["api_key_protected"])
+    lines.Push("voice_model=" (gAssistantSettings.Has("voice_model") ? gAssistantSettings["voice_model"] : "local_windows_default"))
+    lines.Push("voice_model_enabled=" (gAssistantSettings.Has("voice_model_enabled") ? gAssistantSettings["voice_model_enabled"] : 0))
     lines.Push("model=" gAssistantSettings["model"])
     lines.Push("active_template=" gAssistantSettings["active_template"])
     lines.Push("prompt=" StrReplace(StrReplace(GetAssistantPromptByTemplate(gAssistantSettings), "`r", " "), "`n", " "))
@@ -75,7 +77,7 @@ SaveData() {
     lines.Push("voice_input_enabled=" (gAssistantSettings.Has("voice_input_enabled") ? gAssistantSettings["voice_input_enabled"] : 0))
     lines.Push("rate_limit_enabled=" gAssistantSettings["rate_limit_enabled"])
     lines.Push("rate_limit_per_hour=" gAssistantSettings["rate_limit_per_hour"])
-    lines.Push("voice_input_provider=" (gAssistantSettings.Has("voice_input_provider") ? gAssistantSettings["voice_input_provider"] : "local_windows"))
+    lines.Push("voice_input_provider=" GetAssistantVoiceInputProvider(gAssistantSettings))
     lines.Push("voice_input_endpoint=" (gAssistantSettings.Has("voice_input_endpoint") ? gAssistantSettings["voice_input_endpoint"] : ""))
     lines.Push("voice_input_model=" (gAssistantSettings.Has("voice_input_model") ? gAssistantSettings["voice_input_model"] : ""))
 

@@ -52,6 +52,8 @@ EnsureDataFile() {
         . "api_endpoint=https://ark.cn-beijing.volces.com/api/v3/responses`n"
         . "api_key=`n"
         . "api_key_protected=`n"
+        . "voice_model=local_windows_default`n"
+        . "voice_model_enabled=0`n"
         . "model=doubao-seed-2-0-lite-260215`n"
         . "active_template=default_template`n"
         . "prompt=编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。选择题：先写15字以内题目总结，再直接给答案。`n"

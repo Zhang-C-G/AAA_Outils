@@ -157,7 +157,7 @@ RefreshAssistantOverlayTheme() {
 }
 
 BuildAssistantOverlayIdleStatus() {
-    return "状态：待命：" GetAssistantCurrentModelLabel()
+    return "状态：待命：问答=" GetAssistantCurrentModelLabel() " | 语音=" GetAssistantCurrentVoiceModelLabel()
 }
 
 ResetAssistantOverlayProtectionStability() {
@@ -368,6 +368,12 @@ GetAssistantCurrentModelLabel() {
         model := "doubao-seed-2-0-lite-260215"
     }
     return model
+}
+
+GetAssistantCurrentVoiceModelLabel() {
+    global gAssistantSettings
+    try return GetAssistantVoiceProviderLabel(gAssistantSettings)
+    return "本地默认语音识别"
 }
 
 IsAssistantOverlayCopyBlocked() {

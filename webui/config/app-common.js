@@ -20,6 +20,12 @@
     api_endpoint: 'https://ark.cn-beijing.volces.com/api/v3/responses',
     api_key: '',
     has_api_key: 0,
+    voice_model: 'local_windows_default',
+    voice_model_enabled: 0,
+    voice_model_options: [
+      { id: 'local_windows_default', name: '本地默认语音识别', enabled: 1 },
+      { id: 'xunfei_websocket_asr', name: '讯飞 WebSocket 语音识别', enabled: 1 }
+    ],
     model: 'doubao-seed-2-0-lite-260215',
     model_options: [
       { id: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite (Vision)', enabled: 1 },
@@ -37,6 +43,7 @@
     enhanced_capture_mode: 0,
     disable_copy: 1,
     voice_input_enabled: 0,
+    voice_input_device_id: '',
     rate_limit_enabled: 1,
     rate_limit_per_hour: 100,
     capture_dir: '',
