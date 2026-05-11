@@ -54,12 +54,63 @@ gAssistantOverlayEnhancedProtectGapSinceTick := 0
 gAssistantThinkingHasStreamData := false
 gAssistantOverlayInputSummary := ""
 gAssistantVoiceInputActive := false
+gAssistantVoiceInputStarting := false
+gAssistantVoiceStopPending := false
 gAssistantVoiceSession := ""
 gAssistantVoiceTranscriptWatchRunning := false
 gAssistantVoiceTranscriptLastText := ""
 gAssistantVoiceStatusLastStage := ""
 gAssistantVoiceStartTick := 0
 gAssistantVoiceService := ""
+
+IsAssistantVoiceServiceAlive(service) {
+    if !IsObject(service) {
+        return false
+    }
+    try {
+        pid := service.Has("pid") ? service["pid"] : 0
+        if !(pid > 0) {
+            return false
+        }
+        if !ProcessExist(pid) {
+            return false
+        }
+        return service.Has("command_path") && Trim(service["command_path"]) != ""
+    }
+    return false
+}
+
+WaitForAssistantVoiceServiceSessionStart(session, timeoutMs := 1400) {
+    if !IsObject(session) || !session.Has("status_path") {
+        return false
+    }
+    statusPath := session["status_path"]
+    deadline := A_TickCount + Max(200, Abs(Integer(timeoutMs)))
+    loop {
+        if (statusPath != "" && FileExist(statusPath)) {
+            statusText := ""
+            try statusText := FileRead(statusPath, "UTF-8")
+            if (
+                InStr(statusText, "stage=starting")
+                || InStr(statusText, "stage=listening")
+                || InStr(statusText, "stage=connected")
+                || InStr(statusText, "stage=capturing")
+                || InStr(statusText, "stage=streaming")
+                || InStr(statusText, "stage=recognizing")
+                || InStr(statusText, "stage=finalizing")
+                || InStr(statusText, "stage=completed")
+                || InStr(statusText, "stage=failed")
+            ) {
+                return true
+            }
+        }
+        if (A_TickCount >= deadline) {
+            break
+        }
+        Sleep(40)
+    }
+    return false
+}
 
 NormalizeOverlayThemeHex(color, fallback := "111111") {
     raw := Trim("" color)
@@ -682,12 +733,15 @@ StartAssistantCaptureFlow(showNotice := true) {
 }
 
 StartAssistantVoiceInputHold(showNotice := true) {
-    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult, gAssistantVoiceTranscriptLastText, gAssistantVoiceStatusLastStage, gAssistantVoiceStartTick, gAssistantVoiceService
+    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult, gAssistantVoiceTranscriptLastText, gAssistantVoiceStatusLastStage, gAssistantVoiceStartTick, gAssistantVoiceService
 
-    if gAssistantVoiceInputActive {
+    if gAssistantVoiceInputActive || gAssistantVoiceInputStarting {
         return Map("ok", 1, "error", "")
     }
+    gAssistantVoiceInputStarting := true
+    gAssistantVoiceStopPending := false
     if (!gAssistantSettings.Has("enabled") || gAssistantSettings["enabled"] = 0) {
+        gAssistantVoiceInputStarting := false
         msg := "助手功能当前已禁用，请在 Assistant 模块中启用。"
         if showNotice {
             MsgBox(msg)
@@ -695,6 +749,7 @@ StartAssistantVoiceInputHold(showNotice := true) {
         return Map("ok", 0, "error", msg)
     }
     if (!gAssistantSettings.Has("voice_input_enabled") || gAssistantSettings["voice_input_enabled"] = 0) {
+        gAssistantVoiceInputStarting := false
         msg := "语音识别功能当前未开启，请先在高级设置中开启。"
         if showNotice {
             MsgBox(msg)
@@ -713,6 +768,10 @@ StartAssistantVoiceInputHold(showNotice := true) {
     session := ""
     provider := GetAssistantVoiceInputProvider(gAssistantSettings)
     if (provider = "xunfei_websocket_asr") {
+        if IsObject(gAssistantVoiceService) && !IsAssistantVoiceServiceAlive(gAssistantVoiceService) {
+            try ShutdownAssistantVoiceService(gAssistantVoiceService)
+            gAssistantVoiceService := ""
+        }
         if !IsObject(gAssistantVoiceService) {
             svc := EnsureAssistantVoiceService(gAssistantSettings)
             if !svc["ok"] {
@@ -733,13 +792,40 @@ StartAssistantVoiceInputHold(showNotice := true) {
             if !SendAssistantVoiceServiceCommand(session, "start|" A_TickCount) {
                 session := Map("ok", 0, "error", "voice service start command failed")
             } else {
-                session["ok"] := 1
+                if !WaitForAssistantVoiceServiceSessionStart(session) {
+                    try ShutdownAssistantVoiceService(session)
+                    gAssistantVoiceService := ""
+                    svc := EnsureAssistantVoiceService(gAssistantSettings)
+                    if !svc["ok"] {
+                        session := Map("ok", 0, "error", "voice service did not start in time")
+                    } else {
+                        gAssistantVoiceService := svc
+                        session := gAssistantVoiceService
+                        for path in [session["transcript_path"], session["stop_path"], session["error_path"], session["status_path"]] {
+                            try {
+                                if FileExist(path) {
+                                    FileDelete(path)
+                                }
+                            }
+                        }
+                        if !SendAssistantVoiceServiceCommand(session, "start|" A_TickCount) {
+                            session := Map("ok", 0, "error", "voice service restart command failed")
+                        } else if !WaitForAssistantVoiceServiceSessionStart(session, 1800) {
+                            session := Map("ok", 0, "error", "voice service did not become active")
+                        } else {
+                            session["ok"] := 1
+                        }
+                    }
+                } else {
+                    session["ok"] := 1
+                }
             }
         }
     } else {
         session := StartAssistantVoiceRecognitionSession(gAssistantSettings)
     }
     if !session["ok"] {
+        gAssistantVoiceInputStarting := false
         UpdateAssistantOverlayStatus("状态：语音识别启动失败 | 识别：" providerLabel)
         SetAssistantOverlayText("语音识别启动失败：`n" session["error"])
         WriteLog("assistant_voice_input_start_failed", "error=" session["error"])
@@ -751,22 +837,32 @@ StartAssistantVoiceInputHold(showNotice := true) {
 
     gAssistantVoiceSession := session
     gAssistantVoiceInputActive := true
+    gAssistantVoiceInputStarting := false
     gAssistantVoiceTranscriptLastText := ""
     gAssistantVoiceStatusLastStage := ""
     SetAssistantOverlayText("正在监听输入...`n按住热键说话。`n`n实时转写会显示在这里。")
     UpdateAssistantOverlayStatus("状态：语音启动中 | 识别：" providerLabel)
     StartAssistantVoiceTranscriptWatch()
     WriteLog("assistant_voice_input_start", "provider=" session["provider"] " launch_ms=" (A_TickCount - gAssistantVoiceStartTick))
+    if gAssistantVoiceStopPending {
+        gAssistantVoiceStopPending := false
+        return StopAssistantVoiceInputHold(showNotice)
+    }
     return Map("ok", 1, "error", "")
 }
 
 StopAssistantVoiceInputHold(showNotice := true) {
-    global gAssistantVoiceInputActive, gAssistantVoiceSession, gAssistantSettings, gAssistantLastResult, gAssistantOverlayInputSummary
+    global gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceSession, gAssistantSettings, gAssistantLastResult, gAssistantOverlayInputSummary
+    if gAssistantVoiceInputStarting && !gAssistantVoiceInputActive {
+        gAssistantVoiceStopPending := true
+        return Map("ok", 1, "error", "")
+    }
     if !gAssistantVoiceInputActive {
         return Map("ok", 1, "error", "")
     }
 
     gAssistantVoiceInputActive := false
+    gAssistantVoiceInputStarting := false
     StopAssistantVoiceTranscriptWatch()
     providerLabel := GetAssistantVoiceProviderLabel(gAssistantSettings)
     UpdateAssistantOverlayStatus("状态：正在结束监听 | 识别：" providerLabel)
@@ -784,6 +880,9 @@ StopAssistantVoiceInputHold(showNotice := true) {
     }
 
     transcript := Trim(result["text"])
+    if (transcript = "" && Trim(gAssistantVoiceTranscriptLastText) != "") {
+        transcript := Trim(gAssistantVoiceTranscriptLastText)
+    }
     if (transcript = "") {
         SetAssistantOverlayText("未识别到语音内容。`n请按住热键后重新说话。")
         UpdateAssistantOverlayStatus("状态：未识别到语音内容 | 识别：" providerLabel)

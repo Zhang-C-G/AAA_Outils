@@ -11,9 +11,9 @@
 ## 2. 当前轮次
 
 - 轮次标识：`2026-05-11-post-assistant-persistence-and-table-docs-checkpoint`
-- 当前连续改动次数：`0`
+- 当前连续改动次数：`2`
 - 本轮目标：
-  - 等待下一轮改动开始累计
+  - 继续修复 E 模块 F3 语音输入链路，优先解决空结果、重复启动与停止竞态
 - 上一个 git 检查点：`checkpoint: sync assistant persistence and table docs`
 - 历史追溯方式：`git log` / 远端提交记录
 
@@ -112,6 +112,25 @@
 ### 第 2 次改动
 - 时间：`2026-05-11`
 - 内容：
+  - 继续修复 E 模块 F3 语音链路当前“显示未识别到语音内容”的问题
+  - 在 `src/assistant_overlay.ahk` 新增 `IsAssistantVoiceServiceAlive()` 与 `WaitForAssistantVoiceServiceSessionStart()`，启动 F3 时先校验 service 是否仍然存活，再确认本次 `start` 命令是否真的把会话推进到有效阶段
+  - 若现有讯飞 service 已失活，或本次 `start` 发出后仍未进入有效会话，则自动销毁旧 service、重建并重试一次，降低空会话与假启动概率
+  - F3 停止时若最终 transcript 为空，则优先回退使用实时转写过程中已经显示到悬浮窗上的文本，减少“有中间结果但最终被判空”的现象
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+  - service 状态观察：临时启动 `assistant_voice_input.ps1 -Mode service -Provider xunfei_websocket_asr` 后，状态文件已能推进到 `stage=streaming`
+  - 运行态观察：当前 transcript 文件可实时写入内容，不再只停留在“未识别到语音内容”的空结果路径
+- 测试结果：`通过`
+- 是否触发 git：`否`
+
+### 第 2 次改动
+- 时间：`2026-05-11`
+- 内容：
   - 补齐 E 模块问答模型与语音配置的真实持久化链路
   - 新增 `DeepSeek V4 Pro` 问答模型，并为其接入独立 `deepseek_api_key_protected` 存储
   - 新增讯飞 `xunfei_app_id / xunfei_api_key_protected / xunfei_api_secret_protected` 的读写链路
@@ -155,4 +174,26 @@
 
 ## 5. 当前 1-3 次改动窗口
 
-- 当前暂无已完成并通过测试的新改动
+### 第 1 次改动
+- 时间：`2026-05-11`
+- 内容：
+  - 修复 F3 语音输入热键的启动/停止竞态，新增 `gAssistantVoiceInputStarting / gAssistantVoiceStopPending` 防重入状态
+  - 避免长按期间因为按键重复触发或启动尚未完成，出现双 `assistant_voice_input_start`、`voice session missing` 一类问题
+  - 调整讯飞 service 的结束态保留逻辑，让单次识别完成后先保留 `completed / failed`，不再立刻覆盖回 `ready`
+  - 调整 AHK 停止轮询逻辑：service 停止时优先等待 `completed / failed`，降低把识别中途误判成空结果的概率
+  - 引入开源 `sounddevice` 作为讯飞 live 采集的优先路径，优先绕开 `ffmpeg dshow` 的冷启动成本；仅在 `sounddevice` 不可用时回退到原有 `ffmpeg` 方案
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `src/storage/assistant.ahk`
+  - `scripts/assistant_voice_input.ps1`
+  - `scripts/xunfei_asr.py`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - PowerShell 语法校验：`[System.Management.Automation.Language.Parser]::ParseFile('scripts/assistant_voice_input.ps1',[ref]$null,[ref]$null)`
+  - service 独立冒烟：手动启动 `assistant_voice_input.ps1 -Mode service -Provider xunfei_websocket_asr`，确认状态可从 `starting` 进入 `capturing`
+  - service 停止回归：发送 `stop` 后最终状态稳定停在 `stage=completed | detail=completed_empty`，不再立即回写成 `ready`
+  - Python 校验：`py_compile.compile('scripts/xunfei_asr.py', doraise=True)`
+  - `sounddevice` 枚举校验：本机可直接枚举 `Internal Microphone (AMD Audio Device)`
+- 测试结果：`通过`
+- 是否触发 git：`否`

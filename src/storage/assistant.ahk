@@ -1427,6 +1427,7 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
     if isServiceSession {
         SendAssistantVoiceServiceCommand(session, "stop|" A_TickCount)
         deadline := A_TickCount + Max(400, Abs(Integer(timeoutMs)))
+        sawActiveStage := false
         loop {
             statusText := ""
             try {
@@ -1434,7 +1435,13 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
                     statusText := FileRead(session["status_path"], "UTF-8")
                 }
             }
-            if (InStr(statusText, "stage=completed") || InStr(statusText, "stage=ready") || InStr(statusText, "stage=failed")) {
+            if (InStr(statusText, "stage=capturing") || InStr(statusText, "stage=streaming") || InStr(statusText, "stage=recognizing") || InStr(statusText, "stage=finalizing")) {
+                sawActiveStage := true
+            }
+            if (InStr(statusText, "stage=completed") || InStr(statusText, "stage=failed")) {
+                break
+            }
+            if (InStr(statusText, "stage=ready") && sawActiveStage) {
                 break
             }
             if (A_TickCount >= deadline) {

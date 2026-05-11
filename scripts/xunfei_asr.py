@@ -18,8 +18,13 @@ except Exception as exc:
     print(f"python websockets import failed: {exc}", file=sys.stderr)
     sys.exit(2)
 
+try:
+    import sounddevice as sd
+except Exception:
+    sd = None
 
-CHUNK_SIZE = 1280
+
+CHUNK_SIZE = 640
 
 
 def build_auth_url(api_key: str, api_secret: str) -> str:
@@ -169,6 +174,223 @@ async def transcribe_file(audio_path: Path, app_id: str, api_key: str, api_secre
 
 
 async def transcribe_live(
+    device_name: str,
+    stop_path: str,
+    transcript_path: str,
+    status_path: str,
+    app_id: str,
+    api_key: str,
+    api_secret: str,
+) -> str:
+    if sd is not None:
+        try:
+            return await transcribe_live_sounddevice(
+                device_name=device_name,
+                stop_path=stop_path,
+                transcript_path=transcript_path,
+                status_path=status_path,
+                app_id=app_id,
+                api_key=api_key,
+                api_secret=api_secret,
+            )
+        except Exception:
+            # Fall back to ffmpeg/dshow when sounddevice is unavailable for the selected device.
+            pass
+
+    return await transcribe_live_ffmpeg(
+        device_name=device_name,
+        stop_path=stop_path,
+        transcript_path=transcript_path,
+        status_path=status_path,
+        app_id=app_id,
+        api_key=api_key,
+        api_secret=api_secret,
+    )
+
+
+def _normalize_device_name(name: str) -> str:
+    return "".join(ch.lower() for ch in (name or "") if ch.isalnum())
+
+
+def _resolve_sounddevice_input(device_name: str) -> int | None:
+    if sd is None:
+        return None
+
+    target = _normalize_device_name(device_name)
+    devices = sd.query_devices()
+
+    if target:
+        for idx, dev in enumerate(devices):
+            if int(dev.get("max_input_channels", 0) or 0) <= 0:
+                continue
+            name = str(dev.get("name", "") or "")
+            normalized = _normalize_device_name(name)
+            if normalized == target or target in normalized or normalized in target:
+                return idx
+
+    try:
+        default_input = sd.default.device[0]
+        if default_input is not None and int(default_input) >= 0:
+            return int(default_input)
+    except Exception:
+        pass
+
+    for idx, dev in enumerate(devices):
+        if int(dev.get("max_input_channels", 0) or 0) > 0:
+            return idx
+    return None
+
+
+async def transcribe_live_sounddevice(
+    device_name: str,
+    stop_path: str,
+    transcript_path: str,
+    status_path: str,
+    app_id: str,
+    api_key: str,
+    api_secret: str,
+) -> str:
+    if sd is None:
+        raise RuntimeError("sounddevice unavailable")
+
+    url = build_auth_url(api_key, api_secret)
+    stop_file = Path(stop_path) if stop_path else None
+    stop_requested = False
+    send_done = asyncio.Event()
+    slots: list[str] = []
+    last_text = ""
+    loop = asyncio.get_running_loop()
+    audio_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
+    device_index = _resolve_sounddevice_input(device_name)
+    if device_index is None:
+        raise RuntimeError("no sounddevice input device available")
+
+    def update_status(stage: str, detail: str = "") -> None:
+        if not status_path:
+            return
+        text = f"stage={stage}"
+        if detail:
+            text += f"\ndetail={detail}"
+        Path(status_path).write_text(text, encoding="utf-8")
+
+    def audio_callback(indata, frames, time_info, status) -> None:
+        if status:
+            pass
+        try:
+            loop.call_soon_threadsafe(audio_queue.put_nowait, bytes(indata))
+        except RuntimeError:
+            pass
+
+    async def stop_watcher() -> None:
+        nonlocal stop_requested
+        if stop_file is None:
+            return
+        while not stop_requested and not send_done.is_set():
+            if stop_file.exists():
+                stop_requested = True
+                update_status("finalizing", "stop_requested")
+                try:
+                    loop.call_soon_threadsafe(audio_queue.put_nowait, None)
+                except RuntimeError:
+                    pass
+                return
+            await asyncio.sleep(0.02)
+
+    async def stream_audio(ws) -> None:
+        nonlocal stop_requested
+        first = True
+        try:
+            update_status("capturing", "capturing_audio")
+            while True:
+                chunk = await audio_queue.get()
+                if chunk is None:
+                    break
+                if not chunk:
+                    continue
+                payload = build_audio_payload(chunk, 0 if first else 1, app_id, first)
+                await send_payload(ws, payload)
+                first = False
+
+            final_payload = build_audio_payload(b"", 2, app_id, first)
+            if first:
+                final_payload["common"] = {"app_id": app_id}
+                final_payload["business"] = {
+                    "language": "zh_cn",
+                    "domain": "iat",
+                    "accent": "mandarin",
+                    "vad_eos": 5000,
+                    "dwa": "wpgs",
+                }
+            await send_payload(ws, final_payload)
+            update_status("recognizing", "waiting_final_result")
+        finally:
+            stop_requested = True
+            send_done.set()
+
+    async def receive_results(ws) -> None:
+        nonlocal last_text
+        while True:
+            raw = await ws.recv()
+            payload = json.loads(raw)
+            code = int(payload.get("code", 0) or 0)
+            if code != 0:
+                message = str(payload.get("message", "")).strip() or "xunfei websocket error"
+                raise RuntimeError(f"xunfei asr failed ({code}): {message}")
+            merged = merge_segments(slots, payload)
+            if merged and merged != last_text:
+                last_text = merged
+                write_output(transcript_path, last_text)
+                update_status("streaming", "streaming_text")
+            if int(payload.get("data", {}).get("status", 1) or 1) == 2 and send_done.is_set():
+                break
+
+    async with websockets.connect(url, max_size=None, ping_interval=None) as ws:
+        update_status("connected", "service_connected")
+        stream = sd.RawInputStream(
+            samplerate=16000,
+            blocksize=CHUNK_SIZE // 2,
+            device=device_index,
+            channels=1,
+            dtype="int16",
+            callback=audio_callback,
+        )
+        watcher_task = asyncio.create_task(stop_watcher())
+        send_task = asyncio.create_task(stream_audio(ws))
+        recv_task = asyncio.create_task(receive_results(ws))
+        try:
+            stream.start()
+            done, pending = await asyncio.wait(
+                {watcher_task, send_task, recv_task},
+                return_when=asyncio.FIRST_EXCEPTION,
+            )
+            for task in done:
+                exc = task.exception()
+                if exc is not None:
+                    raise exc
+            await send_task
+            await recv_task
+            watcher_task.cancel()
+            with contextlib.suppress(Exception):
+                await watcher_task
+        finally:
+            with contextlib.suppress(Exception):
+                stream.stop()
+            with contextlib.suppress(Exception):
+                stream.close()
+            if not send_done.is_set():
+                send_done.set()
+
+    result = last_text.strip()
+    if result:
+        write_output(transcript_path, result)
+        update_status("completed", "completed_with_text")
+    elif transcript_path:
+        write_output(transcript_path, "")
+        update_status("completed", "completed_empty")
+    return result
+
+
+async def transcribe_live_ffmpeg(
     device_name: str,
     stop_path: str,
     transcript_path: str,

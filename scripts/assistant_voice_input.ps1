@@ -787,16 +787,21 @@ if ($Mode -eq 'service') {
           $finalText = ([IO.File]::ReadAllText($pythonOutPath, [Text.Encoding]::UTF8)).Trim()
           if ($finalText -ne '') {
             [IO.File]::WriteAllText($TranscriptPath, $finalText, $Utf8NoBom)
+            Write-StatusFile 'completed' 'completed_with_text'
           } elseif ($stdOutText -ne '') {
             [IO.File]::WriteAllText($TranscriptPath, $stdOutText, $Utf8NoBom)
+            Write-StatusFile 'completed' 'completed_with_stdout'
+          } else {
+            Write-StatusFile 'completed' 'completed_empty'
           }
+        } else {
+          Write-StatusFile 'completed' 'completed_empty'
         }
         $pythonProc.Dispose()
         $pythonProc = $null
         $serviceStopPath = ''
         $pythonStdOutPath = ''
         $pythonStdErrPath = ''
-        Write-StatusFile 'ready' ('device=' + $deviceName)
       }
       Start-Sleep -Milliseconds 40
     }

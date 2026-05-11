@@ -202,3 +202,27 @@
   - 确认仅存在 `1` 个 `AutoHotkey64.exe`
   - `GET /api/assistant/state` 与 `POST /api/assistant/save-settings` 均正确返回 `overlay_ball_color`
 - 测试结果：`通过`
+
+### 2026-05-11 / F3 语音链路竞态收口
+- 改动内容：
+  - 为 F3 语音输入新增 `gAssistantVoiceInputStarting / gAssistantVoiceStopPending` 防重入状态，避免长按期间重复触发 `start`
+  - 调整热键启动尚未完成时的 `Up` 处理，避免过早进入 `voice session missing`
+  - 调整讯飞 service 结束态保留逻辑，让单次识别结束后先保留 `completed / failed`，不再立刻覆盖回 `ready`
+  - 调整 AHK 停止轮询逻辑，service 停止时优先等待 `completed / failed`，降低把识别中途误判成空结果的概率
+- 测试：
+  - PowerShell 语法校验：`[System.Management.Automation.Language.Parser]::ParseFile('scripts/assistant_voice_input.ps1',[ref]$null,[ref]$null)`
+  - service 独立冒烟：确认状态可从 `starting` 进入 `capturing`
+  - service 停止回归：发送 `stop` 后最终状态稳定停在 `stage=completed | detail=completed_empty`
+- 测试结果：`通过`
+- 补充：live 采集现已优先改为 `sounddevice`，仅在不可用时回退到 `ffmpeg dshow`。这一步属于参考开源实时语音项目的常见优化方向，目标是压缩录音链路的外部进程冷启动成本。
+### 2026-05-11 / F3 当前“未识别到语音内容”问题加固
+- 改动内容：
+  - 在 `src/assistant_overlay.ahk` 新增 service 存活校验，启动 F3 前先确认缓存中的讯飞 service 进程确实还活着，避免复用已失活的旧对象
+  - 新增会话启动确认逻辑，在发出 `start` 命令后，等待状态文件真正进入本次识别会话；如果命令发出了但 service 没有真正起会话，不再直接当作成功
+  - 若首次 `start` 未能把会话推进到有效阶段，则自动销毁旧 service、重建后再重试一次，降低空会话与假启动概率
+  - F3 停止时若最终 transcript 为空，则优先回退使用实时转写过程中已经显示到悬浮窗上的文本，避免“中途识别到了，但最后仍被判空”
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+  - service 状态观察：临时拉起 `assistant_voice_input.ps1 -Mode service -Provider xunfei_websocket_asr` 后，状态文件已可推进到 `stage=streaming`
+  - transcript 运行态观察：当前 transcript 文件可实时写入内容，不再只停留在空结果路径
+- 测试结果：`通过`
