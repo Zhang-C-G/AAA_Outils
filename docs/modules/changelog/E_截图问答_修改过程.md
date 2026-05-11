@@ -108,6 +108,19 @@
   - service `start` / `stop` 冒烟：确认 service 可进入 `ready`，但 `start` 后状态仍停在 `ready`
 - 测试结果：`部分通过：状态显示、日志埋点、ready 待命正常，service start 后的 live 采集链路仍需继续修复`
 
+### 2026-05-11 / F3 语音 service 启动参数修复
+- 改动内容：
+  - 修复 service 模式下 Python live worker 的启动参数拼接错误
+  - 改正设备名、路径参数在后台启动时的拆分方式，避免空格设备名被拆坏，导致 Python 将整串参数识别成脚本路径或报 `unrecognized arguments`
+  - 为 service worker 补上工作目录、stdout/stderr 重定向与退出后的错误透传
+  - 修正 worker 退出码读取，避免正常 stop 后误写 `xunfei live worker failed with exit code`
+- 测试：
+  - service 冒烟：`assistant_voice_input.ps1 -Mode service -Provider xunfei_websocket_asr`
+  - `start` 指令回归：确认状态可从 `starting` 推进到 `capturing`
+  - `stop` 指令回归：确认最终回到 `ready`，错误文件为空
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+- 测试结果：`通过`
+
 ### 2026-04-26 / 语音模型收敛为讯飞
 - 改动内容：
   - E 模块中的“语音模型选择”不再把豆包模型当作语音模型候选

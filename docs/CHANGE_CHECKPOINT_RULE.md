@@ -32,12 +32,11 @@
 
 - 当前轮次：`2026-05-11-post-xunfei-live-voice-checkpoint`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
+- 当前连续改动次数：`1`
 - 下一次强制 git 阈值：`下一次完成 3 次通过测试的连续改动后，需执行 checkpoint commit 并 push 到 origin/main`
 - 上一个 git 检查点：`checkpoint: document xunfei live voice checkpoint`
 - 当前计数说明：
-  - 当前已完成上一轮 checkpoint，计数已清零
-  - 下一轮从后续新的有效改动开始累计
+  - 第 1 次：修复 E 模块 F3 语音 service 的 Python 子进程启动方式，改正参数拆分错误，补上工作目录与 stdout/stderr 回传；当前 service 已可稳定从 `starting` 进入 `capturing`，停止后回到 `ready`
 
 ## 5. 维护方式
 

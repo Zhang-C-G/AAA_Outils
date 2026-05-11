@@ -11,7 +11,7 @@
 ## 2. 当前轮次
 
 - 轮次标识：`2026-05-11-post-xunfei-live-voice-checkpoint`
-- 当前连续改动次数：`0`
+- 当前连续改动次数：`1`
 - 本轮目标：
   - 继续修复 E 模块 F3 讯飞语音 service 常驻待命路径，解决 `ready` 后无法稳定进入 `capturing / streaming`
 - 上一个 git 检查点：`checkpoint: document xunfei live voice checkpoint`
@@ -90,5 +90,21 @@
 
 ## 4. 当前 1-3 次改动窗口
 
-- 当前窗口为空：上一轮 `3/3` 已完成 checkpoint commit 并 push 到 `origin/main`
-- 下一次有效改动开始后，再从第 `1` 次改动继续记录
+### 第 1 次改动
+- 时间：`2026-05-11`
+- 内容：
+  - 修复 E 模块 F3 语音 service 的 Python live worker 启动方式
+  - 改正 service 模式下参数拆分错误，避免设备名中的空格被错误切开，导致 Python 把整串参数当成脚本路径或把设备名截断
+  - 为 service 启动补上工作目录、stdout/stderr 重定向与退出后的错误回传
+  - 修正 service worker 退出码读取，避免正常停止后误写 `xunfei live worker failed with exit code`
+- 影响文件：
+  - `scripts/assistant_voice_input.ps1`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - service 脚本级冒烟：启动 `assistant_voice_input.ps1 -Mode service -Provider xunfei_websocket_asr`，发送 `start` 后确认状态可从 `starting` 推进到 `capturing`
+  - service 停止回归：发送 `stop` 后确认状态最终回到 `ready`，`ErrorPath` 保持为空
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+- 测试结果：`通过`
+- 是否触发 git：`否`

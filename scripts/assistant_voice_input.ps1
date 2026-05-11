@@ -683,6 +683,8 @@ if ($Mode -eq 'service') {
   $serviceStopPath = ''
   $pythonOutPath = ''
   $pythonErrPath = ''
+  $pythonStdOutPath = ''
+  $pythonStdErrPath = ''
   $lastCommand = ''
   Write-StatusFile 'ready' ('device=' + $deviceName)
 
@@ -702,6 +704,8 @@ if ($Mode -eq 'service') {
             $serviceStopPath = Join-Path $env:TEMP ('raccourci_voice_service_stop_' + [guid]::NewGuid().ToString('N') + '.flag')
             $pythonOutPath = Join-Path $env:TEMP ('raccourci_voice_service_out_' + [guid]::NewGuid().ToString('N') + '.txt')
             $pythonErrPath = Join-Path $env:TEMP ('raccourci_voice_service_err_' + [guid]::NewGuid().ToString('N') + '.txt')
+            $pythonStdOutPath = Join-Path $env:TEMP ('raccourci_voice_service_stdout_' + [guid]::NewGuid().ToString('N') + '.txt')
+            $pythonStdErrPath = Join-Path $env:TEMP ('raccourci_voice_service_stderr_' + [guid]::NewGuid().ToString('N') + '.txt')
             $cfg = Get-XunfeiConfig -IniPath $DataFile
             $env:XUNFEI_APP_ID = ([string]$cfg.app_id).Trim()
             $env:XUNFEI_API_KEY = ([string]$cfg.api_key).Trim()
@@ -710,27 +714,16 @@ if ($Mode -eq 'service') {
             if ($null -eq $pythonCmd) {
               throw 'python not found for xunfei websocket asr'
             }
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = $pythonCmd.Source
             $args = @(
-              $PSScriptRoot + '\xunfei_asr.py',
-              '--device-name', $deviceName,
-              '--stop-path', $serviceStopPath,
-              '--transcript-path', $TranscriptPath,
-              '--status-path', $StatusPath,
-              '--output', $pythonOutPath,
-              '--error-output', $pythonErrPath
+              ('"' + ($PSScriptRoot + '\xunfei_asr.py') + '"'),
+              '--device-name', ('"' + $deviceName + '"'),
+              '--stop-path', ('"' + $serviceStopPath + '"'),
+              '--transcript-path', ('"' + $TranscriptPath + '"'),
+              '--status-path', ('"' + $StatusPath + '"'),
+              '--output', ('"' + $pythonOutPath + '"'),
+              '--error-output', ('"' + $pythonErrPath + '"')
             )
-            $quotedArgs = foreach ($arg in $args) {
-              $text = [string]$arg
-              if ($text -match '[\s"]') { '"' + ($text -replace '"', '\"') + '"' } else { $text }
-            }
-            $psi.Arguments = [string]::Join(' ', $quotedArgs)
-            $psi.UseShellExecute = $false
-            $psi.CreateNoWindow = $true
-            $pythonProc = New-Object System.Diagnostics.Process
-            $pythonProc.StartInfo = $psi
-            [void]$pythonProc.Start()
+            $pythonProc = Start-Process -FilePath $pythonCmd.Source -ArgumentList $args -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $pythonStdOutPath -RedirectStandardError $pythonStdErrPath
           }
         } elseif ($command -like 'stop*') {
           if (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
@@ -752,22 +745,57 @@ if ($Mode -eq 'service') {
       }
 
       if ($null -ne $pythonProc -and $pythonProc.HasExited) {
-        $exitCode = $pythonProc.ExitCode
+        try {
+          $pythonProc.WaitForExit()
+          $pythonProc.Refresh()
+        } catch {}
+        $exitCode = 0
+        try {
+          $exitCode = [int]$pythonProc.ExitCode
+        } catch {
+          $exitCode = 0
+        }
+        $stdOutText = ''
+        $stdErrText = ''
+        try {
+          if (Test-Path -LiteralPath $pythonStdOutPath) {
+            $stdOutText = ([IO.File]::ReadAllText($pythonStdOutPath, [Text.Encoding]::UTF8)).Trim()
+          }
+        } catch {}
+        try {
+          if (Test-Path -LiteralPath $pythonStdErrPath) {
+            $stdErrText = ([IO.File]::ReadAllText($pythonStdErrPath, [Text.Encoding]::UTF8)).Trim()
+          }
+        } catch {}
         if ($exitCode -ne 0 -and (Test-Path -LiteralPath $pythonErrPath)) {
           $errText = ([IO.File]::ReadAllText($pythonErrPath, [Text.Encoding]::UTF8)).Trim()
           if ($errText -ne '') {
             Write-ErrorFile $errText
             Write-StatusFile 'failed' 'worker_failed'
           }
+        } elseif ($exitCode -ne 0) {
+          $fallbackError = $stdErrText
+          if ($fallbackError -eq '') {
+            $fallbackError = $stdOutText
+          }
+          if ($fallbackError -eq '') {
+            $fallbackError = 'xunfei live worker failed with exit code ' + $exitCode
+          }
+          Write-ErrorFile $fallbackError
+          Write-StatusFile 'failed' 'worker_failed'
         } elseif (Test-Path -LiteralPath $pythonOutPath) {
           $finalText = ([IO.File]::ReadAllText($pythonOutPath, [Text.Encoding]::UTF8)).Trim()
           if ($finalText -ne '') {
             [IO.File]::WriteAllText($TranscriptPath, $finalText, $Utf8NoBom)
+          } elseif ($stdOutText -ne '') {
+            [IO.File]::WriteAllText($TranscriptPath, $stdOutText, $Utf8NoBom)
           }
         }
         $pythonProc.Dispose()
         $pythonProc = $null
         $serviceStopPath = ''
+        $pythonStdOutPath = ''
+        $pythonStdErrPath = ''
         Write-StatusFile 'ready' ('device=' + $deviceName)
       }
       Start-Sleep -Milliseconds 40
