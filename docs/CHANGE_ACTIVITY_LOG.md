@@ -11,10 +11,10 @@
 ## 2. 当前轮次
 
 - 轮次标识：`2026-05-11-post-assistant-persistence-and-table-docs-checkpoint`
-- 当前连续改动次数：`2`
+- 当前连续改动次数：`0`
 - 本轮目标：
-  - 继续修复 E 模块 F3 语音输入链路，优先解决空结果、重复启动与停止竞态
-- 上一个 git 检查点：`checkpoint: sync assistant persistence and table docs`
+  - 等待下一轮改动开始累计
+- 上一个 git 检查点：`checkpoint: stabilize F3 voice input service path`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 上一轮已归档 checkpoint 摘要
@@ -174,26 +174,4 @@
 
 ## 5. 当前 1-3 次改动窗口
 
-### 第 1 次改动
-- 时间：`2026-05-11`
-- 内容：
-  - 修复 F3 语音输入热键的启动/停止竞态，新增 `gAssistantVoiceInputStarting / gAssistantVoiceStopPending` 防重入状态
-  - 避免长按期间因为按键重复触发或启动尚未完成，出现双 `assistant_voice_input_start`、`voice session missing` 一类问题
-  - 调整讯飞 service 的结束态保留逻辑，让单次识别完成后先保留 `completed / failed`，不再立刻覆盖回 `ready`
-  - 调整 AHK 停止轮询逻辑：service 停止时优先等待 `completed / failed`，降低把识别中途误判成空结果的概率
-  - 引入开源 `sounddevice` 作为讯飞 live 采集的优先路径，优先绕开 `ffmpeg dshow` 的冷启动成本；仅在 `sounddevice` 不可用时回退到原有 `ffmpeg` 方案
-- 影响文件：
-  - `src/assistant_overlay.ahk`
-  - `src/storage/assistant.ahk`
-  - `scripts/assistant_voice_input.ps1`
-  - `scripts/xunfei_asr.py`
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-- 测试：
-  - PowerShell 语法校验：`[System.Management.Automation.Language.Parser]::ParseFile('scripts/assistant_voice_input.ps1',[ref]$null,[ref]$null)`
-  - service 独立冒烟：手动启动 `assistant_voice_input.ps1 -Mode service -Provider xunfei_websocket_asr`，确认状态可从 `starting` 进入 `capturing`
-  - service 停止回归：发送 `stop` 后最终状态稳定停在 `stage=completed | detail=completed_empty`，不再立即回写成 `ready`
-  - Python 校验：`py_compile.compile('scripts/xunfei_asr.py', doraise=True)`
-  - `sounddevice` 枚举校验：本机可直接枚举 `Internal Microphone (AMD Audio Device)`
-- 测试结果：`通过`
-- 是否触发 git：`否`
+- 当前暂无已完成并通过测试的新改动
