@@ -30,15 +30,14 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-11-post-xunfei-auth-failure-checkpoint`
+- 当前轮次：`2026-05-11-post-xunfei-live-voice-checkpoint`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`3`
-- 下一次强制 git 阈值：`已达到 3/3，需立即执行 checkpoint commit 并 push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: trace xunfei voice auth failure`
+- 当前连续改动次数：`0`
+- 下一次强制 git 阈值：`下一次完成 3 次通过测试的连续改动后，需执行 checkpoint commit 并 push 到 origin/main`
+- 上一个 git 检查点：`checkpoint: document xunfei live voice checkpoint`
 - 当前计数说明：
-  - 第 1 次：E 模块 F3 已切为纯语音识别回填，修复讯飞 UTF-8 编码链路，并压短整段上传等待
-  - 第 2 次：E 模块 F3 已切到 live 讯飞链路，支持实时 transcript 写入与悬浮窗流式刷新
-  - 第 3 次：E 模块补齐语音状态显示与阶段耗时埋点，并尝试接入“悬浮窗打开即常驻待命”的语音 service；当前 service 可进入 ready，但 start 后未稳定推进到 capturing，仍需继续修复
+  - 当前已完成上一轮 checkpoint，计数已清零
+  - 下一轮从后续新的有效改动开始累计
 
 ## 5. 维护方式
 
