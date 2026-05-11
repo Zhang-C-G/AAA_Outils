@@ -709,9 +709,9 @@ StartAssistantVoiceInputHold(showNotice := true) {
     ShowAssistantOverlay(text)
     gAssistantOverlayInputSummary := ""
     providerLabel := GetAssistantVoiceProviderLabel(gAssistantSettings)
-    provider := GetAssistantVoiceInputProvider(gAssistantSettings)
     gAssistantVoiceStartTick := A_TickCount
     session := ""
+    provider := GetAssistantVoiceInputProvider(gAssistantSettings)
     if (provider = "xunfei_websocket_asr") {
         if !IsObject(gAssistantVoiceService) {
             svc := EnsureAssistantVoiceService(gAssistantSettings)
@@ -734,30 +734,6 @@ StartAssistantVoiceInputHold(showNotice := true) {
                 session := Map("ok", 0, "error", "voice service start command failed")
             } else {
                 session["ok"] := 1
-                stageDeadline := A_TickCount + 900
-                reachedActiveStage := false
-                loop {
-                    statusText := ""
-                    try {
-                        if (session.Has("status_path") && FileExist(session["status_path"])) {
-                            statusText := FileRead(session["status_path"], "UTF-8")
-                        }
-                    }
-                    if (InStr(statusText, "stage=connected") || InStr(statusText, "stage=capturing") || InStr(statusText, "stage=streaming")) {
-                        reachedActiveStage := true
-                        break
-                    }
-                    if (A_TickCount >= stageDeadline) {
-                        break
-                    }
-                    Sleep(50)
-                }
-                if !reachedActiveStage {
-                    WriteLog("assistant_voice_service_fallback", "reason=service_not_active_in_time")
-                    try ShutdownAssistantVoiceService(gAssistantVoiceService)
-                    gAssistantVoiceService := ""
-                    session := StartAssistantVoiceRecognitionSession(gAssistantSettings)
-                }
             }
         }
     } else {

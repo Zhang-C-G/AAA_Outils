@@ -548,6 +548,8 @@ function Write-ConfigState {
   $lines.Add('api_endpoint=' + $assistant.api_endpoint)
   $lines.Add('api_key=')
   $lines.Add('api_key_protected=' + $assistant.api_key_protected)
+  $lines.Add('deepseek_api_key=')
+  $lines.Add('deepseek_api_key_protected=' + $assistant.deepseek_api_key_protected)
   $lines.Add('model=' + $assistant.model)
   $lines.Add('active_template=' + $assistant.active_template)
   $lines.Add('prompt=' + ((Get-AssistantPromptByTemplate -Settings $assistant) -replace '[\r\n]+', ' '))

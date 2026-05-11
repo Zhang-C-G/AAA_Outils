@@ -35,15 +35,11 @@ SaveAssistantSettingsFromGui() {
         return
     }
 
-    endpoint := Trim(gAssistantApiEndpointEdit.Value)
-    if (endpoint = "") {
-        endpoint := "https://ark.cn-beijing.volces.com/api/v3/responses"
-    }
-
     model := Trim(gAssistantModelEdit.Value)
     if (model = "") {
         model := "doubao-seed-2-0-lite-260215"
     }
+    endpoint := GetAssistantApiEndpointForModel(model, Trim(gAssistantApiEndpointEdit.Value))
 
     prompt := Trim(gAssistantPromptEdit.Value)
     if (prompt = "") {

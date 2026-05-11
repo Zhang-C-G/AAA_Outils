@@ -11,9 +11,10 @@
 ## 2. 当前轮次
 
 - 轮次标识：`2026-05-11-post-xunfei-live-voice-checkpoint`
-- 当前连续改动次数：`1`
+- 当前连续改动次数：`3`
 - 本轮目标：
-  - 继续修复 E 模块 F3 讯飞语音 service 常驻待命路径，解决 `ready` 后无法稳定进入 `capturing / streaming`
+  - 收口 E 模块语音与模型配置持久化
+  - 同步 F 模块表格规则文档并形成新的 checkpoint
 - 上一个 git 检查点：`checkpoint: document xunfei live voice checkpoint`
 - 历史追溯方式：`git log` / 远端提交记录
 
@@ -108,3 +109,47 @@
   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
 - 测试结果：`通过`
 - 是否触发 git：`否`
+
+### 第 2 次改动
+- 时间：`2026-05-11`
+- 内容：
+  - 补齐 E 模块问答模型与语音配置的真实持久化链路
+  - 新增 `DeepSeek V4 Pro` 问答模型，并为其接入独立 `deepseek_api_key_protected` 存储
+  - 新增讯飞 `xunfei_app_id / xunfei_api_key_protected / xunfei_api_secret_protected` 的读写链路
+  - 让问答 endpoint 按当前模型自动切换，避免保存后仍停留在错误 provider endpoint
+  - 去掉 F3 启动时对 service 的 900ms 阻塞等待，避免额外人为延迟
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `src/config_modes/assistant_mode_actions.ahk`
+  - `src/storage/data_load.ahk`
+  - `src/storage/data_save.ahk`
+  - `webui/config/app-common.js`
+  - `webui/config/server_state/assistant.ps1`
+  - `webui/config/server_state/config.ps1`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-common.js`
+  - `[System.Management.Automation.Language.Parser]::ParseFile('webui/config/server_state/assistant.ps1',[ref]$null,[ref]$null) | Out-Null`
+  - `[System.Management.Automation.Language.Parser]::ParseFile('webui/config/server_state/config.ps1',[ref]$null,[ref]$null) | Out-Null`
+  - `rg -n "deepseek-v4-pro|deepseek_api_key_protected|xunfei_api_secret_protected|Get-AssistantEndpointByModel|GetAssistantApiEndpointForModel" src webui/config -S`
+- 测试结果：`通过`
+- 是否触发 git：`否`
+
+### 第 3 次改动
+- 时间：`2026-05-11`
+- 内容：
+  - 同步 F 模块正式说明文档、私人偏好与表格模板，让当前公司投递表实现与文档口径一致
+  - 固化表头勾选框居中、筛选条紧凑化、短文本单行外观、顶部筛选统计等规则
+  - 统一去除软件名中的“靠北！”字样，并补上勾选列表头居中类名
+- 影响文件：
+  - `docs/extension/global_preferences/components/18_表格与筛选器偏好.md`
+  - `docs/modules/11_resume_autofill.md`
+  - `docs/modules/changelog/F_简历自动填写_修改过程.md`
+  - `docs/templates/TABLE_STAGE1_TEMPLATE.md`
+  - `src/app_state.ahk`
+  - `webui/config/index.html`
+  - `webui/config/styles.css`
+- 测试：
+  - 文档一致性校对
+  - `rg -n "resume-company-select-head|resume-company-select-all|DeepSeek V4 Pro|Raccourci Control" webui/config/index.html webui/config/styles.css webui/config/app-common.js docs/modules/11_resume_autofill.md docs/extension/global_preferences/components/18_表格与筛选器偏好.md docs/templates/TABLE_STAGE1_TEMPLATE.md -S`
+- 测试结果：`通过`
+- 是否触发 git：`是，本次应创建 checkpoint 并 push`

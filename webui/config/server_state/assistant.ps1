@@ -34,8 +34,35 @@ function Get-AssistantModelCatalog {
       provider = 'volcengine-ark'
       vision = 1
       enabled = 1
+    },
+    [ordered]@{
+      id = 'deepseek-v4-pro'
+      name = 'DeepSeek V4 Pro'
+      provider = 'deepseek'
+      vision = 0
+      enabled = 1
     }
   )
+}
+
+function Get-AssistantModelProvider {
+  param([string]$Model)
+  $resolved = Resolve-AssistantModel -Requested $Model -Fallback 'doubao-seed-2-0-lite-260215'
+  foreach ($m in (Get-AssistantModelCatalog)) {
+    if ([string](Get-Prop $m 'id' '') -eq $resolved) {
+      return [string](Get-Prop $m 'provider' 'volcengine-ark')
+    }
+  }
+  return 'volcengine-ark'
+}
+
+function Get-AssistantEndpointByModel {
+  param([string]$Model)
+  $provider = Get-AssistantModelProvider -Model $Model
+  switch ($provider) {
+    'deepseek' { return 'https://api.deepseek.com/chat/completions' }
+    default { return 'https://ark.cn-beijing.volces.com/api/v3/responses' }
+  }
 }
 function Resolve-AssistantModel {
   param(
@@ -79,6 +106,16 @@ function Get-AssistantDefaults {
     api_key = ''
     api_key_protected = ''
     has_api_key = 0
+    deepseek_api_key = ''
+    deepseek_api_key_protected = ''
+    has_deepseek_api_key = 0
+    xunfei_app_id = ''
+    xunfei_api_key = ''
+    xunfei_api_key_protected = ''
+    has_xunfei_api_key = 0
+    xunfei_api_secret = ''
+    xunfei_api_secret_protected = ''
+    has_xunfei_api_secret = 0
     voice_model_api_key = ''
     voice_model_api_key_protected = ''
     has_voice_model_api_key = 0
@@ -330,13 +367,37 @@ function Convert-ToAssistantSettings {
   $settings = [ordered]@{}
   $settings.enabled = 1
 
-  $endpoint = ([string](Get-Prop $PayloadAssistant 'api_endpoint' (Get-Prop $Fallback 'api_endpoint' 'https://ark.cn-beijing.volces.com/api/v3/responses'))).Trim()
-  if ($endpoint -eq '') { $endpoint = 'https://ark.cn-beijing.volces.com/api/v3/responses' }
-  $settings.api_endpoint = $endpoint
-
   $settings.api_key = ''
   $settings.api_key_protected = Resolve-AssistantProtectedKey -PayloadAssistant $PayloadAssistant -Fallback $Fallback
   $settings.has_api_key = if ($settings.api_key_protected -ne '') { 1 } else { 0 }
+  $settings.deepseek_api_key = ''
+  $settings.deepseek_api_key_protected = Resolve-AssistantProtectedKey -PayloadAssistant ([ordered]@{
+    api_key = Get-Prop $PayloadAssistant 'deepseek_api_key' $null
+    keep_api_key = Get-Prop $PayloadAssistant 'keep_deepseek_api_key' '0'
+    clear_api_key = Get-Prop $PayloadAssistant 'clear_deepseek_api_key' '0'
+  }) -Fallback ([ordered]@{
+    api_key_protected = Get-Prop $Fallback 'deepseek_api_key_protected' ''
+  })
+  $settings.has_deepseek_api_key = if ($settings.deepseek_api_key_protected -ne '') { 1 } else { 0 }
+  $settings.xunfei_app_id = ([string](Get-Prop $PayloadAssistant 'xunfei_app_id' (Get-Prop $Fallback 'xunfei_app_id' ''))).Trim()
+  $settings.xunfei_api_key = ''
+  $settings.xunfei_api_key_protected = Resolve-AssistantProtectedKey -PayloadAssistant ([ordered]@{
+    api_key = Get-Prop $PayloadAssistant 'xunfei_api_key' $null
+    keep_api_key = Get-Prop $PayloadAssistant 'keep_xunfei_api_key' '0'
+    clear_api_key = Get-Prop $PayloadAssistant 'clear_xunfei_api_key' '0'
+  }) -Fallback ([ordered]@{
+    api_key_protected = Get-Prop $Fallback 'xunfei_api_key_protected' ''
+  })
+  $settings.has_xunfei_api_key = if ($settings.xunfei_api_key_protected -ne '') { 1 } else { 0 }
+  $settings.xunfei_api_secret = ''
+  $settings.xunfei_api_secret_protected = Resolve-AssistantProtectedKey -PayloadAssistant ([ordered]@{
+    api_key = Get-Prop $PayloadAssistant 'xunfei_api_secret' $null
+    keep_api_key = Get-Prop $PayloadAssistant 'keep_xunfei_api_secret' '0'
+    clear_api_key = Get-Prop $PayloadAssistant 'clear_xunfei_api_secret' '0'
+  }) -Fallback ([ordered]@{
+    api_key_protected = Get-Prop $Fallback 'xunfei_api_secret_protected' ''
+  })
+  $settings.has_xunfei_api_secret = if ($settings.xunfei_api_secret_protected -ne '') { 1 } else { 0 }
   $settings.voice_model_api_key = ''
   $settings.voice_model_api_key_protected = Resolve-AssistantVoiceModelProtectedKey -PayloadAssistant $PayloadAssistant -Fallback $Fallback
   $settings.has_voice_model_api_key = if ($settings.voice_model_api_key_protected -ne '') { 1 } else { 0 }
@@ -346,6 +407,7 @@ function Convert-ToAssistantSettings {
 
   $requestedModel = [string](Get-Prop $PayloadAssistant 'model' (Get-Prop $Fallback 'model' 'doubao-seed-2-0-lite-260215'))
   $settings.model = Resolve-AssistantModel -Requested $requestedModel -Fallback ([string](Get-Prop $Fallback 'model' 'doubao-seed-2-0-lite-260215'))
+  $settings.api_endpoint = Get-AssistantEndpointByModel -Model $settings.model
 
   $settings.active_template = ([string](Get-Prop $PayloadAssistant 'active_template' (Get-Prop $Fallback 'active_template' 'default_template'))).Trim()
   if ($settings.active_template -eq '') { $settings.active_template = 'default_template' }
@@ -380,6 +442,20 @@ function Convert-ToAssistantSettings {
 function Resolve-AssistantApiKey {
   param($Settings)
 
+  $provider = Get-AssistantModelProvider -Model ([string](Get-Prop $Settings 'model' 'doubao-seed-2-0-lite-260215'))
+  if ($provider -eq 'deepseek') {
+    $deepseekProtected = ([string](Get-Prop $Settings 'deepseek_api_key_protected' '')).Trim()
+    if ($deepseekProtected -ne '') {
+      $plain = Unprotect-AssistantSecret -Encoded $deepseekProtected
+      if ($plain -ne '') { return $plain }
+    }
+    $ini = Read-Ini $DataFile
+    if ($ini.Contains('Assistant') -and $ini['Assistant'].Contains('deepseek_api_key')) {
+      return ([string]$ini['Assistant']['deepseek_api_key']).Trim()
+    }
+    return ''
+  }
+
   $protected = ([string](Get-Prop $Settings 'api_key_protected' '')).Trim()
   if ($protected -ne '') {
     $plain = Unprotect-AssistantSecret -Encoded $protected
@@ -406,6 +482,18 @@ function Get-AssistantSettings {
     }
     if ($sec.Contains('api_key_protected')) {
       $settings.api_key_protected = ([string]$sec['api_key_protected']).Trim()
+    }
+    if ($sec.Contains('deepseek_api_key_protected')) {
+      $settings.deepseek_api_key_protected = ([string]$sec['deepseek_api_key_protected']).Trim()
+    }
+    if ($sec.Contains('xunfei_app_id')) {
+      $settings.xunfei_app_id = ([string]$sec['xunfei_app_id']).Trim()
+    }
+    if ($sec.Contains('xunfei_api_key_protected')) {
+      $settings.xunfei_api_key_protected = ([string]$sec['xunfei_api_key_protected']).Trim()
+    }
+    if ($sec.Contains('xunfei_api_secret_protected')) {
+      $settings.xunfei_api_secret_protected = ([string]$sec['xunfei_api_secret_protected']).Trim()
     }
     if ($sec.Contains('voice_model_api_key_protected')) {
       $settings.voice_model_api_key_protected = ([string]$sec['voice_model_api_key_protected']).Trim()
@@ -460,6 +548,24 @@ function Get-AssistantSettings {
         $settings.api_key_protected = Protect-AssistantSecret -Secret $legacy
       }
     }
+    if (($settings.deepseek_api_key_protected -eq '') -and $sec.Contains('deepseek_api_key')) {
+      $legacyDeepSeek = ([string]$sec['deepseek_api_key']).Trim()
+      if ($legacyDeepSeek -ne '') {
+        $settings.deepseek_api_key_protected = Protect-AssistantSecret -Secret $legacyDeepSeek
+      }
+    }
+    if (($settings.xunfei_api_key_protected -eq '') -and $sec.Contains('xunfei_api_key')) {
+      $legacyXunfeiKey = ([string]$sec['xunfei_api_key']).Trim()
+      if ($legacyXunfeiKey -ne '') {
+        $settings.xunfei_api_key_protected = Protect-AssistantSecret -Secret $legacyXunfeiKey
+      }
+    }
+    if (($settings.xunfei_api_secret_protected -eq '') -and $sec.Contains('xunfei_api_secret')) {
+      $legacyXunfeiSecret = ([string]$sec['xunfei_api_secret']).Trim()
+      if ($legacyXunfeiSecret -ne '') {
+        $settings.xunfei_api_secret_protected = Protect-AssistantSecret -Secret $legacyXunfeiSecret
+      }
+    }
     if (($settings.voice_model_api_key_protected -eq '') -and $sec.Contains('voice_model_api_key')) {
       $legacyVoice = ([string]$sec['voice_model_api_key']).Trim()
       if ($legacyVoice -ne '') {
@@ -484,11 +590,18 @@ function Get-AssistantSettings {
   Ensure-AssistantTemplates $settings
   $settings.api_key = ''
   $settings.has_api_key = if ([string]$settings.api_key_protected -ne '') { 1 } else { 0 }
+  $settings.deepseek_api_key = ''
+  $settings.has_deepseek_api_key = if ([string]$settings.deepseek_api_key_protected -ne '') { 1 } else { 0 }
+  $settings.xunfei_api_key = ''
+  $settings.has_xunfei_api_key = if ([string]$settings.xunfei_api_key_protected -ne '') { 1 } else { 0 }
+  $settings.xunfei_api_secret = ''
+  $settings.has_xunfei_api_secret = if ([string]$settings.xunfei_api_secret_protected -ne '') { 1 } else { 0 }
   $settings.voice_model_api_key = ''
   $settings.has_voice_model_api_key = if ([string]$settings.voice_model_api_key_protected -ne '') { 1 } else { 0 }
   $settings.voice_model = Resolve-AssistantVoiceModel -Requested ([string](Get-Prop $settings 'voice_model' '')) -Fallback 'local_windows_default'
   $settings.voice_model_enabled = if ([string](Get-Prop $settings 'voice_model_enabled' 0) -eq '0') { 0 } else { 1 }
   $settings.model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' '')) -Fallback 'doubao-seed-2-0-lite-260215'
+  $settings.api_endpoint = Get-AssistantEndpointByModel -Model $settings.model
   $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
   $settings.voice_input_enabled = if ([string](Get-Prop $settings 'voice_input_enabled' 0) -eq '0') { 0 } else { 1 }
@@ -518,6 +631,12 @@ function Get-AssistantPublicSettings {
 
   $public['api_key'] = ''
   $public['has_api_key'] = if ([string](Get-Prop $Settings 'api_key_protected' '') -ne '') { 1 } else { 0 }
+  $public['deepseek_api_key'] = ''
+  $public['has_deepseek_api_key'] = if ([string](Get-Prop $Settings 'deepseek_api_key_protected' '') -ne '') { 1 } else { 0 }
+  $public['xunfei_api_key'] = ''
+  $public['has_xunfei_api_key'] = if ([string](Get-Prop $Settings 'xunfei_api_key_protected' '') -ne '') { 1 } else { 0 }
+  $public['xunfei_api_secret'] = ''
+  $public['has_xunfei_api_secret'] = if ([string](Get-Prop $Settings 'xunfei_api_secret_protected' '') -ne '') { 1 } else { 0 }
   $public['voice_model_api_key'] = ''
   $public['has_voice_model_api_key'] = if ([string](Get-Prop $Settings 'voice_model_api_key_protected' '') -ne '') { 1 } else { 0 }
   $public['model_options'] = Get-AssistantModelCatalog
@@ -597,6 +716,13 @@ function Save-AssistantSettings {
   $ini['Assistant']['api_endpoint'] = [string]$settings.api_endpoint
   $ini['Assistant']['api_key'] = ''
   $ini['Assistant']['api_key_protected'] = [string]$settings.api_key_protected
+  $ini['Assistant']['deepseek_api_key'] = ''
+  $ini['Assistant']['deepseek_api_key_protected'] = [string]$settings.deepseek_api_key_protected
+  $ini['Assistant']['xunfei_app_id'] = [string]$settings.xunfei_app_id
+  $ini['Assistant']['xunfei_api_key'] = ''
+  $ini['Assistant']['xunfei_api_key_protected'] = [string]$settings.xunfei_api_key_protected
+  $ini['Assistant']['xunfei_api_secret'] = ''
+  $ini['Assistant']['xunfei_api_secret_protected'] = [string]$settings.xunfei_api_secret_protected
   $ini['Assistant']['voice_model_api_key'] = ''
   $ini['Assistant']['voice_model_api_key_protected'] = [string]$settings.voice_model_api_key_protected
   $ini['Assistant']['voice_model'] = [string]$settings.voice_model

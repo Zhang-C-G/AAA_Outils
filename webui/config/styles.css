@@ -1589,10 +1589,16 @@ label span { color: #d2d2d2; font-size: 14px; }
   text-align: center;
   vertical-align: top;
 }
+.resume-company-select-head {
+  width: 68px;
+  text-align: center;
+  vertical-align: middle;
+}
 .resume-company-select-all {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 100%;
   color: #dcdcdc;
   font-size: 13px;
   line-height: 1;

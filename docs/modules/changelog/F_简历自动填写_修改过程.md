@@ -1,12 +1,12 @@
 # 模块修改过程记录：F 简历自动填写
 
-最近同步：`2026-04-27`  
+最近同步：`2026-05-09`
 状态：`active`
 
 ## 1. 当前状态
 
 - 核心范围：资料字段、映射、自动填写入口
-- 当前重点：字段编辑稳定、公司链接界面布局清晰、内容从顶部起排
+- 当前重点：字段编辑稳定、公司投递表可维护、表格规则与文档口径一致
 
 ## 2. 修改记录
 
@@ -20,7 +20,7 @@
 ### 2026-04-26 / 删除保存按钮并切到自动保存
 - 改动内容：
   - 删除 Web 端 F 模块“保存简历资料”按钮
-  - 删除 AHK 配置界面 F 模块 “Save Resume Config” 按钮
+  - 删除 AHK 配置界面 F 模块 `Save Resume Config` 按钮
   - F 模块改为字段变更后自动保存，符合“不喜欢保存按钮”的个人偏好
 - 测试：
   - 代码校验：确认 `resumeSaveBtn` 已从 `index.html` 与 `app-resume.js` 移除
@@ -62,7 +62,7 @@
   - 通过 `scripts/restart_main_ahk.ps1` 重启原有 `main.ahk`
   - 延迟复查后确认当前仅存在 1 个 `AutoHotkey64.exe` 实例
 - 测试结果：`通过`
-- 
+
 ### 2026-05-09 / 公司链接维护改为公司投递面板
 - 改动内容：
   - F 模块公司维护表由“公司 / 链接地址 / 允许填充”调整为“选择 / 公司名称 / 公司类型 / 投递进度 / 链接地址 / 操作”
@@ -91,7 +91,7 @@
 
 ### 2026-05-09 / 公司投递面板补官方链接
 - 改动内容：
-  - 为 `resume_profile.json` 中的 50 家目标公司补入链接
+  - 为 `resume_profile.json` 中的 50 家目标公司补全链接
   - 优先填写官方招聘页；如未单独维护稳定招聘入口，则回填官方站点或官方公司页
   - 便于后续在 F 模块中直接点击进入公司侧页面继续投递或二次维护
 - 测试：
@@ -110,10 +110,10 @@
   - `rg -n "resume-company-url|url-preview|normalizeExternalUrl" webui/config/app-resume.js webui/config/styles.css`
 - 测试结果：`已通过`
 
-### 2026-05-09 / 公司投递表改为列头圆点筛选，链接列收口为单编辑框
+### 2026-05-09 / 公司投递表改为列表头圆点筛选，链接列收口为单编辑框
 - 改动内容：
   - 删除 F 模块公司投递表顶部整排筛选器
-  - 改为在每个可筛选列标题右侧仅保留一个小圆按钮，点击后再展开对应筛选项
+  - 改为在每一个可筛选列表头右侧仅保留一个小圆按钮，点击后再展开对应筛选项
   - 链接地址列不再同时显示“链接文本 + 输入框”两个入口
   - 改为“单一可编辑链接框 + 单独跳转按钮”组合，既能修改，也能点击跳转
 - 测试：
@@ -137,7 +137,7 @@
   - 筛选条为顶部固定区域，不悬浮在表头旁边
 - 测试：
   - `node --experimental-default-type=module --check webui/config/app-resume.js`
-  - `rg -n "resumeCompanyFilterBar|resume-filter-popover|resumeCompanyFilterCompanyPanel|resume-company-filter-bar|resume-filter-dot.active" webui/config/app-resume.js webui/config/index.html webui/config/styles.css`
+  - `rg -n "resumeCompanyFilterBar|resume-filter-popover|resumeCompanyFilterCompanyPanel|resume-company-filter-bar|resume-filter-dot.active" webui/config/app-resume.js webui/config/index.html webui/config.styles.css`
 - 测试结果：`已通过`
 
 ### 2026-05-09 / 颜色保留为侧边色标，下拉框恢复原色
@@ -150,13 +150,13 @@
   - `rg -n "resume-company-select-wrap|resume-company-select-indicator|syncCompanySelectTheme" webui/config/app-resume.js webui/config/styles.css`
 - 测试结果：`已通过`
 
-### 2026-05-09 / 公司投递表补分页，并修正公司名称输入框宽度
+### 2026-05-09 / 公司投递表补充分页，并修正公司名称输入框宽度
 - 改动内容：
   - F 模块公司投递表增加底部分页区
   - 分页支持 `上一页 / 下一页 / 每页条数`
   - 当前页与每页条数接入保存链路与前端草稿恢复链路
   - 公司名称输入框不再横向撑满整格，改为按字段自身宽度贴合
-  - 将本轮表格规则沉淀到“表格与筛选器偏好”，并建立第一个统一表格模版
+  - 将本轮表格规则沉淀到“表格与筛选器偏好”，并建立第一个统一表格模板
 - 测试：
   - `node --experimental-default-type=module --check webui/config/app-resume.js`
   - `rg -n "resumeCompanyPagination|company_table_view|resume-company-name-input|TABLE_STAGE1_TEMPLATE" webui/config/app-resume.js webui/config/index.html webui/config/styles.css webui/config/app-main.js docs/templates/TABLE_STAGE1_TEMPLATE.md`
@@ -167,16 +167,27 @@
   - F 模块公司投递表的顶部筛选条从“单开一项”改为“可同时展开多项”
   - 多个 `筛` 按钮在同时使用时，允许同时保持绿色激活态
   - 顶部筛选区改为承载多个筛选块，而不是一次只显示一个
-  - 表头 `选择` 改为 `全选`，点击后可把当前表中可见公司一键全部打勾
+  - 表头选择入口收敛为勾选框本体，去掉额外文字
   - 顶部筛选条增加结果统计，筛选时直接显示当前命中的公司总数
-  - 删除 `收起筛选` 按钮；筛选面板的展开与取消仅通过对应列头圆点控制
+  - 删除 `收起筛选` 按钮；筛选面板的展开与取消仅通过对应列表头圆点控制
   - 公司名称与链接地址输入框改为默认单行显示，只有手动回车后才扩展为多行
   - 顶部筛选区整体压缩为更紧凑的工具条样式，减少高度与留白占用
   - 修正公司名称与链接地址输入框的视觉高度，避免被表格通用 `textarea` 样式继续撑成多行外观
-  - 删除筛选卡片里的重复字段名，只保留一层标题，避免“公司名称筛选 / 公司名称”双重命名
+  - 删除筛选卡片里的重复字段名，只保留一层标题
   - 收窄公司名称列宽度，减少表格横向占用
-  - 删除表头 `全选` 文字，仅保留勾选框本体
+  - 将表头勾选框调整为列内真正居中显示
 - 测试：
   - `node --experimental-default-type=module --check webui/config/app-resume.js`
-  - `rg -n "resumeCompanySelectAll|aria-label=\\\"全选当前表格公司\\\"" webui/config/index.html`
+  - `rg -n "resume-company-select-head|resume-company-select-all|justify-content: center" webui/config/index.html webui/config/styles.css`
+- 测试结果：`已通过`
+
+### 2026-05-09 / 正式文档与表格模板同步收口
+- 改动内容：
+  - 正式同步 F 模块说明文档，使其与当前“简历字段维护 + 公司投递维护”双工作区实现一致
+  - 正式同步“表格与筛选器偏好”文档，沉淀已验证的表头筛选、顶部筛选条、分页、单行短文本编辑等规则
+  - 正式同步第一阶段表格模板，作为后续同类模块复用入口
+  - 补齐模块修改过程文档与本轮改动流水文档，保证实现、偏好、模板、过程四份口径一致
+- 测试：
+  - 文档一致性校对
+  - `git log --oneline -5`
 - 测试结果：`已通过`

@@ -20,7 +20,7 @@ gWebConfigPidFile := A_Temp "\\raccourci_web_config_server.pid"
 gWebConfigActionFile := A_Temp "\\raccourci_web_config_action.json"
 gWebConfigDesiredFile := A_Temp "\\raccourci_web_config_desired.flag"
 gResumeProfileFile := A_ScriptDir "\\resume_profile.json"
-gAppName := "靠北！Raccourci Control"
+gAppName := "Raccourci Control"
 
 gPanelGui := ""
 gConfigGui := ""

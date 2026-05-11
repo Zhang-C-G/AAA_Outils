@@ -108,6 +108,19 @@
   - service `start` / `stop` 冒烟：确认 service 可进入 `ready`，但 `start` 后状态仍停在 `ready`
 - 测试结果：`部分通过：状态显示、日志埋点、ready 待命正常，service start 后的 live 采集链路仍需继续修复`
 
+### 2026-05-11 / E 模块配置持久化与 DeepSeek 模型接入
+- 改动内容：
+  - 补齐问答模型与语音配置的真实持久化，避免前端切换后只停留在界面态
+  - 新增 `DeepSeek V4 Pro` 问答模型，并接入独立 `deepseek_api_key_protected` 存储，避免覆盖豆包问答密钥
+  - 新增讯飞 `xunfei_app_id / xunfei_api_key_protected / xunfei_api_secret_protected` 的读写链路，供 F3 语音识别真实复用
+  - 让问答 endpoint 按当前模型自动解析，DeepSeek 走 `https://api.deepseek.com/chat/completions`，豆包继续走 Ark Responses endpoint
+  - 去掉 F3 启动时对 service 的 900ms 阻塞等待，避免人为拉长按下后到监听开始的体感延迟
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-common.js`
+  - PowerShell Parser 校验 `webui/config/server_state/assistant.ps1` 与 `webui/config/server_state/config.ps1`
+  - `rg -n "deepseek-v4-pro|deepseek_api_key_protected|xunfei_api_secret_protected|Get-AssistantEndpointByModel|GetAssistantApiEndpointForModel" src webui/config -S`
+- 测试结果：`通过`
+
 ### 2026-05-11 / F3 语音 service 启动参数修复
 - 改动内容：
   - 修复 service 模式下 Python live worker 的启动参数拼接错误

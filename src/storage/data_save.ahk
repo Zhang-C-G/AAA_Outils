@@ -17,6 +17,36 @@ SaveData() {
     }
     gAssistantSettings["api_key_protected"] := protectedKey
     gAssistantSettings["has_api_key"] := (currentPlainKey != "" || protectedKey != "") ? 1 : 0
+    currentDeepSeekKey := gAssistantSettings.Has("deepseek_api_key") ? Trim(gAssistantSettings["deepseek_api_key"]) : ""
+    deepseekProtectedKey := gAssistantSettings.Has("deepseek_api_key_protected") ? Trim(gAssistantSettings["deepseek_api_key_protected"]) : ""
+    if (currentDeepSeekKey != "") {
+        newDeepSeekProtected := ProtectAssistantSecret(currentDeepSeekKey)
+        if (newDeepSeekProtected != "") {
+            deepseekProtectedKey := newDeepSeekProtected
+        }
+    }
+    gAssistantSettings["deepseek_api_key_protected"] := deepseekProtectedKey
+    gAssistantSettings["has_deepseek_api_key"] := (currentDeepSeekKey != "" || deepseekProtectedKey != "") ? 1 : 0
+    currentXunfeiKey := gAssistantSettings.Has("xunfei_api_key") ? Trim(gAssistantSettings["xunfei_api_key"]) : ""
+    xunfeiKeyProtected := gAssistantSettings.Has("xunfei_api_key_protected") ? Trim(gAssistantSettings["xunfei_api_key_protected"]) : ""
+    if (currentXunfeiKey != "") {
+        newXunfeiKeyProtected := ProtectAssistantSecret(currentXunfeiKey)
+        if (newXunfeiKeyProtected != "") {
+            xunfeiKeyProtected := newXunfeiKeyProtected
+        }
+    }
+    gAssistantSettings["xunfei_api_key_protected"] := xunfeiKeyProtected
+    gAssistantSettings["has_xunfei_api_key"] := (currentXunfeiKey != "" || xunfeiKeyProtected != "") ? 1 : 0
+    currentXunfeiSecret := gAssistantSettings.Has("xunfei_api_secret") ? Trim(gAssistantSettings["xunfei_api_secret"]) : ""
+    xunfeiSecretProtected := gAssistantSettings.Has("xunfei_api_secret_protected") ? Trim(gAssistantSettings["xunfei_api_secret_protected"]) : ""
+    if (currentXunfeiSecret != "") {
+        newXunfeiSecretProtected := ProtectAssistantSecret(currentXunfeiSecret)
+        if (newXunfeiSecretProtected != "") {
+            xunfeiSecretProtected := newXunfeiSecretProtected
+        }
+    }
+    gAssistantSettings["xunfei_api_secret_protected"] := xunfeiSecretProtected
+    gAssistantSettings["has_xunfei_api_secret"] := (currentXunfeiSecret != "" || xunfeiSecretProtected != "") ? 1 : 0
 
     lines := []
     lines.Push("[Categories]")
@@ -66,6 +96,13 @@ SaveData() {
     lines.Push("api_endpoint=" gAssistantSettings["api_endpoint"])
     lines.Push("api_key=")
     lines.Push("api_key_protected=" gAssistantSettings["api_key_protected"])
+    lines.Push("deepseek_api_key=")
+    lines.Push("deepseek_api_key_protected=" (gAssistantSettings.Has("deepseek_api_key_protected") ? gAssistantSettings["deepseek_api_key_protected"] : ""))
+    lines.Push("xunfei_app_id=" (gAssistantSettings.Has("xunfei_app_id") ? gAssistantSettings["xunfei_app_id"] : ""))
+    lines.Push("xunfei_api_key=")
+    lines.Push("xunfei_api_key_protected=" (gAssistantSettings.Has("xunfei_api_key_protected") ? gAssistantSettings["xunfei_api_key_protected"] : ""))
+    lines.Push("xunfei_api_secret=")
+    lines.Push("xunfei_api_secret_protected=" (gAssistantSettings.Has("xunfei_api_secret_protected") ? gAssistantSettings["xunfei_api_secret_protected"] : ""))
     lines.Push("voice_model=" (gAssistantSettings.Has("voice_model") ? gAssistantSettings["voice_model"] : "local_windows_default"))
     lines.Push("voice_model_enabled=" (gAssistantSettings.Has("voice_model_enabled") ? gAssistantSettings["voice_model_enabled"] : 0))
     lines.Push("model=" gAssistantSettings["model"])
