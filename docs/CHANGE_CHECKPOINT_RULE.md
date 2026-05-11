@@ -30,15 +30,14 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-11-post-xunfei-live-voice-checkpoint`
+- 当前轮次：`2026-05-11-post-assistant-persistence-and-table-docs-checkpoint`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`3`
-- 下一次强制 git 阈值：`当前已达到 3 次改动阈值，本次需执行 checkpoint commit 并 push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: document xunfei live voice checkpoint`
+- 当前连续改动次数：`0`
+- 下一次强制 git 阈值：`下一次完成 3 次通过测试的连续改动后，需执行 checkpoint commit 并 push 到 origin/main`
+- 上一个 git 检查点：`checkpoint: sync assistant persistence and table docs`
 - 当前计数说明：
-  - 第 1 次：修复 E 模块 F3 语音 service 的 Python 子进程启动方式，改正参数拆分错误，补上工作目录与 stdout/stderr 回传；当前 service 已可稳定从 `starting` 进入 `capturing`，停止后回到 `ready`
-  - 第 2 次：补齐 E 模块问答模型与语音配置的真实持久化，新增 DeepSeek 问答模型独立密钥链路，补齐讯飞 `app_id / api_key / api_secret` 的自动保存字段，并让 endpoint 按模型自动切换
-  - 第 3 次：同步 F 模块公司投递表正式文档与表格偏好模板，补齐表头勾选框居中、短文本单行外观、紧凑筛选条等规则落点，并统一移除软件名中的“靠北！”字样
+  - 本轮已于 `2026-05-11` 完成 checkpoint 并成功 push 到 `origin/main`
+  - 新一轮连续改动计数已清零，等待下一次通过测试的有效改动开始累计
 
 ## 5. 维护方式
 

@@ -10,12 +10,11 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-11-post-xunfei-live-voice-checkpoint`
-- 当前连续改动次数：`3`
+- 轮次标识：`2026-05-11-post-assistant-persistence-and-table-docs-checkpoint`
+- 当前连续改动次数：`0`
 - 本轮目标：
-  - 收口 E 模块语音与模型配置持久化
-  - 同步 F 模块表格规则文档并形成新的 checkpoint
-- 上一个 git 检查点：`checkpoint: document xunfei live voice checkpoint`
+  - 等待下一轮改动开始累计
+- 上一个 git 检查点：`checkpoint: sync assistant persistence and table docs`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 上一轮已归档 checkpoint 摘要
@@ -89,7 +88,7 @@
 - 测试结果：`通过`
 - 是否触发 git：`是，已形成 checkpoint`
 
-## 4. 当前 1-3 次改动窗口
+## 4. 上一轮已完成 checkpoint 的 1-3 次改动窗口
 
 ### 第 1 次改动
 - 时间：`2026-05-11`
@@ -152,4 +151,8 @@
   - 文档一致性校对
   - `rg -n "resume-company-select-head|resume-company-select-all|DeepSeek V4 Pro|Raccourci Control" webui/config/index.html webui/config/styles.css webui/config/app-common.js docs/modules/11_resume_autofill.md docs/extension/global_preferences/components/18_表格与筛选器偏好.md docs/templates/TABLE_STAGE1_TEMPLATE.md -S`
 - 测试结果：`通过`
-- 是否触发 git：`是，本次应创建 checkpoint 并 push`
+- 是否触发 git：`是，已完成 checkpoint 并 push`
+
+## 5. 当前 1-3 次改动窗口
+
+- 当前暂无已完成并通过测试的新改动
