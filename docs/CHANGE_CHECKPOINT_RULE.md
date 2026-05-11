@@ -30,15 +30,15 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-09-post-resume-company-table-checkpoint`
+- 当前轮次：`2026-05-11-post-assistant-voice-model-checkpoint`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`3`
-- 下一次强制 git 阈值：`当前已到 3/3，必须立即执行 checkpoint commit 并 push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: refine resume company table workflow`
+- 下一次强制 git 阈值：`已达到 3/3，需立即执行 checkpoint commit 并 push 到 origin/main`
+- 上一个 git 检查点：`checkpoint: wire assistant voice model persistence`
 - 当前计数说明：
-  - 第 1 次：F 模块正式模块文档、表格私人偏好、表格模板、模块修改过程文档与改动流水文档已同步到当前公司投递表实现
-  - 第 2 次：删除主界面中的“靠北！”软件名前缀，仅保留 `Raccourci Control` 作为页面标题与顶部标题
-  - 第 3 次：E 模块语音模型选择与激活状态已真实接入自动保存、后端配置、AHK 运行态与 F2 悬浮窗待命文案
+  - 第 1 次：E 模块 F3 已真实接入讯飞 WebSocket 语音识别链路，包含本地录音、讯飞识别上传、识别结果回写、本机密钥持久化与 AHK 停止等待时间补强
+  - 第 2 次：E 模块新增 DeepSeek V4 Pro 问答模型，接入独立密钥持久化、按模型自动切换 endpoint，并完成真实 API 冒烟测试
+  - 第 3 次：E 模块 F3 讯飞语音识别继续排障，已将链路推进到真实讯飞鉴权层；当前服务端明确返回 `HMAC signature does not match`，并已切换为 Python WebSocket worker 透传真实错误
 
 ## 5. 维护方式
 
