@@ -30,15 +30,15 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-11-post-assistant-voice-model-checkpoint`
+- 当前轮次：`2026-05-11-post-xunfei-auth-failure-checkpoint`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`3`
 - 下一次强制 git 阈值：`已达到 3/3，需立即执行 checkpoint commit 并 push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: wire assistant voice model persistence`
+- 上一个 git 检查点：`checkpoint: trace xunfei voice auth failure`
 - 当前计数说明：
-  - 第 1 次：E 模块 F3 已真实接入讯飞 WebSocket 语音识别链路，包含本地录音、讯飞识别上传、识别结果回写、本机密钥持久化与 AHK 停止等待时间补强
-  - 第 2 次：E 模块新增 DeepSeek V4 Pro 问答模型，接入独立密钥持久化、按模型自动切换 endpoint，并完成真实 API 冒烟测试
-  - 第 3 次：E 模块 F3 讯飞语音识别继续排障，已将链路推进到真实讯飞鉴权层；当前服务端明确返回 `HMAC signature does not match`，并已切换为 Python WebSocket worker 透传真实错误
+  - 第 1 次：E 模块 F3 已切为纯语音识别回填，修复讯飞 UTF-8 编码链路，并压短整段上传等待
+  - 第 2 次：E 模块 F3 已切到 live 讯飞链路，支持实时 transcript 写入与悬浮窗流式刷新
+  - 第 3 次：E 模块补齐语音状态显示与阶段耗时埋点，并尝试接入“悬浮窗打开即常驻待命”的语音 service；当前 service 可进入 ready，但 start 后未稳定推进到 capturing，仍需继续修复
 
 ## 5. 维护方式
 

@@ -1,26 +1,53 @@
 param(
-  [ValidateSet('list', 'listen')]
+  [ValidateSet('list', 'listen', 'service')]
   [string]$Mode = 'list',
   [string]$Provider = 'local_windows',
   [string]$TranscriptPath = '',
   [string]$StopPath = '',
   [string]$ErrorPath = '',
+  [string]$StatusPath = '',
   [string]$DevicesJsonPath = '',
   [string]$SelectedDeviceId = '',
-  [string]$DataFile = ''
+  [string]$DataFile = '',
+  [string]$AudioPath = '',
+  [string]$CommandPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
 if ($null -ne (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue)) {
   $PSNativeCommandUseErrorActionPreference = $false
 }
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 
 function Write-ErrorFile {
   param([string]$Message)
   if ([string]::IsNullOrWhiteSpace($ErrorPath)) {
     return
   }
-  [IO.File]::WriteAllText($ErrorPath, [string]$Message, [Text.Encoding]::UTF8)
+  [IO.File]::WriteAllText($ErrorPath, [string]$Message, $Utf8NoBom)
+}
+
+function Write-StatusFile {
+  param([string]$Stage, [string]$Detail = '')
+  if ([string]::IsNullOrWhiteSpace($StatusPath)) {
+    return
+  }
+  $text = "stage=" + ([string]$Stage).Trim()
+  if (([string]$Detail).Trim() -ne '') {
+    $text += [Environment]::NewLine + "detail=" + ([string]$Detail).Trim()
+  }
+  [IO.File]::WriteAllText($StatusPath, $text, $Utf8NoBom)
+}
+
+function Read-CommandFile {
+  if ([string]::IsNullOrWhiteSpace($CommandPath) -or -not (Test-Path -LiteralPath $CommandPath)) {
+    return ''
+  }
+  try {
+    return ([IO.File]::ReadAllText($CommandPath, [Text.Encoding]::UTF8)).Trim()
+  } catch {
+    return ''
+  }
 }
 
 function Ensure-TranscriptFile {
@@ -28,7 +55,7 @@ function Ensure-TranscriptFile {
     return
   }
   if (-not (Test-Path -LiteralPath $TranscriptPath)) {
-    [IO.File]::WriteAllText($TranscriptPath, '', [Text.Encoding]::UTF8)
+    [IO.File]::WriteAllText($TranscriptPath, '', $Utf8NoBom)
   }
 }
 
@@ -42,25 +69,6 @@ function Unprotect-AssistantSecret {
   } catch {
     return ''
   }
-}
-
-function Normalize-XunfeiSecret {
-  param([string]$Secret)
-  $value = ([string]$Secret).Trim()
-  if ($value -eq '') {
-    return ''
-  }
-  if ($value -notmatch '^[A-Za-z0-9+/=]+$') {
-    return $value
-  }
-  try {
-    $decodedBytes = [Convert]::FromBase64String($value)
-    $decoded = [Text.Encoding]::UTF8.GetString($decodedBytes).Trim()
-    if ($decoded -match '^[\x20-\x7E]+$' -and $decoded.Length -ge 16 -and $decoded.Length -lt $value.Length) {
-      return $decoded
-    }
-  } catch {}
-  return $value
 }
 
 function Read-IniSection {
@@ -105,7 +113,6 @@ function Get-XunfeiConfig {
   if ($apiSecret -eq '' -and $sec.Contains('xunfei_api_secret_protected')) {
     $apiSecret = Unprotect-AssistantSecret ([string]$sec['xunfei_api_secret_protected'])
   }
-  $apiSecret = Normalize-XunfeiSecret $apiSecret
 
   return [ordered]@{
     app_id = $appId
@@ -571,7 +578,10 @@ function Get-XunfeiResultText {
 function Invoke-XunfeiTranscription {
   param(
     [string]$AudioPath,
-    [string]$IniPath
+    [string]$IniPath,
+    [string]$DeviceName = '',
+    [string]$StopFlagPath = '',
+    [string]$TranscriptOutputPath = ''
   )
 
   $cfg = Get-XunfeiConfig -IniPath $IniPath
@@ -582,7 +592,7 @@ function Invoke-XunfeiTranscription {
   if ($appId -eq '' -or $apiKey -eq '' -or $apiSecret -eq '') {
     throw 'xunfei websocket credentials missing in config.ini Assistant section'
   }
-  if (-not (Test-Path -LiteralPath $AudioPath)) {
+  if ([string]::IsNullOrWhiteSpace($DeviceName) -and -not (Test-Path -LiteralPath $AudioPath)) {
     throw 'xunfei audio file missing'
   }
 
@@ -596,6 +606,8 @@ function Invoke-XunfeiTranscription {
     throw 'python not found for xunfei websocket asr'
   }
 
+  $pythonOutPath = Join-Path $env:TEMP ('raccourci_xunfei_asr_out_' + [guid]::NewGuid().ToString('N') + '.txt')
+  $pythonErrPath = Join-Path $env:TEMP ('raccourci_xunfei_asr_err_' + [guid]::NewGuid().ToString('N') + '.txt')
   $previousAppId = $env:XUNFEI_APP_ID
   $previousApiKey = $env:XUNFEI_API_KEY
   $previousApiSecret = $env:XUNFEI_API_SECRET
@@ -603,10 +615,26 @@ function Invoke-XunfeiTranscription {
     $env:XUNFEI_APP_ID = $appId
     $env:XUNFEI_API_KEY = $apiKey
     $env:XUNFEI_API_SECRET = $apiSecret
-    $resultLines = & $pythonCmd.Source $pythonScript --audio $AudioPath 2>&1
+    if (Test-Path -LiteralPath $pythonOutPath) { Remove-Item -LiteralPath $pythonOutPath -Force }
+    if (Test-Path -LiteralPath $pythonErrPath) { Remove-Item -LiteralPath $pythonErrPath -Force }
+    if ([string]::IsNullOrWhiteSpace($DeviceName)) {
+      $null = & $pythonCmd.Source $pythonScript --audio $AudioPath --output $pythonOutPath --error-output $pythonErrPath 2>&1
+    } else {
+      $null = & $pythonCmd.Source $pythonScript --device-name $DeviceName --stop-path $StopFlagPath --transcript-path $TranscriptOutputPath --status-path $StatusPath --output $pythonOutPath --error-output $pythonErrPath 2>&1
+    }
     $exitCode = $LASTEXITCODE
-    $resultText = (($resultLines | ForEach-Object { [string]$_ }) -join [Environment]::NewLine).Trim()
+    $resultText = ''
+    if (Test-Path -LiteralPath $pythonOutPath) {
+      $resultText = ([IO.File]::ReadAllText($pythonOutPath, [Text.Encoding]::UTF8)).Trim()
+    }
+    $errorText = ''
+    if (Test-Path -LiteralPath $pythonErrPath) {
+      $errorText = ([IO.File]::ReadAllText($pythonErrPath, [Text.Encoding]::UTF8)).Trim()
+    }
     if ($exitCode -ne 0) {
+      if ($errorText -ne '') {
+        throw $errorText
+      }
       if ($resultText -eq '') {
         throw 'xunfei python worker failed'
       }
@@ -617,6 +645,12 @@ function Invoke-XunfeiTranscription {
     $env:XUNFEI_APP_ID = $previousAppId
     $env:XUNFEI_API_KEY = $previousApiKey
     $env:XUNFEI_API_SECRET = $previousApiSecret
+    if (Test-Path -LiteralPath $pythonOutPath) {
+      try { Remove-Item -LiteralPath $pythonOutPath -Force } catch {}
+    }
+    if (Test-Path -LiteralPath $pythonErrPath) {
+      try { Remove-Item -LiteralPath $pythonErrPath -Force } catch {}
+    }
   }
 }
 
@@ -631,6 +665,125 @@ if ($Mode -eq 'list') {
   exit 0
 }
 
+if ($Mode -eq 'service') {
+  $providerKey = ([string]$Provider).Trim().ToLowerInvariant()
+  if ($providerKey -ne 'xunfei_websocket_asr') {
+    throw 'service mode currently supports xunfei_websocket_asr only'
+  }
+  if ([string]::IsNullOrWhiteSpace($CommandPath)) {
+    throw 'service command path missing'
+  }
+
+  $deviceName = Resolve-DShowAudioDeviceName -SelectedId $SelectedDeviceId
+  if ([string]::IsNullOrWhiteSpace($deviceName)) {
+    throw 'no DirectShow microphone found for xunfei service'
+  }
+
+  $pythonProc = $null
+  $serviceStopPath = ''
+  $pythonOutPath = ''
+  $pythonErrPath = ''
+  $lastCommand = ''
+  Write-StatusFile 'ready' ('device=' + $deviceName)
+
+  try {
+    while ($true) {
+      $command = Read-CommandFile
+      if ($command -ne '' -and $command -ne $lastCommand) {
+        $lastCommand = $command
+        if ($command -like 'start*') {
+          if ($null -eq $pythonProc -or $pythonProc.HasExited) {
+            Ensure-TranscriptFile
+            [IO.File]::WriteAllText($TranscriptPath, '', $Utf8NoBom)
+            if (-not [string]::IsNullOrWhiteSpace($ErrorPath)) {
+              [IO.File]::WriteAllText($ErrorPath, '', $Utf8NoBom)
+            }
+            Write-StatusFile 'starting' 'service_starting'
+            $serviceStopPath = Join-Path $env:TEMP ('raccourci_voice_service_stop_' + [guid]::NewGuid().ToString('N') + '.flag')
+            $pythonOutPath = Join-Path $env:TEMP ('raccourci_voice_service_out_' + [guid]::NewGuid().ToString('N') + '.txt')
+            $pythonErrPath = Join-Path $env:TEMP ('raccourci_voice_service_err_' + [guid]::NewGuid().ToString('N') + '.txt')
+            $cfg = Get-XunfeiConfig -IniPath $DataFile
+            $env:XUNFEI_APP_ID = ([string]$cfg.app_id).Trim()
+            $env:XUNFEI_API_KEY = ([string]$cfg.api_key).Trim()
+            $env:XUNFEI_API_SECRET = ([string]$cfg.api_secret).Trim()
+            $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+            if ($null -eq $pythonCmd) {
+              throw 'python not found for xunfei websocket asr'
+            }
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $pythonCmd.Source
+            $args = @(
+              $PSScriptRoot + '\xunfei_asr.py',
+              '--device-name', $deviceName,
+              '--stop-path', $serviceStopPath,
+              '--transcript-path', $TranscriptPath,
+              '--status-path', $StatusPath,
+              '--output', $pythonOutPath,
+              '--error-output', $pythonErrPath
+            )
+            $quotedArgs = foreach ($arg in $args) {
+              $text = [string]$arg
+              if ($text -match '[\s"]') { '"' + ($text -replace '"', '\"') + '"' } else { $text }
+            }
+            $psi.Arguments = [string]::Join(' ', $quotedArgs)
+            $psi.UseShellExecute = $false
+            $psi.CreateNoWindow = $true
+            $pythonProc = New-Object System.Diagnostics.Process
+            $pythonProc.StartInfo = $psi
+            [void]$pythonProc.Start()
+          }
+        } elseif ($command -like 'stop*') {
+          if (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
+            [IO.File]::WriteAllText($serviceStopPath, 'stop', $Utf8NoBom)
+          }
+          Write-StatusFile 'finalizing' 'service_stop_requested'
+        } elseif ($command -like 'exit*') {
+          if (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
+            [IO.File]::WriteAllText($serviceStopPath, 'stop', $Utf8NoBom)
+          }
+          if ($null -ne $pythonProc -and -not $pythonProc.HasExited) {
+            $pythonProc.WaitForExit(4000) | Out-Null
+            if (-not $pythonProc.HasExited) {
+              try { $pythonProc.Kill() } catch {}
+            }
+          }
+          break
+        }
+      }
+
+      if ($null -ne $pythonProc -and $pythonProc.HasExited) {
+        $exitCode = $pythonProc.ExitCode
+        if ($exitCode -ne 0 -and (Test-Path -LiteralPath $pythonErrPath)) {
+          $errText = ([IO.File]::ReadAllText($pythonErrPath, [Text.Encoding]::UTF8)).Trim()
+          if ($errText -ne '') {
+            Write-ErrorFile $errText
+            Write-StatusFile 'failed' 'worker_failed'
+          }
+        } elseif (Test-Path -LiteralPath $pythonOutPath) {
+          $finalText = ([IO.File]::ReadAllText($pythonOutPath, [Text.Encoding]::UTF8)).Trim()
+          if ($finalText -ne '') {
+            [IO.File]::WriteAllText($TranscriptPath, $finalText, $Utf8NoBom)
+          }
+        }
+        $pythonProc.Dispose()
+        $pythonProc = $null
+        $serviceStopPath = ''
+        Write-StatusFile 'ready' ('device=' + $deviceName)
+      }
+      Start-Sleep -Milliseconds 40
+    }
+  } finally {
+    if ($null -ne $pythonProc) {
+      try {
+        if (-not $pythonProc.HasExited) { $pythonProc.Kill() }
+      } catch {}
+      try { $pythonProc.Dispose() } catch {}
+    }
+    Write-StatusFile 'closed' 'service_closed'
+  }
+  exit 0
+}
+
 $providerKey = ([string]$Provider).Trim().ToLowerInvariant()
 $previousDefault = ''
 $shouldRestoreDefault = $false
@@ -641,10 +794,15 @@ try {
   Ensure-TranscriptFile
 
   if ($providerKey -eq 'xunfei_websocket_asr') {
-    $tempAudioPath = Join-Path $env:TEMP 'raccourci_voice_input_xunfei.pcm'
-    Invoke-FfmpegRawCapture -AudioPath $tempAudioPath -StopFlagPath $StopPath -SelectedId $SelectedDeviceId
-    $transcript = Invoke-XunfeiTranscription -AudioPath $tempAudioPath -IniPath $DataFile
-    [IO.File]::WriteAllText($TranscriptPath, ([string]$transcript).Trim(), [Text.Encoding]::UTF8)
+    Write-StatusFile 'starting' '正在准备语音识别'
+    $deviceName = Resolve-DShowAudioDeviceName -SelectedId $SelectedDeviceId
+    if ([string]::IsNullOrWhiteSpace($deviceName)) {
+      throw 'no DirectShow microphone found for xunfei live capture'
+    }
+    Write-StatusFile 'listening' ('已连接麦克风: ' + $deviceName)
+    $transcript = Invoke-XunfeiTranscription -AudioPath $AudioPath -IniPath $DataFile -DeviceName $deviceName -StopFlagPath $StopPath -TranscriptOutputPath $TranscriptPath
+    Write-StatusFile 'completed' '语音识别完成'
+    [IO.File]::WriteAllText($TranscriptPath, ([string]$transcript).Trim(), $Utf8NoBom)
     exit 0
   }
 
@@ -687,7 +845,7 @@ try {
     if ($parts.Count -gt 0 -and $parts[$parts.Count - 1] -eq $text) { continue }
 
     [void]$parts.Add($text)
-    [IO.File]::WriteAllText($TranscriptPath, [string]::Join([Environment]::NewLine, $parts), [Text.Encoding]::UTF8)
+    [IO.File]::WriteAllText($TranscriptPath, [string]::Join([Environment]::NewLine, $parts), $Utf8NoBom)
   }
 
   Ensure-TranscriptFile

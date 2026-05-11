@@ -150,6 +150,16 @@ GetAssistantDefaultSettings() {
         "api_key", "",
         "api_key_protected", "",
         "has_api_key", 0,
+        "deepseek_api_key", "",
+        "deepseek_api_key_protected", "",
+        "has_deepseek_api_key", 0,
+        "xunfei_app_id", "",
+        "xunfei_api_key", "",
+        "xunfei_api_key_protected", "",
+        "has_xunfei_api_key", 0,
+        "xunfei_api_secret", "",
+        "xunfei_api_secret_protected", "",
+        "has_xunfei_api_secret", 0,
         "voice_model", "local_windows_default",
         "voice_model_enabled", 0,
         "model", "doubao-seed-2-0-lite-260215",
@@ -168,6 +178,58 @@ GetAssistantDefaultSettings() {
         "voice_input_endpoint", "",
         "voice_input_model", ""
     )
+}
+
+GetAssistantModelProviderId(settingsOrModel) {
+    model := ""
+    try {
+        if IsObject(settingsOrModel) {
+            model := Trim(settingsOrModel["model"])
+        } else {
+            model := Trim(settingsOrModel)
+        }
+    }
+    if (model = "deepseek-v4-pro") {
+        return "deepseek"
+    }
+    if (model = "mock-local") {
+        return "mock"
+    }
+    return "volcengine-ark"
+}
+
+GetAssistantApiEndpointForModel(model, fallback := "") {
+    provider := GetAssistantModelProviderId(model)
+    if (provider = "deepseek") {
+        return "https://api.deepseek.com/chat/completions"
+    }
+    if (provider = "mock") {
+        return "mock://local"
+    }
+    candidate := Trim(fallback)
+    if (candidate != "" && candidate != "mock://local") {
+        return candidate
+    }
+    return "https://ark.cn-beijing.volces.com/api/v3/responses"
+}
+
+GetAssistantRequestApiKey(settings) {
+    provider := GetAssistantModelProviderId(settings)
+    if (provider = "deepseek") {
+        protected := ""
+        plain := ""
+        try protected := Trim(settings["deepseek_api_key_protected"])
+        if (protected != "") {
+            plain := UnprotectAssistantSecret(protected)
+            if (plain != "") {
+                return plain
+            }
+        }
+        try plain := Trim(settings["deepseek_api_key"])
+        return plain
+    }
+    try return Trim(settings["api_key"])
+    return ""
 }
 
 GetAssistantVoiceModelId(settings) {
@@ -292,6 +354,20 @@ LoadAssistantSettings() {
                 legacyApiKey := value
             case "api_key_protected":
                 settings["api_key_protected"] := value
+            case "deepseek_api_key":
+                settings["deepseek_api_key"] := value
+            case "deepseek_api_key_protected":
+                settings["deepseek_api_key_protected"] := value
+            case "xunfei_app_id":
+                settings["xunfei_app_id"] := value
+            case "xunfei_api_key":
+                settings["xunfei_api_key"] := value
+            case "xunfei_api_key_protected":
+                settings["xunfei_api_key_protected"] := value
+            case "xunfei_api_secret":
+                settings["xunfei_api_secret"] := value
+            case "xunfei_api_secret_protected":
+                settings["xunfei_api_secret_protected"] := value
             case "voice_model":
                 if (value != "") {
                     settings["voice_model"] := value
@@ -351,6 +427,30 @@ LoadAssistantSettings() {
     }
 
     settings["has_api_key"] := (Trim(settings["api_key"]) != "" || Trim(settings["api_key_protected"]) != "") ? 1 : 0
+    deepseekProtected := Trim(settings["deepseek_api_key_protected"])
+    if (deepseekProtected != "") {
+        deepseekPlain := UnprotectAssistantSecret(deepseekProtected)
+        if (deepseekPlain != "") {
+            settings["deepseek_api_key"] := deepseekPlain
+        }
+    }
+    settings["has_deepseek_api_key"] := (Trim(settings["deepseek_api_key"]) != "" || Trim(settings["deepseek_api_key_protected"]) != "") ? 1 : 0
+    xunfeiKeyProtected := Trim(settings["xunfei_api_key_protected"])
+    if (xunfeiKeyProtected != "") {
+        xunfeiKeyPlain := UnprotectAssistantSecret(xunfeiKeyProtected)
+        if (xunfeiKeyPlain != "") {
+            settings["xunfei_api_key"] := xunfeiKeyPlain
+        }
+    }
+    xunfeiSecretProtected := Trim(settings["xunfei_api_secret_protected"])
+    if (xunfeiSecretProtected != "") {
+        xunfeiSecretPlain := UnprotectAssistantSecret(xunfeiSecretProtected)
+        if (xunfeiSecretPlain != "") {
+            settings["xunfei_api_secret"] := xunfeiSecretPlain
+        }
+    }
+    settings["has_xunfei_api_key"] := (Trim(settings["xunfei_api_key"]) != "" || Trim(settings["xunfei_api_key_protected"]) != "") ? 1 : 0
+    settings["has_xunfei_api_secret"] := (Trim(settings["xunfei_api_secret"]) != "" || Trim(settings["xunfei_api_secret_protected"]) != "") ? 1 : 0
 
     tmplRows := LoadSection(gDataFile, "AssistantTemplates")
     if (tmplRows.Length > 0) {
@@ -372,6 +472,7 @@ LoadAssistantSettings() {
     settings["overlay_opacity"] := ClampAssistantOpacity(settings["overlay_opacity"])
     settings["overlay_ball_color"] := NormalizeAssistantOverlayColor(settings["overlay_ball_color"])
     settings["enabled"] := 1
+    settings["api_endpoint"] := GetAssistantApiEndpointForModel(settings["model"], settings["api_endpoint"])
     settings["enhanced_capture_mode"] := settings.Has("enhanced_capture_mode") ? (settings["enhanced_capture_mode"] ? 1 : 0) : 0
     settings["disable_copy"] := settings.Has("disable_copy") ? (settings["disable_copy"] ? 1 : 0) : 1
     settings["voice_model"] := GetAssistantVoiceModelId(settings)
@@ -414,13 +515,15 @@ RequestAssistantAnswerFromText(queryText, settings, onProgress := "") {
 
 RequestAssistantAnswerFromImageLegacy(imagePath, settings, onProgress := "") {
     outPath := A_Temp "\\raccourci_assistant_out.txt"
+    reasonPath := A_Temp "\\raccourci_assistant_reasoning.txt"
     errPath := A_Temp "\\raccourci_assistant_err.txt"
     psPath := A_Temp "\\raccourci_assistant_request.ps1"
 
     endpoint := Trim(settings["api_endpoint"])
-    apiKey := Trim(settings["api_key"])
+    apiKey := GetAssistantRequestApiKey(settings)
     model := Trim(settings["model"])
     prompt := Trim(GetAssistantPromptByTemplate(settings))
+    provider := GetAssistantModelProviderId(settings)
 
     if (endpoint = "") {
         return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "assistant endpoint is empty")
@@ -441,7 +544,9 @@ RequestAssistantAnswerFromImageLegacy(imagePath, settings, onProgress := "") {
         . "`$prompt='" PsSingleQuote(prompt) "'`n"
         . "`$img='" PsSingleQuote(imagePath) "'`n"
         . "`$out='" PsSingleQuote(outPath) "'`n"
+        . "`$reason='" PsSingleQuote(reasonPath) "'`n"
         . "`$err='" PsSingleQuote(errPath) "'`n"
+        . "`$isDeepSeek=" (provider = "deepseek" ? "$true" : "$false") "`n"
         . "try {`n"
         . "  `$bytes=[System.IO.File]::ReadAllBytes(`$img)`n"
         . "  `$b64=[System.Convert]::ToBase64String(`$bytes)`n"
@@ -456,14 +561,17 @@ RequestAssistantAnswerFromImageLegacy(imagePath, settings, onProgress := "") {
         . "  } else {`n"
         . "    `$body=[ordered]@{`n"
         . "      model=`$model;`n"
-        . "      messages=@([ordered]@{role='user';content=@([ordered]@{type='text';text=`$prompt},[ordered]@{type='image_url';image_url=[ordered]@{url=`$imgUrl}})});`n"
-        . "      temperature=0.2;`n"
+        . "      messages=`$(if(`$isDeepSeek){ @([ordered]@{role='system';content=`$prompt},[ordered]@{role='user';content=@([ordered]@{type='text';text='请基于这张图片回答。'},[ordered]@{type='image_url';image_url=[ordered]@{url=`$imgUrl}})}) } else { @([ordered]@{role='user';content=@([ordered]@{type='text';text=`$prompt},[ordered]@{type='image_url';image_url=[ordered]@{url=`$imgUrl}})}) });`n"
+        . "      thinking=`$(if(`$isDeepSeek){ [ordered]@{ type='enabled' } } else { `$null });`n"
+        . "      reasoning_effort=`$(if(`$isDeepSeek){ 'high' } else { `$null });`n"
+        . "      temperature=`$(if(`$isDeepSeek){ `$null } else { 0.2 });`n"
         . "      max_tokens=700`n"
         . "    }`n"
         . "  }`n"
         . "  `$json=`$body | ConvertTo-Json -Depth 30`n"
         . "  `$res=Invoke-RestMethod -Method Post -Uri `$ep -Headers `$headers -ContentType 'application/json' -Body `$json`n"
         . "  `$text=''`n"
+        . "  `$reasoning=''`n"
         . "  if(`$isResponses){`n"
         . "    if(-not [string]::IsNullOrWhiteSpace([string]`$res.output_text)){ `$text=[string]`$res.output_text }`n"
         . "    if([string]::IsNullOrWhiteSpace(`$text) -and `$null -ne `$res.output){`n"
@@ -478,24 +586,22 @@ RequestAssistantAnswerFromImageLegacy(imagePath, settings, onProgress := "") {
         . "  } else {`n"
         . "    if(`$null -ne `$res.choices -and `$res.choices.Count -gt 0){`n"
         . "      `$content=`$res.choices[0].message.content`n"
+        . "      if(`$null -ne `$res.choices[0].message.reasoning_content){ `$reasoning=[string]`$res.choices[0].message.reasoning_content }`n"
         . "      if(`$content -is [System.Array]){ foreach(`$it in `$content){ if(`$it.text){ `$text += [string]`$it.text + [Environment]::NewLine } } } else { `$text=[string]`$content }`n"
         . "    }`n"
         . "  }`n"
         . "  if([string]::IsNullOrWhiteSpace(`$text) -and `$null -ne `$res.output_text){ `$text=[string]`$res.output_text }`n"
         . "  if([string]::IsNullOrWhiteSpace(`$text)){ `$text = (`$res | ConvertTo-Json -Depth 20) }`n"
         . "  Set-Content -LiteralPath `$out -Value `$text -Encoding UTF8`n"
+        . "  Set-Content -LiteralPath `$reason -Value `$reasoning -Encoding UTF8`n"
         . "} catch {`n"
         . "  Set-Content -LiteralPath `$err -Value `$_.Exception.Message -Encoding UTF8`n"
         . "}`n"
 
-    if FileExist(outPath) {
-        FileDelete(outPath)
-    }
-    if FileExist(errPath) {
-        FileDelete(errPath)
-    }
-    if FileExist(psPath) {
-        FileDelete(psPath)
+    for path in [outPath, reasonPath, errPath, psPath] {
+        if FileExist(path) {
+            FileDelete(path)
+        }
     }
     FileAppend(script, psPath, "UTF-8")
 
@@ -538,10 +644,11 @@ RequestAssistantAnswerFromImageLegacy(imagePath, settings, onProgress := "") {
     }
 
     txt := Trim(FileRead(outPath, "UTF-8"))
+    reasoning := FileExist(reasonPath) ? Trim(FileRead(reasonPath, "UTF-8")) : ""
     if (txt = "") {
-        return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "assistant returned empty text")
+        return Map("ok", 0, "text", "", "reasoning", reasoning, "streamed", 0, "error", "assistant returned empty text")
     }
-    return Map("ok", 1, "text", txt, "reasoning", "", "streamed", 0, "error", "")
+    return Map("ok", 1, "text", txt, "reasoning", reasoning, "streamed", 0, "error", "")
 }
 
 RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
@@ -552,7 +659,7 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
     psPath := A_Temp "\\raccourci_assistant_stream_request.ps1"
 
     endpoint := Trim(settings["api_endpoint"])
-    apiKey := Trim(settings["api_key"])
+    apiKey := GetAssistantRequestApiKey(settings)
     model := Trim(settings["model"])
     prompt := Trim(GetAssistantPromptByTemplate(settings))
 
@@ -767,14 +874,16 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
 
 RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
     outPath := A_Temp "\\raccourci_assistant_text_out.txt"
+    reasonPath := A_Temp "\\raccourci_assistant_text_reasoning.txt"
     errPath := A_Temp "\\raccourci_assistant_text_err.txt"
     psPath := A_Temp "\\raccourci_assistant_text_request.ps1"
 
     endpoint := Trim(settings["api_endpoint"])
-    apiKey := Trim(settings["api_key"])
+    apiKey := GetAssistantRequestApiKey(settings)
     model := Trim(settings["model"])
     prompt := Trim(GetAssistantPromptByTemplate(settings))
     query := Trim(queryText)
+    provider := GetAssistantModelProviderId(settings)
 
     if (endpoint = "") {
         return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "assistant endpoint is empty")
@@ -799,7 +908,9 @@ RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
         . "`$prompt='" PsSingleQuote(prompt) "'`n"
         . "`$query='" PsSingleQuote(query) "'`n"
         . "`$out='" PsSingleQuote(outPath) "'`n"
+        . "`$reason='" PsSingleQuote(reasonPath) "'`n"
         . "`$err='" PsSingleQuote(errPath) "'`n"
+        . "`$isDeepSeek=" (provider = "deepseek" ? "$true" : "$false") "`n"
         . "try {`n"
         . "  `$headers=@{}`n"
         . "  if(`$k -ne ''){ `$headers['Authorization']='Bearer ' + `$k }`n"
@@ -807,11 +918,12 @@ RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
         . "  if(`$isResponses){`n"
         . "    `$payload=[ordered]@{ model=`$model; input=@([ordered]@{role='user';content=@([ordered]@{type='input_text';text=`$prompt + '`n`n' + `$query})}) }`n"
         . "  } else {`n"
-        . "    `$payload=[ordered]@{ model=`$model; messages=@([ordered]@{role='user';content=@([ordered]@{type='text';text=`$prompt + '`n`n' + `$query})}); temperature=0.2; max_tokens=700 }`n"
+        . "    `$payload=[ordered]@{ model=`$model; messages=`$(if(`$isDeepSeek){ @([ordered]@{role='system';content=`$prompt},[ordered]@{role='user';content=`$query}) } else { @([ordered]@{role='user';content=@([ordered]@{type='text';text=`$prompt + '`n`n' + `$query})}) }); thinking=`$(if(`$isDeepSeek){ [ordered]@{ type='enabled' } } else { `$null }); reasoning_effort=`$(if(`$isDeepSeek){ 'high' } else { `$null }); temperature=`$(if(`$isDeepSeek){ `$null } else { 0.2 }); max_tokens=700 }`n"
         . "  }`n"
         . "  `$json=`$payload | ConvertTo-Json -Depth 30`n"
         . "  `$res=Invoke-RestMethod -Method Post -Uri `$ep -Headers `$headers -ContentType 'application/json' -Body `$json`n"
         . "  `$text=''`n"
+        . "  `$reasoning=''`n"
         . "  if(`$isResponses){`n"
         . "    if(-not [string]::IsNullOrWhiteSpace([string]`$res.output_text)){ `$text=[string]`$res.output_text }`n"
         . "    if([string]::IsNullOrWhiteSpace(`$text) -and `$null -ne `$res.output){`n"
@@ -824,6 +936,7 @@ RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
         . "  } else {`n"
         . "    if(`$null -ne `$res.choices -and `$res.choices.Count -gt 0){`n"
         . "      `$msg=`$res.choices[0].message`n"
+        . "      if(`$null -ne `$msg.reasoning_content){ `$reasoning=[string]`$msg.reasoning_content }`n"
         . "      if(`$null -ne `$msg.content){`n"
         . "        if(`$msg.content -is [string]){ `$text=[string]`$msg.content }`n"
         . "        elseif(`$msg.content -is [System.Array]){ foreach(`$part in `$msg.content){ if(`$part.type -eq 'text' -and `$part.text){ `$text += [string]`$part.text + [Environment]::NewLine } }; `$text=`$text.Trim() }`n"
@@ -832,18 +945,15 @@ RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
         . "  }`n"
         . "  if([string]::IsNullOrWhiteSpace(`$text)){ `$text = (`$res | ConvertTo-Json -Depth 20) }`n"
         . "  Set-Content -LiteralPath `$out -Value `$text -Encoding UTF8`n"
+        . "  Set-Content -LiteralPath `$reason -Value `$reasoning -Encoding UTF8`n"
         . "} catch {`n"
         . "  Set-Content -LiteralPath `$err -Value `$_.Exception.Message -Encoding UTF8`n"
         . "}`n"
 
-    if FileExist(outPath) {
-        FileDelete(outPath)
-    }
-    if FileExist(errPath) {
-        FileDelete(errPath)
-    }
-    if FileExist(psPath) {
-        FileDelete(psPath)
+    for path in [outPath, reasonPath, errPath, psPath] {
+        if FileExist(path) {
+            FileDelete(path)
+        }
     }
     FileAppend(script, psPath, "UTF-8")
 
@@ -886,10 +996,11 @@ RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
     }
 
     txt := Trim(FileRead(outPath, "UTF-8"))
+    reasoning := FileExist(reasonPath) ? Trim(FileRead(reasonPath, "UTF-8")) : ""
     if (txt = "") {
-        return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "assistant text returned empty text")
+        return Map("ok", 0, "text", "", "reasoning", reasoning, "streamed", 0, "error", "assistant text returned empty text")
     }
-    return Map("ok", 1, "text", txt, "reasoning", "", "streamed", 0, "error", "")
+    return Map("ok", 1, "text", txt, "reasoning", reasoning, "streamed", 0, "error", "")
 }
 
 RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
@@ -900,7 +1011,7 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
     psPath := A_Temp "\\raccourci_assistant_text_stream_request.ps1"
 
     endpoint := Trim(settings["api_endpoint"])
-    apiKey := Trim(settings["api_key"])
+    apiKey := GetAssistantRequestApiKey(settings)
     model := Trim(settings["model"])
     prompt := Trim(GetAssistantPromptByTemplate(settings))
     query := Trim(queryText)
@@ -1147,11 +1258,12 @@ ParseAssistantStreamSnapshot(rawText) {
 }
 
 StartAssistantVoiceRecognitionSession(settings) {
+    global gDataFile
     provider := StrLower(GetAssistantVoiceInputProvider(settings))
     if (provider = "mock_local") {
         return Map("ok", 1, "provider", provider, "pid", 0, "transcript_path", "", "stop_path", "", "error_path", "")
     }
-    if (provider != "local_windows") {
+    if (provider != "local_windows" && provider != "xunfei_websocket_asr") {
         return Map("ok", 0, "provider", provider, "error", "voice provider not implemented: " provider)
     }
 
@@ -1163,9 +1275,11 @@ StartAssistantVoiceRecognitionSession(settings) {
     transcriptPath := A_Temp "\\raccourci_voice_input_transcript.txt"
     stopPath := A_Temp "\\raccourci_voice_input_stop.flag"
     errPath := A_Temp "\\raccourci_voice_input_err.txt"
+    statusPath := A_Temp "\\raccourci_voice_input_status.txt"
+    audioPath := A_Temp "\\raccourci_voice_input_xunfei_" A_TickCount ".pcm"
     selectedDeviceId := settings.Has("voice_input_device_id") ? Trim(settings["voice_input_device_id"]) : ""
 
-    for path in [transcriptPath, stopPath, errPath] {
+    for path in [transcriptPath, stopPath, errPath, statusPath] {
         if FileExist(path) {
             FileDelete(path)
         }
@@ -1175,9 +1289,13 @@ StartAssistantVoiceRecognitionSession(settings) {
     try {
         cmd := 'powershell -NoProfile -ExecutionPolicy Bypass -File "' scriptPath '"'
             . ' -Mode listen'
+            . ' -Provider "' provider '"'
             . ' -TranscriptPath "' transcriptPath '"'
             . ' -StopPath "' stopPath '"'
             . ' -ErrorPath "' errPath '"'
+            . ' -StatusPath "' statusPath '"'
+            . ' -DataFile "' gDataFile '"'
+            . ' -AudioPath "' audioPath '"'
         if (selectedDeviceId != "") {
             cmd .= ' -SelectedDeviceId "' selectedDeviceId '"'
         }
@@ -1193,8 +1311,98 @@ StartAssistantVoiceRecognitionSession(settings) {
         "transcript_path", transcriptPath,
         "stop_path", stopPath,
         "error_path", errPath,
+        "status_path", statusPath,
+        "audio_path", audioPath,
         "script_path", scriptPath
     )
+}
+
+EnsureAssistantVoiceService(settings) {
+    global gDataFile
+    provider := StrLower(GetAssistantVoiceInputProvider(settings))
+    if (provider != "xunfei_websocket_asr") {
+        return Map("ok", 0, "error", "voice service only supports xunfei_websocket_asr")
+    }
+
+    scriptPath := A_ScriptDir "\\scripts\\assistant_voice_input.ps1"
+    if !FileExist(scriptPath) {
+        return Map("ok", 0, "error", "voice input script missing")
+    }
+
+    transcriptPath := A_Temp "\\raccourci_voice_input_transcript.txt"
+    stopPath := A_Temp "\\raccourci_voice_input_stop.flag"
+    errPath := A_Temp "\\raccourci_voice_input_err.txt"
+    statusPath := A_Temp "\\raccourci_voice_input_status.txt"
+    commandPath := A_Temp "\\raccourci_voice_input_command.txt"
+    selectedDeviceId := settings.Has("voice_input_device_id") ? Trim(settings["voice_input_device_id"]) : ""
+
+    pid := 0
+    try {
+        cmd := 'powershell -NoProfile -ExecutionPolicy Bypass -File "' scriptPath '"'
+            . ' -Mode service'
+            . ' -Provider "' provider '"'
+            . ' -TranscriptPath "' transcriptPath '"'
+            . ' -StopPath "' stopPath '"'
+            . ' -ErrorPath "' errPath '"'
+            . ' -StatusPath "' statusPath '"'
+            . ' -CommandPath "' commandPath '"'
+            . ' -DataFile "' gDataFile '"'
+        if (selectedDeviceId != "") {
+            cmd .= ' -SelectedDeviceId "' selectedDeviceId '"'
+        }
+        Run(cmd, , "Hide", &pid)
+    } catch {
+        return Map("ok", 0, "error", "voice service command failed")
+    }
+
+    return Map(
+        "ok", 1,
+        "provider", provider,
+        "pid", pid,
+        "selected_device_id", selectedDeviceId,
+        "transcript_path", transcriptPath,
+        "stop_path", stopPath,
+        "error_path", errPath,
+        "status_path", statusPath,
+        "command_path", commandPath,
+        "script_path", scriptPath
+    )
+}
+
+SendAssistantVoiceServiceCommand(service, commandText) {
+    if !IsObject(service) || !service.Has("command_path") {
+        return false
+    }
+    try {
+        FileDelete(service["command_path"])
+    } catch {
+    }
+    try {
+        FileAppend(commandText, service["command_path"], "UTF-8")
+        return true
+    } catch {
+        return false
+    }
+}
+
+ShutdownAssistantVoiceService(service) {
+    if !IsObject(service) {
+        return
+    }
+    SendAssistantVoiceServiceCommand(service, "exit|" A_TickCount)
+    pid := service.Has("pid") ? service["pid"] : 0
+    if (pid > 0) {
+        deadline := A_TickCount + 3000
+        loop {
+            if !ProcessExist(pid) || A_TickCount >= deadline {
+                break
+            }
+            Sleep(60)
+        }
+        if ProcessExist(pid) {
+            try ProcessClose(pid)
+        }
+    }
 }
 
 StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
@@ -1203,8 +1411,12 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
     }
 
     provider := session.Has("provider") ? session["provider"] : ""
+    isServiceSession := session.Has("command_path")
     if (provider = "mock_local") {
         return Map("ok", 1, "text", "这是一次本地模拟语音输入。", "error", "")
+    }
+    if (provider = "xunfei_websocket_asr") {
+        timeoutMs := Max(timeoutMs, 8000)
     }
 
     stopPath := session.Has("stop_path") ? session["stop_path"] : ""
@@ -1212,32 +1424,62 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
     errPath := session.Has("error_path") ? session["error_path"] : ""
     pid := session.Has("pid") ? session["pid"] : 0
 
-    try FileAppend("stop", stopPath, "UTF-8")
-
-    deadline := A_TickCount + Max(400, Abs(Integer(timeoutMs)))
-    loop {
-        if !(pid > 0 && ProcessExist(pid)) {
-            break
+    if isServiceSession {
+        SendAssistantVoiceServiceCommand(session, "stop|" A_TickCount)
+        deadline := A_TickCount + Max(400, Abs(Integer(timeoutMs)))
+        loop {
+            statusText := ""
+            try {
+                if (session.Has("status_path") && FileExist(session["status_path"])) {
+                    statusText := FileRead(session["status_path"], "UTF-8")
+                }
+            }
+            if (InStr(statusText, "stage=completed") || InStr(statusText, "stage=ready") || InStr(statusText, "stage=failed")) {
+                break
+            }
+            if (A_TickCount >= deadline) {
+                break
+            }
+            Sleep(80)
         }
-        if (A_TickCount >= deadline) {
+    } else {
+        try FileAppend("stop", stopPath, "UTF-8")
+
+        deadline := A_TickCount + Max(400, Abs(Integer(timeoutMs)))
+        loop {
+            if !(pid > 0 && ProcessExist(pid)) {
+                break
+            }
+            if (A_TickCount >= deadline) {
+                break
+            }
+            Sleep(120)
+        }
+        if (pid > 0 && ProcessExist(pid)) {
+            try ProcessClose(pid)
+        }
+    }
+
+    settleDeadline := A_TickCount + ((provider = "xunfei_websocket_asr") ? 700 : 400)
+    err := ""
+    text := ""
+    loop {
+        if (errPath != "" && FileExist(errPath)) {
+            err := Trim(FileRead(errPath, "UTF-8"))
+            if (err != "") {
+                return Map("ok", 0, "text", "", "error", err)
+            }
+        }
+        if (transcriptPath != "" && FileExist(transcriptPath)) {
+            text := Trim(FileRead(transcriptPath, "UTF-8"))
+            if (text != "") {
+                break
+            }
+        }
+        if (A_TickCount >= settleDeadline) {
             break
         }
         Sleep(120)
-    }
-    if (pid > 0 && ProcessExist(pid)) {
-        try ProcessClose(pid)
-    }
-
-    if (errPath != "" && FileExist(errPath)) {
-        err := Trim(FileRead(errPath, "UTF-8"))
-        if (err != "") {
-            return Map("ok", 0, "text", "", "error", err)
-        }
-    }
-
-    text := ""
-    if (transcriptPath != "" && FileExist(transcriptPath)) {
-        text := Trim(FileRead(transcriptPath, "UTF-8"))
     }
     return Map("ok", 1, "text", text, "error", "")
 }

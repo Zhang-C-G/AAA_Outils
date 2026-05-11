@@ -1,12 +1,12 @@
 # 模块修改过程记录：E 截图问答
 
-最近同步：`2026-04-27`  
+最近同步：`2026-05-11`  
 状态：`active`
 
 ## 1. 当前状态
 
 - 核心范围：截图问答、语音输入、悬浮窗、模型配置
-- 当前重点：保留有效配置项，收掉无用前端入口
+- 当前重点：F3 讯飞语音识别的低延迟、流式转写、状态可视化与常驻待命优化
 
 ## 2. 修改记录
 
@@ -70,6 +70,43 @@
   - Python WebSocket 直连讯飞鉴权校验
   - 校验结果：本地录音与远端连接已通，当前剩余阻塞为讯飞 `API Key / API Secret` 签名不匹配
 - 测试结果：`链路推进成功，但需修正讯飞凭据后才能完成最终识别`
+
+### 2026-05-11 / F3 切换为纯语音识别回填并修复中文编码链路
+- 改动内容：
+  - 将 `F3` 从“识别后直接调用问答模型”切为“纯语音识别回填输入框”，便于先单独验证语音识别准确率
+  - 修复讯飞识别结果在 Python -> PowerShell -> AHK 链路中的中文乱码问题，改为由 Python 先写入 UTF-8 文本文件，再由上层读取
+  - transcript 初始化改为 `UTF-8 without BOM`，避免空文件被误识别为已有内容
+  - 压短整段录音上传前的额外等待，先收掉明显的非必要延迟
+- 测试：
+  - `python scripts/xunfei_asr.py --audio <probe_pcm> --output <temp> --error-output <temp>`
+  - transcript 空文件检查：确认长度为 `0`，无 BOM
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+- 测试结果：`通过`
+
+### 2026-05-11 / F3 接入 live 讯飞链路与流式 transcript
+- 改动内容：
+  - 将讯飞识别链路从“按住录音、松开后整段识别”推进到 `live` 模式，改为边采集、边上传、边实时写 transcript
+  - 悬浮窗 transcript watcher 刷新间隔从 `180ms` 收紧到 `70ms`
+  - 悬浮窗文案同步改为“实时转写”，明确当前看到的是流式中间结果
+  - 当前阶段先保持“语音识别 -> 回填文本”的单目标闭环，不叠加问答模型调用
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/assistant_voice_input.ps1 -Mode listen -Provider xunfei_websocket_asr ...`
+  - live transcript 文件持续写入观察
+  - `python scripts/xunfei_asr.py --audio <probe_pcm>`
+- 测试结果：`通过`
+
+### 2026-05-11 / F3 增加语音状态显示、耗时埋点与 service 常驻待命尝试
+- 改动内容：
+  - 为 F3 增加状态显示：`语音启动中 / 已连接麦克风 / 已连接识别服务 / 正在监听输入 / 正在实时转写 / 正在整理识别结果 / 正在结束监听 / 语音识别完成`
+  - 增加耗时埋点日志：`assistant_voice_input_start`、`assistant_voice_stage`、`assistant_voice_first_text`
+  - 实测旧链路中 `F3 -> listening` 约 `641ms`，`F3 -> capturing` 约 `1344ms`，确认用户感知到的 1 秒级启动延迟是真实存在的
+  - 新增“悬浮窗打开时预拉起语音底层”的 service / prewarm 尝试：悬浮窗打开即启动待命 service，按下 F3 时优先走 service start，超时则 fallback 到旧链路
+  - 当前 service 已可稳定进入 `stage=ready`，也能拉起 Python 子进程，但 `start` 后尚未稳定推进到 `connected / capturing / streaming`，因此仍需继续修复
+- 测试：
+  - `action.log` 校验：确认出现 `assistant_voice_stage` 与 `assistant_voice_first_text` 埋点
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/assistant_voice_input.ps1 -Mode service ...`
+  - service `start` / `stop` 冒烟：确认 service 可进入 `ready`，但 `start` 后状态仍停在 `ready`
+- 测试结果：`部分通过：状态显示、日志埋点、ready 待命正常，service start 后的 live 采集链路仍需继续修复`
 
 ### 2026-04-26 / 语音模型收敛为讯飞
 - 改动内容：
