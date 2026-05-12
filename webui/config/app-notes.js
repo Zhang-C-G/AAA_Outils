@@ -1,4 +1,5 @@
 ﻿import { state, byId, api, toast, setDirty, escapeHtml, confirmDialog } from './app-common.js';
+import { parseMarkdown, serializePreviewBodyToMarkdown, slugifyHeading } from './app-markdown.js';
 
 const NOTES_AUTOSAVE_DELAY_MS = 700;
 let notesAutosaveTimer = 0;
@@ -254,15 +255,6 @@ function syncExtractMarkerInput(inputId) {
   input.value = stripAsteriskMarker(input.value);
 }
 
-function slugifyHeading(text, index) {
-  const base = String(text || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^\w\u4e00-\u9fa5]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return `${base || 'section'}-${index}`;
-}
-
 function parseNoteStructure(content) {
   const normalized = String(content || '').replace(/\r\n/g, '\n');
   const lines = normalized.split('\n');
@@ -396,224 +388,12 @@ function setExtractStatus(message) {
   }
 }
 
-function renderInlineMarkdown(text) {
-  let out = escapeHtml(text);
-  out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
-  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  out = out.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-  out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  out = out.replace(/_([^_]+)_/g, '<em>$1</em>');
-  return out;
-}
-
-function buildMarkdownPreview(markdown) {
-  const lines = String(markdown || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  const html = [];
-  let paragraph = [];
-  let listItems = [];
-  let listType = '';
-  let inCode = false;
-  let codeLines = [];
-  let headingIndex = 0;
-
-  const flushParagraph = () => {
-    if (!paragraph.length) return;
-    html.push(`<p>${renderInlineMarkdown(paragraph.join('\n'))}</p>`);
-    paragraph = [];
-  };
-
-  const flushList = () => {
-    if (!listItems.length) return;
-    const tag = listType === 'ol' ? 'ol' : 'ul';
-    html.push(`<${tag}>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</${tag}>`);
-    listItems = [];
-    listType = '';
-  };
-
-  const flushCode = () => {
-    if (!inCode) return;
-    html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
-    inCode = false;
-    codeLines = [];
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine ?? '';
-    const trimmed = line.trim();
-
-    if (trimmed.startsWith('```')) {
-      flushParagraph();
-      flushList();
-      if (inCode) {
-        flushCode();
-      } else {
-        inCode = true;
-        codeLines = [];
-      }
-      continue;
-    }
-
-    if (inCode) {
-      codeLines.push(line);
-      continue;
-    }
-
-    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
-    if (headingMatch) {
-      flushParagraph();
-      flushList();
-      headingIndex += 1;
-      const level = headingMatch[1].length;
-      const text = headingMatch[2].trim();
-      const id = slugifyHeading(text, headingIndex);
-      html.push(`<h${level} data-heading-id="${id}" id="${id}">${renderInlineMarkdown(text)}</h${level}>`);
-      continue;
-    }
-
-    const standaloneStrongMatch = trimmed.match(/^(\*\*[^*]+\*\*|__[^_]+__)$/);
-    if (standaloneStrongMatch) {
-      flushParagraph();
-      flushList();
-      html.push(`<p class="notes-preview-label">${renderInlineMarkdown(trimmed)}</p>`);
-      continue;
-    }
-
-    const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
-    if (orderedMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ol') flushList();
-      listType = 'ol';
-      listItems.push(orderedMatch[1]);
-      continue;
-    }
-
-    const bulletMatch = trimmed.match(/^[-*+]\s+(.+)$/);
-    if (bulletMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ul') flushList();
-      listType = 'ul';
-      listItems.push(bulletMatch[1]);
-      continue;
-    }
-
-    if (!trimmed) {
-      flushParagraph();
-      flushList();
-      continue;
-    }
-
-    if (listItems.length) flushList();
-    paragraph.push(trimmed);
-  }
-
-  flushParagraph();
-  flushList();
-  flushCode();
-  return html.join('');
-}
-
-function collectInlineMarkdown(node) {
-  if (!node) return '';
-  const tag = (node.nodeName || '').toUpperCase();
-
-  if (tag === '#TEXT') {
-    return String(node.textContent || '').replace(/\u00A0/g, ' ');
-  }
-  if (tag === 'BR') {
-    return '\n';
-  }
-  if (tag === 'STRONG' || tag === 'B') {
-    const inner = Array.from(node.childNodes || []).map((child) => collectInlineMarkdown(child)).join('');
-    return inner ? `**${inner}**` : '';
-  }
-  if (tag === 'EM' || tag === 'I') {
-    const inner = Array.from(node.childNodes || []).map((child) => collectInlineMarkdown(child)).join('');
-    return inner ? `*${inner}*` : '';
-  }
-  if (tag === 'CODE') {
-    const inner = Array.from(node.childNodes || []).map((child) => collectInlineMarkdown(child)).join('');
-    return inner ? `\`${inner}\`` : '';
-  }
-
-  return Array.from(node.childNodes || []).map((child) => collectInlineMarkdown(child)).join('');
-}
-
-function collectMarkdownFromPreviewNode(node, lines) {
-  if (!node) return;
-  const tag = (node.nodeName || '').toUpperCase();
-
-  if (tag === '#TEXT') {
-    const text = String(node.textContent || '').replace(/\u00A0/g, ' ').trim();
-    if (text) lines.push(text);
-    return;
-  }
-
-  if (/^H[1-6]$/.test(tag)) {
-    const level = Number(tag.slice(1));
-    const text = collectInlineMarkdown(node).trim();
-    if (text) {
-      lines.push(`${'#'.repeat(level)} ${text}`);
-      lines.push('');
-    }
-    return;
-  }
-
-  if (tag === 'P') {
-    const text = collectInlineMarkdown(node).replace(/\n{3,}/g, '\n\n').trim();
-    if (text) {
-      lines.push(text);
-      lines.push('');
-    }
-    return;
-  }
-
-  if (tag === 'UL' || tag === 'OL') {
-    const items = Array.from(node.children || []).filter((child) => child.nodeName.toUpperCase() === 'LI');
-    items.forEach((item, index) => {
-      const text = collectInlineMarkdown(item).replace(/\n+/g, ' ').trim();
-      if (!text) return;
-      lines.push(`${tag === 'OL' ? `${index + 1}. ` : '- '}${text}`);
-    });
-    if (items.length) lines.push('');
-    return;
-  }
-
-  if (tag === 'PRE') {
-    const code = (node.innerText || node.textContent || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd();
-    lines.push('```');
-    if (code) lines.push(code);
-    lines.push('```');
-    lines.push('');
-    return;
-  }
-
-  if (tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE') {
-    Array.from(node.childNodes || []).forEach((child) => collectMarkdownFromPreviewNode(child, lines));
-    return;
-  }
-
-  const text = collectInlineMarkdown(node).replace(/\n{3,}/g, '\n\n').trim();
-  if (text) {
-    lines.push(text);
-    lines.push('');
-  }
-}
-
-function serializePreviewBodyToMarkdown(bodyEl) {
-  const lines = [];
-  Array.from(bodyEl.childNodes || []).forEach((node) => collectMarkdownFromPreviewNode(node, lines));
-  while (lines.length && !String(lines[lines.length - 1]).trim()) {
-    lines.pop();
-  }
-  return lines.join('\n');
-}
-
 function renderNoteContentSurface() {
   const previewEl = byId('notePreviewBody');
   const sourceEl = byId('noteContent');
   if (!previewEl || !sourceEl) return;
   if (notesPreviewEditing) return;
-  const html = buildMarkdownPreview(sourceEl.value || '');
+  const html = parseMarkdown(sourceEl.value || '').html;
   previewEl.innerHTML = html.trim() ? html : '<div class="notes-preview-empty">当前还没有正文内容。可以先输入或导入 Markdown，系统会转成正常笔记正文显示。</div>';
   syncNotesContentMode();
 }

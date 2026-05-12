@@ -1,14 +1,20 @@
 import { state, byId, api, toast, setDirty, escapeHtml, confirmDialog } from './app-common.js';
+import { parseMarkdown, serializePreviewBodyToMarkdown } from './app-markdown.js';
 
 const NOTES_DISPLAY_AUTOSAVE_DELAY_MS = 700;
 let notesDisplayAutosaveTimer = 0;
 let notesDisplayLoading = false;
+let notesDisplaySaveInFlight = false;
+let notesDisplaySaveQueued = false;
+let notesDisplaySavePromise = null;
 let notesDisplayPreviewEditing = false;
 let notesDisplaySidebarCompact = false;
 let notesDisplayContentView = 'rendered';
 let notesDisplayStructureCache = [];
 let activeNotesDisplayHeadingId = '';
 let activeNotesDisplayPreviewHeadingEl = null;
+let draggingNotesDisplayId = '';
+let editingNotesDisplayTitleId = '';
 
 function hotkeyToFriendly(hk) {
   const raw = String(hk || '').trim();
@@ -44,7 +50,7 @@ function renderNotesDisplayHotkeyExplain() {
   const hkOpen = hotkeyToFriendly(state.hotkeys?.notes_display_overlay || 'F4');
   const hkUp = hotkeyToFriendly(state.hotkeys?.notes_overlay_up || 'Up');
   const hkDown = hotkeyToFriendly(state.hotkeys?.notes_overlay_down || 'Down');
-  el.textContent = `快捷键说明（自动同步配置）：启动笔记显示悬浮窗 ${hkOpen}；目录上移 ${hkUp}；目录下移 ${hkDown}；在本页写入 Markdown 后会自动解析目录；点击目录或使用上下键后正文预览自动跳转。`;
+  el.textContent = `快捷键说明：启动笔记显示悬浮窗 ${hkOpen}；目录上移 ${hkUp}；目录下移 ${hkDown}。在本页写入 Markdown 后会自动解析目录，点击目录或使用上下键后正文预览会自动跳转。`;
 }
 
 function syncNotesDisplaySidebar() {
@@ -78,6 +84,38 @@ function deriveNotesDisplayTitle(content) {
   return 'Untitled';
 }
 
+function getCurrentNotesDisplayTitle() {
+  const currentId = String(state.notesDisplay.currentId || '').trim();
+  const current = (state.notesDisplay.list || []).find((note) => String(note.id || '').trim() === currentId);
+  return String(current?.title || '').trim() || 'Untitled';
+}
+
+function updateCurrentNotesDisplayMeta(title) {
+  const id = String(state.notesDisplay.currentId || '').trim();
+  if (!id) return;
+  const nextTitle = String(title || '').trim() || 'Untitled';
+  const list = Array.isArray(state.notesDisplay.list) ? state.notesDisplay.list : [];
+  const existing = list.find((note) => String(note.id || '').trim() === id);
+  if (existing) {
+    existing.title = nextTitle;
+  } else {
+    list.unshift({ id, title: nextTitle, updated: '' });
+    state.notesDisplay.list = list;
+  }
+}
+
+async function persistNotesDisplayWorkspaceState() {
+  state.app.notes_display_current_id = String(state.notesDisplay.currentId || '').trim();
+  state.app.notes_display_content_view = notesDisplayContentView;
+  await api('/api/app/notes-display-workspace', {
+    method: 'POST',
+    body: JSON.stringify({
+      notes_display_current_id: state.app.notes_display_current_id,
+      notes_display_content_view: state.app.notes_display_content_view
+    })
+  });
+}
+
 async function ensureNotesDisplayCurrentId() {
   if (state.notesDisplay.currentId) return state.notesDisplay.currentId;
   const payload = await api('/api/notes-display/create', {
@@ -89,39 +127,6 @@ async function ensureNotesDisplayCurrentId() {
   }
   state.notesDisplay.currentId = String(payload.id);
   return state.notesDisplay.currentId;
-}
-
-function renderNotesDisplayList() {
-  const listEl = byId('notesDisplayList');
-  if (!listEl) return;
-  listEl.innerHTML = '';
-
-  if (!Array.isArray(state.notesDisplay.list) || state.notesDisplay.list.length === 0) {
-    listEl.innerHTML = '<div class="notes-display-list-empty">当前还没有可展示内容。先在右侧写入 Markdown，系统会自动保存并生成目录与预览。</div>';
-    return;
-  }
-
-  for (const note of state.notesDisplay.list) {
-    const item = document.createElement('div');
-    item.className = `note-item ${note.id === state.notesDisplay.currentId ? 'active' : ''}`;
-    item.innerHTML = `<div class="note-item-title">${escapeHtml(note.title || 'Untitled')}</div>`;
-    item.onclick = () => selectNotesDisplayNote(note.id).catch((e) => toast(`切换失败: ${e.message}`));
-    listEl.appendChild(item);
-  }
-
-  const createWrap = document.createElement('div');
-  createWrap.className = 'notes-list-create-wrap';
-  createWrap.innerHTML = '<button id="newNotesDisplayBtnInline" class="notes-create-btn" type="button" aria-label="新建笔记显示">+</button>';
-  listEl.appendChild(createWrap);
-
-  const inlineCreateBtn = createWrap.querySelector('#newNotesDisplayBtnInline');
-  if (inlineCreateBtn) {
-    inlineCreateBtn.onclick = () => {
-      createNewNotesDisplayNote().catch((error) => {
-        toast(`新建失败: ${error.message}`);
-      });
-    };
-  }
 }
 
 async function createNewNotesDisplayNote() {
@@ -140,24 +145,47 @@ async function createNewNotesDisplayNote() {
   toast('已新建内容');
 }
 
-function renderInlineMarkdown(text) {
-  let out = escapeHtml(text);
-  out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
-  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  out = out.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-  out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  out = out.replace(/_([^_]+)_/g, '<em>$1</em>');
-  return out;
+async function renameNotesDisplayTitle(noteId, rawTitle) {
+  const id = String(noteId || '').trim();
+  if (!id) return;
+  const title = String(rawTitle || '').trim() || 'Untitled';
+
+  if (id === String(state.notesDisplay.currentId || '').trim()) {
+    updateCurrentNotesDisplayMeta(title);
+    renderNotesDisplayList();
+    state.notesDisplay.dirty = true;
+    setDirty(true, 'notes_display');
+    await saveCurrentNotesDisplayNote({ silent: true, preserveTitle: true, title });
+    return;
+  }
+
+  const payload = await api(`/api/notes-display/get?id=${encodeURIComponent(id)}`);
+  if (!payload.ok) throw new Error(payload.error || 'load notes display note failed');
+  const note = payload.note || { id, title, content: '' };
+  const savePayload = await api('/api/notes-display/save', {
+    method: 'POST',
+    body: JSON.stringify({
+      id,
+      title,
+      content: note.content || ''
+    })
+  });
+  if (!savePayload.ok) throw new Error(savePayload.error || 'rename notes display note failed');
+
+  const existing = (state.notesDisplay.list || []).find((item) => String(item.id || '').trim() === id);
+  if (existing) existing.title = title;
+  renderNotesDisplayList();
 }
 
-function slugifyHeading(text, index) {
-  const base = String(text || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^\w\u4e00-\u9fa5-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `${base || 'section'}-${index}`;
+async function persistNotesDisplayOrder() {
+  const order = (state.notesDisplay.list || []).map((note) => String(note.id || '').trim()).filter(Boolean);
+  const payload = await api('/api/notes-display/reorder', {
+    method: 'POST',
+    body: JSON.stringify({ order })
+  });
+  if (!payload.ok) throw new Error(payload.error || 'reorder notes display failed');
+  state.notesDisplay.list = payload.notes || state.notesDisplay.list;
+  renderNotesDisplayList();
 }
 
 function syncNotesDisplayContentMode() {
@@ -187,108 +215,11 @@ function syncNotesDisplayContentMode() {
 
 function setNotesDisplayContentView(mode) {
   notesDisplayContentView = mode === 'markdown' ? 'markdown' : 'rendered';
+  state.app.notes_display_content_view = notesDisplayContentView;
   syncNotesDisplayContentMode();
-}
-
-function buildMarkdownPreview(markdown) {
-  const lines = String(markdown || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  const toc = [];
-  const html = [];
-  let paragraph = [];
-  let listItems = [];
-  let listType = '';
-  let inCode = false;
-  let codeLines = [];
-  let headingIndex = 0;
-
-  const flushParagraph = () => {
-    if (!paragraph.length) return;
-    html.push(`<p>${renderInlineMarkdown(paragraph.join('\n'))}</p>`);
-    paragraph = [];
-  };
-
-  const flushList = () => {
-    if (!listItems.length) return;
-    const tag = listType === 'ol' ? 'ol' : 'ul';
-    html.push(`<${tag}>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</${tag}>`);
-    listItems = [];
-    listType = '';
-  };
-
-  const flushCode = () => {
-    if (!inCode) return;
-    html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
-    inCode = false;
-    codeLines = [];
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine ?? '';
-    const trimmed = line.trim();
-
-    if (trimmed.startsWith('```')) {
-      flushParagraph();
-      flushList();
-      if (inCode) {
-        flushCode();
-      } else {
-        inCode = true;
-        codeLines = [];
-      }
-      continue;
-    }
-
-    if (inCode) {
-      codeLines.push(line);
-      continue;
-    }
-
-    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
-    if (headingMatch) {
-      flushParagraph();
-      flushList();
-      headingIndex += 1;
-      const level = headingMatch[1].length;
-      const text = headingMatch[2].trim();
-      const id = slugifyHeading(text, headingIndex);
-      toc.push({ id, text, level });
-      html.push(`<h${level} data-heading-id="${id}" id="${id}">${renderInlineMarkdown(text)}</h${level}>`);
-      continue;
-    }
-
-    const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
-    if (orderedMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ol') flushList();
-      listType = 'ol';
-      listItems.push(orderedMatch[1]);
-      continue;
-    }
-
-    const bulletMatch = trimmed.match(/^[-*+]\s+(.+)$/);
-    if (bulletMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ul') flushList();
-      listType = 'ul';
-      listItems.push(bulletMatch[1]);
-      continue;
-    }
-
-    if (!trimmed) {
-      flushParagraph();
-      flushList();
-      continue;
-    }
-
-    if (listItems.length) flushList();
-    paragraph.push(trimmed);
-  }
-
-  flushParagraph();
-  flushList();
-  flushCode();
-
-  return { toc, html: html.join('') };
+  void persistNotesDisplayWorkspaceState().catch((e) => {
+    toast(`视图状态保存失败: ${e.message}`);
+  });
 }
 
 function syncActiveNotesDisplayHeading() {
@@ -414,76 +345,6 @@ function focusNotesDisplayHeading(headingId) {
   scrollNotesDisplayPreviewToHeading(target.id);
 }
 
-function collectMarkdownFromPreviewNode(node, lines) {
-  if (!node) return;
-  const tag = (node.nodeName || '').toUpperCase();
-
-  if (tag === '#TEXT') {
-    const text = String(node.textContent || '').replace(/\u00A0/g, ' ').trim();
-    if (text) lines.push(text);
-    return;
-  }
-
-  if (/^H[1-6]$/.test(tag)) {
-    const level = Number(tag.slice(1));
-    const text = (node.innerText || node.textContent || '').replace(/\u00A0/g, ' ').trim();
-    if (text) {
-      lines.push(`${'#'.repeat(level)} ${text}`);
-      lines.push('');
-    }
-    return;
-  }
-
-  if (tag === 'P') {
-    const text = (node.innerText || node.textContent || '').replace(/\u00A0/g, ' ').trim();
-    if (text) {
-      lines.push(text);
-      lines.push('');
-    }
-    return;
-  }
-
-  if (tag === 'UL' || tag === 'OL') {
-    const items = Array.from(node.children || []).filter((child) => child.nodeName.toUpperCase() === 'LI');
-    items.forEach((item, index) => {
-      const text = (item.innerText || item.textContent || '').replace(/\u00A0/g, ' ').trim();
-      if (!text) return;
-      lines.push(`${tag === 'OL' ? `${index + 1}. ` : '- '}${text}`);
-    });
-    if (items.length) lines.push('');
-    return;
-  }
-
-  if (tag === 'PRE') {
-    const code = (node.innerText || node.textContent || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd();
-    lines.push('```');
-    if (code) lines.push(code);
-    lines.push('```');
-    lines.push('');
-    return;
-  }
-
-  if (tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE') {
-    Array.from(node.childNodes || []).forEach((child) => collectMarkdownFromPreviewNode(child, lines));
-    return;
-  }
-
-  const text = (node.innerText || node.textContent || '').replace(/\u00A0/g, ' ').trim();
-  if (text) {
-    lines.push(text);
-    lines.push('');
-  }
-}
-
-function serializePreviewBodyToMarkdown(bodyEl) {
-  const lines = [];
-  Array.from(bodyEl.childNodes || []).forEach((node) => collectMarkdownFromPreviewNode(node, lines));
-  while (lines.length && !String(lines[lines.length - 1]).trim()) {
-    lines.pop();
-  }
-  return lines.join('\n');
-}
-
 function renderNotesDisplayStructure(toc = []) {
   const host = byId('notesDisplayOutlineList');
   if (!host) return;
@@ -492,7 +353,7 @@ function renderNotesDisplayStructure(toc = []) {
     activeNotesDisplayHeadingId = '';
   }
   if (!notesDisplayStructureCache.length) {
-    host.innerHTML = '<div class="notes-outline-empty">把一大段 Markdown 贴进右侧后，这里会自动列出目录结构。</div>';
+    host.innerHTML = '<div class="notes-outline-empty">把一段 Markdown 放进右侧后，这里会自动列出目录结构。</div>';
     return;
   }
   host.innerHTML = notesDisplayStructureCache
@@ -511,6 +372,7 @@ function syncNotesDisplayPreviewEdit() {
   const contentEl = byId('notesDisplayContent');
   if (!bodyEl || !contentEl) return;
   contentEl.value = serializePreviewBodyToMarkdown(bodyEl);
+  renderNotesDisplayStructure(parseMarkdown(contentEl.value).toc);
   state.notesDisplay.dirty = true;
   setDirty(true, 'notes_display');
   scheduleNotesDisplayAutosave();
@@ -528,7 +390,7 @@ function renderNotesDisplayPreview() {
   if (!bodyEl) return;
   if (notesDisplayPreviewEditing) return;
 
-  const parsed = buildMarkdownPreview(content);
+  const parsed = parseMarkdown(content);
   renderNotesDisplayStructure(parsed.toc);
 
   if (!parsed.html.trim()) {
@@ -542,6 +404,124 @@ function renderNotesDisplayPreview() {
   syncNotesDisplayContentMode();
 }
 
+function renderNotesDisplayList() {
+  const listEl = byId('notesDisplayList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  if (!Array.isArray(state.notesDisplay.list) || state.notesDisplay.list.length === 0) {
+    listEl.innerHTML = '<div class="notes-display-list-empty">当前还没有可展示内容。先在右侧写入 Markdown，系统会自动保存并生成目录与预览。</div>';
+    return;
+  }
+
+  for (const note of state.notesDisplay.list) {
+    const item = document.createElement('div');
+    item.className = `note-item ${note.id === state.notesDisplay.currentId ? 'active' : ''}`;
+    item.draggable = true;
+    item.dataset.id = note.id;
+    if (editingNotesDisplayTitleId === note.id) {
+      item.innerHTML = `<input class="note-item-title-edit" type="text" value="${escapeHtml(note.title || 'Untitled')}" />`;
+    } else {
+      item.innerHTML = `<div class="note-item-title">${escapeHtml(note.title || 'Untitled')}</div>`;
+    }
+    item.onclick = () => selectNotesDisplayNote(note.id).catch((e) => toast(`切换失败: ${e.message}`));
+    item.ondblclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      editingNotesDisplayTitleId = note.id;
+      renderNotesDisplayList();
+      const input = listEl.querySelector(`.note-item[data-id="${note.id}"] .note-item-title-edit`);
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    };
+    item.addEventListener('dragstart', (event) => {
+      draggingNotesDisplayId = note.id;
+      item.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', note.id);
+    });
+    item.addEventListener('dragend', () => {
+      draggingNotesDisplayId = '';
+      item.classList.remove('dragging');
+      for (const node of listEl.querySelectorAll('.drag-target')) {
+        node.classList.remove('drag-target');
+      }
+    });
+    item.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      if (!draggingNotesDisplayId || draggingNotesDisplayId === note.id) return;
+      item.classList.add('drag-target');
+    });
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-target');
+    });
+    item.addEventListener('drop', (event) => {
+      event.preventDefault();
+      item.classList.remove('drag-target');
+      const fromId = event.dataTransfer.getData('text/plain');
+      if (!fromId || fromId === note.id) return;
+      const from = state.notesDisplay.list.findIndex((entry) => entry.id === fromId);
+      const to = state.notesDisplay.list.findIndex((entry) => entry.id === note.id);
+      if (from < 0 || to < 0) return;
+      const [moving] = state.notesDisplay.list.splice(from, 1);
+      state.notesDisplay.list.splice(to, 0, moving);
+      renderNotesDisplayList();
+      void persistNotesDisplayOrder().catch((e) => toast(`内容排序保存失败: ${e.message}`));
+    });
+
+    if (editingNotesDisplayTitleId === note.id) {
+      const input = item.querySelector('.note-item-title-edit');
+      const finish = async (commit) => {
+        const nextValue = commit ? input.value : (note.title || 'Untitled');
+        editingNotesDisplayTitleId = '';
+        try {
+          if (commit) {
+            await renameNotesDisplayTitle(note.id, nextValue);
+            toast('内容标题已更新');
+          } else {
+            renderNotesDisplayList();
+          }
+        } catch (error) {
+          toast(`标题修改失败: ${error.message}`);
+          renderNotesDisplayList();
+        }
+      };
+      input.addEventListener('click', (event) => event.stopPropagation());
+      input.addEventListener('dblclick', (event) => event.stopPropagation());
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          void finish(true);
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          void finish(false);
+        }
+      });
+      input.addEventListener('blur', () => {
+        void finish(true);
+      });
+    }
+    listEl.appendChild(item);
+  }
+
+  const createWrap = document.createElement('div');
+  createWrap.className = 'notes-list-create-wrap';
+  createWrap.innerHTML = '<button id="newNotesDisplayBtnInline" class="notes-create-btn" type="button" aria-label="新建笔记显示">+</button>';
+  listEl.appendChild(createWrap);
+
+  const inlineCreateBtn = createWrap.querySelector('#newNotesDisplayBtnInline');
+  if (inlineCreateBtn) {
+    inlineCreateBtn.onclick = () => {
+      createNewNotesDisplayNote().catch((error) => {
+        toast(`新建失败: ${error.message}`);
+      });
+    };
+  }
+}
+
 async function loadNotesDisplayContent(id) {
   const payload = await api(`/api/notes-display/get?id=${encodeURIComponent(id)}`);
   if (!payload.ok) throw new Error(payload.error || 'load notes display note failed');
@@ -550,6 +530,8 @@ async function loadNotesDisplayContent(id) {
   notesDisplayLoading = true;
   clearNotesDisplayAutosaveTimer();
   state.notesDisplay.currentId = note.id;
+  state.app.notes_display_current_id = note.id;
+  updateCurrentNotesDisplayMeta(note.title || 'Untitled');
   byId('notesDisplayContent').value = note.content || '';
   state.notesDisplay.dirty = false;
   setDirty(false, 'notes_display');
@@ -557,6 +539,7 @@ async function loadNotesDisplayContent(id) {
   renderNotesDisplayHotkeyExplain();
   renderNotesDisplayPreview();
   notesDisplayLoading = false;
+  await persistNotesDisplayWorkspaceState();
 }
 
 export async function loadNotesDisplayNotes() {
@@ -572,7 +555,8 @@ export async function loadNotesDisplayNotes() {
   }
 
   if (!state.notesDisplay.currentId || !state.notesDisplay.list.find((n) => n.id === state.notesDisplay.currentId)) {
-    state.notesDisplay.currentId = state.notesDisplay.list[0]?.id || '';
+    const preferredId = String(state.app?.notes_display_current_id || '').trim();
+    state.notesDisplay.currentId = (preferredId && state.notesDisplay.list.find((n) => n.id === preferredId) ? preferredId : '') || state.notesDisplay.list[0]?.id || '';
   }
 
   renderNotesDisplayList();
@@ -589,21 +573,62 @@ export async function loadNotesDisplayNotes() {
 export async function saveCurrentNotesDisplayNote(options = {}) {
   const id = await ensureNotesDisplayCurrentId();
 
-  const content = byId('notesDisplayContent').value;
-  const title = deriveNotesDisplayTitle(content);
-  const payload = await api('/api/notes-display/save', {
-    method: 'POST',
-    body: JSON.stringify({ id, title, content })
-  });
-  if (!payload.ok) throw new Error(payload.error || 'save notes display note failed');
+  if (notesDisplaySaveInFlight) {
+    notesDisplaySaveQueued = true;
+    await notesDisplaySavePromise;
+    if (state.notesDisplay.dirty) {
+      return saveCurrentNotesDisplayNote(options);
+    }
+    return;
+  }
 
-  state.notesDisplay.dirty = false;
-  setDirty(false, 'notes_display');
-  await loadNotesDisplayNotes();
-  if (!options.silent) {
-    toast('笔记显示内容已保存');
+  const content = byId('notesDisplayContent').value;
+  let title = String(options.title || '').trim();
+  if (!title) {
+    title = options.preserveTitle ? getCurrentNotesDisplayTitle() : '';
+  }
+  if (!title) {
+    title = getCurrentNotesDisplayTitle();
+  }
+  if (!title || title === 'Untitled') {
+    title = deriveNotesDisplayTitle(content);
+  }
+
+  clearNotesDisplayAutosaveTimer();
+  notesDisplaySaveInFlight = true;
+
+  try {
+    notesDisplaySavePromise = api('/api/notes-display/save', {
+      method: 'POST',
+      body: JSON.stringify({ id, title, content })
+    });
+    const payload = await notesDisplaySavePromise;
+    if (!payload.ok) throw new Error(payload.error || 'save notes display note failed');
+
+    updateCurrentNotesDisplayMeta(title);
+    state.notesDisplay.dirty = false;
+    setDirty(false, 'notes_display');
+    renderNotesDisplayList();
+    await loadNotesDisplayNotes();
+    if (!options.silent) {
+      toast('内容已保存');
+    }
+  } catch (error) {
+    state.notesDisplay.dirty = true;
+    setDirty(true, 'notes_display');
+    notesDisplaySaveQueued = false;
+    scheduleNotesDisplayAutosave();
+    throw error;
+  } finally {
+    notesDisplaySaveInFlight = false;
+    notesDisplaySavePromise = null;
+    if (notesDisplaySaveQueued) {
+      notesDisplaySaveQueued = false;
+      scheduleNotesDisplayAutosave();
+    }
   }
 }
+
 
 export async function deleteCurrentNotesDisplayNote() {
   const id = state.notesDisplay.currentId;
@@ -616,8 +641,10 @@ export async function deleteCurrentNotesDisplayNote() {
   if (!payload.ok) throw new Error(payload.error || 'delete notes display note failed');
   clearNotesDisplayAutosaveTimer();
   state.notesDisplay.currentId = '';
+  state.app.notes_display_current_id = '';
   state.notesDisplay.dirty = false;
   setDirty(false, 'notes_display');
+  await persistNotesDisplayWorkspaceState();
   await loadNotesDisplayNotes();
   toast('内容已删除');
 }
@@ -641,6 +668,8 @@ export async function selectNotesDisplayNote(id) {
 
 export function initNotesDisplayHandlers() {
   notesDisplaySidebarCompact = Number(state.app?.notes_display_sidebar_compact || 0) === 1;
+  notesDisplayContentView = String(state.app?.notes_display_content_view || 'rendered') === 'markdown' ? 'markdown' : 'rendered';
+  state.app.notes_display_content_view = notesDisplayContentView;
   const contentEl = byId('notesDisplayContent');
   const previewBodyEl = byId('notesDisplayPreviewBody');
   const outlineEl = byId('notesDisplayOutlineList');

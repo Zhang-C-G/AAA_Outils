@@ -678,6 +678,55 @@ label span { color: #d2d2d2; font-size: 14px; }
   margin: 0 0 12px 22px;
   padding: 0;
 }
+.notes-preview-body li + li {
+  margin-top: 6px;
+}
+.notes-preview-body a {
+  color: #8ab4ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.notes-preview-body blockquote {
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border-left: 3px solid #525252;
+  background: rgba(255,255,255,.03);
+  color: #d6d6d6;
+}
+.notes-preview-body hr {
+  margin: 14px 0;
+  border: 0;
+  border-top: 1px solid #343434;
+}
+.notes-preview-body table {
+  width: 100%;
+  margin: 0 0 12px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.notes-preview-body th,
+.notes-preview-body td {
+  padding: 8px 10px;
+  border: 1px solid #303030;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+.notes-preview-body th {
+  color: #f6f6f6;
+  background: rgba(255,255,255,.04);
+  font-weight: 700;
+}
+.notes-preview-body img {
+  display: block;
+  max-width: 100%;
+  margin: 0 0 12px;
+  border-radius: 8px;
+}
+.notes-preview-body input[type="checkbox"] {
+  margin-right: 8px;
+  accent-color: #f1f1f1;
+}
 .notes-preview-body pre {
   margin: 0 0 12px;
   padding: 12px 14px;
@@ -689,6 +738,11 @@ label span { color: #d2d2d2; font-size: 14px; }
 }
 .notes-preview-body code {
   font-family: "Consolas", "Microsoft YaHei UI", monospace;
+}
+.notes-preview-body :not(pre) > code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.07);
 }
 .notes-preview-empty {
   color: #bdbdbd;
@@ -771,6 +825,58 @@ label span { color: #d2d2d2; font-size: 14px; }
 .badge.wait { background: #b0851d; color: #fff; }
 .capture-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .assistant-sections { display: grid; gap: 12px; }
+.testing-sections {
+  align-content: start;
+}
+.testing-title-block {
+  display: grid;
+  gap: 6px;
+}
+.testing-title {
+  margin: 0;
+  font-size: 22px;
+  color: #f5f5f5;
+}
+.testing-subtitle {
+  margin: 0;
+  color: #b7b7b7;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.testing-subview-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.testing-subview-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid #333;
+  border-radius: 999px;
+  background: rgba(255,255,255,.03);
+  color: #d4d4d4;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+.testing-subview-btn.active {
+  border-color: #f1f1f1;
+  background: rgba(255,255,255,.10);
+  color: #ffffff;
+  font-weight: 700;
+}
+.testing-subview-btn:focus-visible {
+  outline: 2px solid rgba(255,255,255,.72);
+  outline-offset: 2px;
+}
+.testing-subview-panel {
+  display: grid;
+}
+.testing-subview-panel.hidden {
+  display: none;
+}
 .assistant-block {
   position: relative;
   z-index: 1;
@@ -928,6 +1034,16 @@ label span { color: #d2d2d2; font-size: 14px; }
 .assistant-benchmark-model-label span {
   display: block;
   margin-bottom: 6px;
+}
+.assistant-benchmark-chip {
+  min-width: 220px;
+  padding: 9px 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  background: #101010;
+  color: #f4f4f4;
+  text-align: center;
+  font-weight: 600;
 }
 .assistant-benchmark-timer {
   min-width: 110px;
