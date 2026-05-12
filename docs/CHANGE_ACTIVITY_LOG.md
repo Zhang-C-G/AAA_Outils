@@ -9,12 +9,15 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-12-f3-overlay-ready-state`
-- 当前连续改动次数：`3`
+- 轮次标识：`2026-05-12-post-f3-checkpoint`
+- 当前连续改动次数：`0`
 - 本轮目标：
-  - 收口 E 模块 F3 的待命状态显示
-  - 让悬浮窗打开后即自动预热语音 service，并把 ready 态稳定显出来
-- 上一个 git 检查点：`checkpoint: stabilize F3 voice input service path`
+  - 当前轮次已归档，等待下一轮改动开始后重新累计
+- 上一个 git 检查点：`checkpoint: commit all current workspace changes`
+- 最近一次推送：
+  - 提交：`d7413a1`
+  - 目标：`origin/main`
+  - 结果：`push 成功`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 当前 1-3 次改动窗口
@@ -85,6 +88,6 @@
 
 ## 4. 是否触发 git
 
-- 当前累计：`3 / 3`
-- 本次是否触发 checkpoint：`是，已达到文档规则中的 checkpoint 阈值`
-- 下一步要求：执行 `checkpoint commit + push`
+- 当前累计：`0 / 3`
+- 本次是否触发 checkpoint：`已完成`
+- 下一步要求：等待下一次有效改动累计
