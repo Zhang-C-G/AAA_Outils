@@ -12,6 +12,10 @@ function Get-NotesDisplayPath {
   return (Join-Path $NotesDisplayDir ($Id + '.md'))
 }
 
+function Get-NotesDisplayOrderPath {
+  return (Join-Path $NotesDisplayDir '_order.json')
+}
+
 function Parse-NoteFile {
   param([string]$Path)
   $text = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8)
@@ -145,7 +149,107 @@ function Get-NotesDisplayMeta {
     $parsed = Parse-NoteFile $f.FullName
     $list += [ordered]@{ id=$id; title=$parsed.title; updated=$f.LastWriteTime.ToString('yyyyMMddHHmmss') }
   }
-  return @($list | Sort-Object updated -Descending)
+  return (Apply-NotesDisplayOrder -Notes @($list | Sort-Object updated -Descending))
+}
+
+function Read-NotesDisplayOrder {
+  Ensure-Dir $NotesDisplayDir
+  $path = Get-NotesDisplayOrderPath
+  if (!(Test-Path -LiteralPath $path)) { return @() }
+  try {
+    $raw = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8)
+    if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
+    $parsed = $raw | ConvertFrom-Json
+    if ($parsed -is [System.Array]) {
+      return @($parsed | ForEach-Object { [string]$_ })
+    }
+    return @()
+  } catch {
+    return @()
+  }
+}
+
+function Save-NotesDisplayOrder {
+  param($Order)
+  Ensure-Dir $NotesDisplayDir
+  $normalized = @()
+  foreach ($id in @($Order)) {
+    $text = ([string]$id).Trim()
+    if ($text -eq '') { continue }
+    if ($normalized -contains $text) { continue }
+    $normalized += $text
+  }
+  $json = To-JsonNoBom $normalized
+  [IO.File]::WriteAllText((Get-NotesDisplayOrderPath), $json, [Text.Encoding]::UTF8)
+}
+
+function Apply-NotesDisplayOrder {
+  param($Notes)
+
+  $list = @($Notes)
+  if ($list.Count -le 1) { return $list }
+
+  $order = Read-NotesDisplayOrder
+  if (@($order).Count -eq 0) { return $list }
+
+  $byId = @{}
+  foreach ($note in $list) {
+    $id = [string](Get-Prop $note 'id' '')
+    if ($id -eq '') { continue }
+    $byId[$id] = $note
+  }
+
+  $ordered = @()
+  foreach ($id in $order) {
+    if ($byId.ContainsKey($id)) {
+      $ordered += $byId[$id]
+      $byId.Remove($id)
+    }
+  }
+
+  foreach ($note in $list) {
+    $id = [string](Get-Prop $note 'id' '')
+    if ($id -eq '') { continue }
+    if ($byId.ContainsKey($id)) {
+      $ordered += $byId[$id]
+      $byId.Remove($id)
+    }
+  }
+
+  return @($ordered)
+}
+
+function Reorder-NotesDisplay {
+  param($Order)
+
+  $existing = @(Get-NotesDisplayMeta)
+  $validIds = @{}
+  foreach ($note in $existing) {
+    $id = [string](Get-Prop $note 'id' '')
+    if ($id -ne '') {
+      $validIds[$id] = $true
+    }
+  }
+
+  $normalized = @()
+  foreach ($id in @($Order)) {
+    $text = ([string]$id).Trim()
+    if ($text -eq '') { continue }
+    if (-not $validIds.ContainsKey($text)) { continue }
+    if ($normalized -contains $text) { continue }
+    $normalized += $text
+  }
+
+  foreach ($note in $existing) {
+    $id = [string](Get-Prop $note 'id' '')
+    if ($id -eq '') { continue }
+    if ($normalized -contains $id) { continue }
+    $normalized += $id
+  }
+
+  Save-NotesDisplayOrder -Order $normalized
+  Write-AppLog 'notes_display_reorder' ('count=' + $normalized.Count)
+  return Get-NotesDisplayMeta
 }
 
 function Save-NoteContent {

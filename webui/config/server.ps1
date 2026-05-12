@@ -104,6 +104,16 @@ while ($true) {
       Set-AppNotesDisplaySidebarCompact -Compact (Get-Prop $payload 'notes_display_sidebar_compact' 0)
       Send-Json $res ([ordered]@{ ok=$true })
     }
+    elseif ($path -eq '/api/app/notes-display-workspace' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppNotesDisplayWorkspaceState -CurrentId ([string](Get-Prop $payload 'notes_display_current_id' '')) -ContentView ([string](Get-Prop $payload 'notes_display_content_view' 'rendered'))
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
+    elseif ($path -eq '/api/app/testing-subview' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppTestingSubview -Subview ([string](Get-Prop $payload 'testing_subview' 'assistant_benchmark'))
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
     elseif ($path -eq '/api/app/notes-extract-collapsed' -and $method -eq 'POST') {
       $payload = Read-BodyJson $req
       Set-AppNotesExtractCollapsed -Collapsed (Get-Prop $payload 'notes_extract_collapsed' 0)
@@ -164,6 +174,11 @@ while ($true) {
     }
     elseif ($path -eq '/api/notes-display/list' -and $method -eq 'GET') {
       Send-Json $res ([ordered]@{ ok=$true; notes=(Get-NotesDisplayMeta) })
+    }
+    elseif ($path -eq '/api/notes-display/reorder' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $notes = Reorder-NotesDisplay -Order (Get-Prop $payload 'order' @())
+      Send-Json $res ([ordered]@{ ok=$true; notes=$notes })
     }
     elseif ($path -eq '/api/notes-display/get' -and $method -eq 'GET') {
       $id = [string]$req.QueryString['id']
@@ -334,6 +349,13 @@ while ($true) {
     }
     elseif ($path -eq '/api/testing/open-hotkey-probe' -and $method -eq 'POST') {
       $result = Open-TestingHotkeyProbe
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/testing/voice-latency-state' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{ ok=$true; state=(Get-TestingVoiceLatencyState) })
+    }
+    elseif ($path -eq '/api/testing/run-voice-latency-benchmark' -and $method -eq 'POST') {
+      $result = Run-TestingVoiceLatencyBenchmark
       Send-Json $res $result
     }
     elseif ($path -eq '/api/testing/run-overlay-record-capture' -and $method -eq 'POST') {

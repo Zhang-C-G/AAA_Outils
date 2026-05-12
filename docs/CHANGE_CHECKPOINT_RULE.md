@@ -1,6 +1,6 @@
 # 改动计数与 Git 检查点规则
 
-最近同步：`2026-05-11`
+最近同步：`2026-05-12`
 状态：`active`
 
 ## 1. 目的
@@ -12,8 +12,8 @@
 
 ## 2. 强制规则
 
-1. 每完成 1 次明确改动，且对应测试执行并通过后，计数 `+1`
-2. 每累计满 `3` 次改动，无论大小，都必须立刻创建 1 个 git 检查点
+1. 每完成 `1` 次明确改动，且对应测试执行并通过后，计数 `+1`
+2. 每累计满 `3` 次改动，无论大小，都必须立刻创建 `1` 个 git 检查点
 3. 本项目里的 git 默认动作：
    - 本地 `commit`
    - 直接推送到 `origin/main`
@@ -32,13 +32,13 @@
 
 - 当前轮次：`2026-05-11-post-assistant-persistence-and-table-docs-checkpoint`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
-- 下一次强制 git 阈值：`下一次完成 3 次通过测试的连续改动后，需执行 checkpoint commit 并 push 到 origin/main`
+- 当前连续改动次数：`3`
+- 下一次强制 git 阈值：`当前已达到 3 次连续改动，必须先执行 checkpoint commit 并 push 到 origin/main，随后计数清零`
 - 上一个 git 检查点：`checkpoint: stabilize F3 voice input service path`
 - 当前计数说明：
-  - 本轮已于 `2026-05-11` 完成 checkpoint 并成功 push 到 `origin/main`
-  - 最新 checkpoint：`checkpoint: stabilize F3 voice input service path`
-  - 新一轮连续改动计数已清零，等待下一次通过测试的有效改动开始累计
+  - 第 `1` 次：为 E 模块 F3 语音链路补齐分段时长埋点，把 Python worker、WebSocket、首包、首条结果、最终完成等关键时点写入状态文件和日志
+  - 第 `2` 次：把讯飞语音延迟测试正式接入 H 测试模块，补齐前端 UI、后端接口、固定样本脚本和分段耗时展示
+  - 第 `3` 次：正式抽出“列表 + 目录 + 正文工作区”模板文档，并将 B/C 两个模块文档从“参考关系”收口为“模板继承关系”
 
 ## 5. 维护方式
 

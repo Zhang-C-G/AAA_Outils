@@ -29,6 +29,16 @@ function Normalize-BuiltinCategoryName {
   return $name
 }
 
+function Normalize-TestingSubview {
+  param([string]$Subview)
+
+  $value = ([string]$Subview).Trim().ToLowerInvariant()
+  if ($value -in @('assistant_benchmark', 'voice_benchmark', 'overlay_record')) {
+    return $value
+  }
+  return 'assistant_benchmark'
+}
+
 function Ensure-BuiltinCategories {
   param($Cats)
 
@@ -236,6 +246,9 @@ function Get-ConfigState {
     mode_order = (Get-DefaultModeOrder)
     notes_sidebar_compact = 0
     notes_display_sidebar_compact = 0
+    notes_display_current_id = ''
+    notes_display_content_view = 'rendered'
+    testing_subview = 'assistant_benchmark'
     notes_extract_collapsed = 0
     shell_theme_mode = 'solid'
     shell_theme_primary = '#111111'
@@ -254,6 +267,16 @@ function Get-ConfigState {
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_sidebar_compact')) {
     $app['notes_display_sidebar_compact'] = if ([string]$ini['App']['notes_display_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_current_id')) {
+    $app['notes_display_current_id'] = ([string]$ini['App']['notes_display_current_id']).Trim()
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_content_view')) {
+    $view = ([string]$ini['App']['notes_display_content_view']).Trim().ToLowerInvariant()
+    $app['notes_display_content_view'] = if ($view -eq 'markdown') { 'markdown' } else { 'rendered' }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('testing_subview')) {
+    $app['testing_subview'] = Normalize-TestingSubview ([string]$ini['App']['testing_subview'])
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('notes_extract_collapsed')) {
     $app['notes_extract_collapsed'] = if ([string]$ini['App']['notes_extract_collapsed'] -eq '1') { 1 } else { 0 }
@@ -311,6 +334,9 @@ function Get-AppShellState {
     mode_order = (Get-DefaultModeOrder)
     notes_sidebar_compact = 0
     notes_display_sidebar_compact = 0
+    notes_display_current_id = ''
+    notes_display_content_view = 'rendered'
+    testing_subview = 'assistant_benchmark'
     notes_extract_collapsed = 0
     shell_theme_mode = 'solid'
     shell_theme_primary = '#111111'
@@ -329,6 +355,16 @@ function Get-AppShellState {
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_sidebar_compact')) {
     $app['notes_display_sidebar_compact'] = if ([string]$ini['App']['notes_display_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_current_id')) {
+    $app['notes_display_current_id'] = ([string]$ini['App']['notes_display_current_id']).Trim()
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('notes_display_content_view')) {
+    $view = ([string]$ini['App']['notes_display_content_view']).Trim().ToLowerInvariant()
+    $app['notes_display_content_view'] = if ($view -eq 'markdown') { 'markdown' } else { 'rendered' }
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('testing_subview')) {
+    $app['testing_subview'] = Normalize-TestingSubview ([string]$ini['App']['testing_subview'])
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('notes_extract_collapsed')) {
     $app['notes_extract_collapsed'] = if ([string]$ini['App']['notes_extract_collapsed'] -eq '1') { 1 } else { 0 }
@@ -462,6 +498,9 @@ function Write-ConfigState {
   $currentOrder = Get-DefaultModeOrder
   $currentNotesSidebarCompact = 0
   $currentNotesDisplaySidebarCompact = 0
+  $currentNotesDisplayCurrentId = ''
+  $currentNotesDisplayContentView = 'rendered'
+  $currentTestingSubview = 'assistant_benchmark'
   $currentNotesExtractCollapsed = 0
   $currentSelectedCategory = 'fields'
   $currentThemeMode = 'solid'
@@ -479,6 +518,16 @@ function Write-ConfigState {
   }
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('notes_display_sidebar_compact')) {
     $currentNotesDisplaySidebarCompact = if ([string]$currentIni['App']['notes_display_sidebar_compact'] -eq '1') { 1 } else { 0 }
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('notes_display_current_id')) {
+    $currentNotesDisplayCurrentId = ([string]$currentIni['App']['notes_display_current_id']).Trim()
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('notes_display_content_view')) {
+    $view = ([string]$currentIni['App']['notes_display_content_view']).Trim().ToLowerInvariant()
+    $currentNotesDisplayContentView = if ($view -eq 'markdown') { 'markdown' } else { 'rendered' }
+  }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('testing_subview')) {
+    $currentTestingSubview = Normalize-TestingSubview ([string]$currentIni['App']['testing_subview'])
   }
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('notes_extract_collapsed')) {
     $currentNotesExtractCollapsed = if ([string]$currentIni['App']['notes_extract_collapsed'] -eq '1') { 1 } else { 0 }
@@ -506,6 +555,10 @@ function Write-ConfigState {
   $modeOrder = Normalize-ModeOrder((Get-Prop $appPayload 'mode_order' $currentOrder))
   $notesSidebarCompact = if ([string](Get-Prop $appPayload 'notes_sidebar_compact' $currentNotesSidebarCompact) -eq '1') { 1 } else { 0 }
   $notesDisplaySidebarCompact = if ([string](Get-Prop $appPayload 'notes_display_sidebar_compact' $currentNotesDisplaySidebarCompact) -eq '1') { 1 } else { 0 }
+  $notesDisplayCurrentId = ([string](Get-Prop $appPayload 'notes_display_current_id' $currentNotesDisplayCurrentId)).Trim()
+  $notesDisplayContentViewRaw = ([string](Get-Prop $appPayload 'notes_display_content_view' $currentNotesDisplayContentView)).Trim().ToLowerInvariant()
+  $notesDisplayContentView = if ($notesDisplayContentViewRaw -eq 'markdown') { 'markdown' } else { 'rendered' }
+  $testingSubview = Normalize-TestingSubview ([string](Get-Prop $appPayload 'testing_subview' $currentTestingSubview))
   $notesExtractCollapsed = if ([string](Get-Prop $appPayload 'notes_extract_collapsed' $currentNotesExtractCollapsed) -eq '1') { 1 } else { 0 }
   $selectedCategory = ([string](Get-Prop $appPayload 'shortcuts_selected_category' $currentSelectedCategory)).Trim()
   $themeMode = Normalize-AppThemeMode ([string](Get-Prop $appPayload 'shell_theme_mode' $currentThemeMode))
@@ -519,6 +572,9 @@ function Write-ConfigState {
   $lines.Add('mode_order=' + [string]::Join(',', $modeOrder))
   $lines.Add('notes_sidebar_compact=' + $notesSidebarCompact)
   $lines.Add('notes_display_sidebar_compact=' + $notesDisplaySidebarCompact)
+  $lines.Add('notes_display_current_id=' + $notesDisplayCurrentId)
+  $lines.Add('notes_display_content_view=' + $notesDisplayContentView)
+  $lines.Add('testing_subview=' + $testingSubview)
   $lines.Add('notes_extract_collapsed=' + $notesExtractCollapsed)
   $lines.Add('shell_theme_mode=' + $themeMode)
   $lines.Add('shell_theme_primary=' + $themePrimary)
@@ -725,6 +781,59 @@ function Set-AppNotesDisplaySidebarCompact {
 
   [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
   Write-AppLog 'notes_display_sidebar_save' ('notes_display_sidebar_compact=' + $ini['App']['notes_display_sidebar_compact'])
+}
+
+function Set-AppNotesDisplayWorkspaceState {
+  param(
+    [string]$CurrentId,
+    [string]$ContentView
+  )
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+
+  $ini['App']['notes_display_current_id'] = ([string]$CurrentId).Trim()
+  $view = ([string]$ContentView).Trim().ToLowerInvariant()
+  $ini['App']['notes_display_content_view'] = if ($view -eq 'markdown') { 'markdown' } else { 'rendered' }
+  Write-Ini $ini
+
+  Write-AppLog 'notes_display_workspace_save' ('id=' + $ini['App']['notes_display_current_id'] + ' view=' + $ini['App']['notes_display_content_view'])
+}
+
+function Set-AppTestingSubview {
+  param([string]$Subview)
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+
+  $ini['App']['testing_subview'] = Normalize-TestingSubview $Subview
+  Write-Ini $ini
+
+  Write-AppLog 'testing_subview_save' ('testing_subview=' + $ini['App']['testing_subview'])
 }
 
 function Set-AppNotesExtractCollapsed {

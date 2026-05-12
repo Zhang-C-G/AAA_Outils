@@ -2,11 +2,76 @@ import { state, byId, api, toast, toInt } from './app-common.js';
 import { saveAssistantSettings } from './app-assistant.js';
 
 const ASSISTANT_BENCHMARK_HISTORY_LIMIT = 5;
+const VOICE_BENCHMARK_HISTORY_LIMIT = 5;
+const TESTING_SUBVIEW_ORDER = ['assistant_benchmark', 'voice_benchmark', 'overlay_record'];
+const TESTING_SUBVIEW_LABELS = {
+  assistant_benchmark: '接口基线',
+  voice_benchmark: '语音延迟',
+  overlay_record: '录屏捕获'
+};
 let assistantBenchmarkRunning = false;
 let assistantBenchmarkTimer = 0;
 let assistantBenchmarkStartedAt = 0;
 let assistantBenchmarkPollTimer = 0;
 let assistantBenchmarkRunId = '';
+let voiceBenchmarkRunning = false;
+let voiceBenchmarkTimer = 0;
+let voiceBenchmarkStartedAt = 0;
+
+function normalizeTestingSubview(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  return TESTING_SUBVIEW_ORDER.includes(value) ? value : 'assistant_benchmark';
+}
+
+async function persistTestingSubview() {
+  await api('/api/app/testing-subview', {
+    method: 'POST',
+    body: JSON.stringify({ testing_subview: state.app.testing_subview })
+  });
+}
+
+function syncTestingSubview() {
+  state.app.testing_subview = normalizeTestingSubview(state.app.testing_subview);
+  const active = state.app.testing_subview;
+  const metaEl = byId('testingSubviewMeta');
+  const tabs = [
+    ['assistant_benchmark', byId('testingSubviewAssistantBtn'), byId('testingAssistantPanel')],
+    ['voice_benchmark', byId('testingSubviewVoiceBtn'), byId('testingVoicePanel')],
+    ['overlay_record', byId('testingSubviewOverlayBtn'), byId('testingOverlayPanel')]
+  ];
+
+  tabs.forEach(([id, button, panel], index) => {
+    const isActive = id === active;
+    if (button) {
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      button.tabIndex = isActive ? 0 : -1;
+      button.dataset.testingSubviewIndex = String(index);
+    }
+    if (panel) {
+      panel.classList.toggle('hidden', !isActive);
+    }
+  });
+  if (metaEl) {
+    metaEl.textContent = `当前：${TESTING_SUBVIEW_LABELS[active] || '接口基线'}`;
+  }
+}
+
+function setTestingSubview(nextSubview, options = {}) {
+  const persist = options.persist !== false;
+  const normalized = normalizeTestingSubview(nextSubview);
+  if (state.app.testing_subview === normalized) {
+    syncTestingSubview();
+    return;
+  }
+  state.app.testing_subview = normalized;
+  syncTestingSubview();
+  if (persist) {
+    void persistTestingSubview().catch((e) => {
+      toast(`testing subview save failed: ${e.message}`);
+    });
+  }
+}
 
 function appendOutput(line) {
   const el = byId('testOutput');
@@ -34,6 +99,23 @@ function normalizeBenchmark(incoming = {}, existingHistory = []) {
     image_kb: Number(incoming.image_kb || 0),
     note: String(incoming.note || '').trim(),
     selected_model: String(incoming.selected_model || '').trim(),
+    last_result: incoming.last_result || null,
+    history
+  };
+}
+
+function normalizeVoiceBenchmark(incoming = {}, existingHistory = []) {
+  const history = Array.isArray(incoming.history)
+    ? incoming.history.slice(0, VOICE_BENCHMARK_HISTORY_LIMIT)
+    : Array.isArray(existingHistory)
+      ? existingHistory.slice(0, VOICE_BENCHMARK_HISTORY_LIMIT)
+      : [];
+
+  return {
+    engine_id: String(incoming.engine_id || 'xunfei_websocket_asr').trim(),
+    engine_label: String(incoming.engine_label || '讯飞 WebSocket 语音识别').trim(),
+    sample_text: String(incoming.sample_text || '').trim(),
+    note: String(incoming.note || '').trim(),
     last_result: incoming.last_result || null,
     history
   };
@@ -103,6 +185,34 @@ function stopBenchmarkTimer() {
   updateBenchmarkTimerLabel();
 }
 
+function updateVoiceBenchmarkTimerLabel() {
+  const el = byId('voiceBenchmarkTimer');
+  if (!el) return;
+  if (!voiceBenchmarkRunning || !voiceBenchmarkStartedAt) {
+    const totalMs = Number(state.assistant.voice_benchmark?.last_result?.elapsed_ms || 0);
+    el.textContent = `${msToSeconds(totalMs)} s`;
+    return;
+  }
+  const elapsed = Date.now() - voiceBenchmarkStartedAt;
+  el.textContent = `${(elapsed / 1000).toFixed(1)} s`;
+}
+
+function startVoiceBenchmarkTimer() {
+  stopVoiceBenchmarkTimer();
+  voiceBenchmarkStartedAt = Date.now();
+  voiceBenchmarkTimer = window.setInterval(updateVoiceBenchmarkTimerLabel, 100);
+  updateVoiceBenchmarkTimerLabel();
+}
+
+function stopVoiceBenchmarkTimer() {
+  if (voiceBenchmarkTimer) {
+    clearInterval(voiceBenchmarkTimer);
+    voiceBenchmarkTimer = 0;
+  }
+  voiceBenchmarkStartedAt = 0;
+  updateVoiceBenchmarkTimerLabel();
+}
+
 function stopBenchmarkPolling() {
   if (assistantBenchmarkPollTimer) {
     clearInterval(assistantBenchmarkPollTimer);
@@ -133,6 +243,29 @@ function applyBenchmarkResult(result, options = {}) {
     benchmark.history = [normalizedResult, ...(benchmark.history || [])].slice(0, ASSISTANT_BENCHMARK_HISTORY_LIMIT);
   }
   state.assistant.benchmark = benchmark;
+}
+
+function applyVoiceBenchmarkResult(result, options = {}) {
+  const keepHistory = !!options.keepHistory;
+  const benchmark = normalizeVoiceBenchmark(result.state || state.assistant.voice_benchmark, state.assistant.voice_benchmark?.history || []);
+  const normalizedResult = {
+    started_at: String(result.started_at || '').trim(),
+    elapsed_ms: Number(result.elapsed_ms || 0),
+    exit_code: Number(result.exit_code || 0),
+    transcript: String(result.transcript || '').trim(),
+    transcript_chars: Number(result.transcript_chars || 0),
+    text: String(result.text || '').trim(),
+    error: String(result.error || '').trim(),
+    status_stage: String(result.status_stage || '').trim(),
+    status_detail: String(result.status_detail || '').trim(),
+    metrics: result.metrics || {}
+  };
+
+  benchmark.last_result = normalizedResult;
+  if (!keepHistory && !normalizedResult.error) {
+    benchmark.history = [normalizedResult, ...(benchmark.history || [])].slice(0, VOICE_BENCHMARK_HISTORY_LIMIT);
+  }
+  state.assistant.voice_benchmark = benchmark;
 }
 
 function renderAssistantBenchmark() {
@@ -221,6 +354,90 @@ function renderAssistantBenchmark() {
   updateBenchmarkTimerLabel();
 }
 
+function metricValue(metrics, key) {
+  const value = Number(metrics?.[key] ?? 0);
+  return value > 0 ? `${value} ms` : '-';
+}
+
+function renderVoiceBenchmark() {
+  const benchmark = normalizeVoiceBenchmark(state.assistant.voice_benchmark, state.assistant.voice_benchmark?.history || []);
+  state.assistant.voice_benchmark = benchmark;
+
+  const engine = byId('voiceBenchmarkEngine');
+  const meta = byId('voiceBenchmarkMeta');
+  const summary = byId('voiceBenchmarkSummary');
+  const metricsEl = byId('voiceBenchmarkMetrics');
+  const transcript = byId('voiceBenchmarkTranscript');
+  const historyEl = byId('voiceBenchmarkHistory');
+  const runBtn = byId('voiceBenchmarkRunBtn');
+
+  if (engine) engine.textContent = benchmark.engine_label || '讯飞 WebSocket 语音识别';
+  if (runBtn) {
+    runBtn.disabled = voiceBenchmarkRunning;
+    runBtn.textContent = voiceBenchmarkRunning ? '测试中...' : '开始测试';
+  }
+
+  if (meta) {
+    meta.innerHTML = `
+      <div><strong>固定测试样本</strong></div>
+      <div>${benchmark.sample_text || '未提供样本文字'}</div>
+      <div>${benchmark.note || '固定中文样本，仅测试语音识别链路本身。'}</div>
+    `;
+  }
+
+  const last = benchmark.last_result;
+  if (summary) {
+    if (!last) {
+      summary.innerHTML = '<div>还没有语音延迟测试结果。点击“开始测试”后，这里会显示总耗时与识别状态。</div>';
+    } else {
+      const statusText = last.error ? `状态：失败 - ${last.error}` : '状态：已完成';
+      summary.innerHTML = `
+        <div><strong>本次结果</strong></div>
+        <div>${statusText}</div>
+        <div>开始时间：${last.started_at || '-'}</div>
+        <div>总耗时：${msToSeconds(last.elapsed_ms)} s</div>
+        <div>识别字数：${Number(last.transcript_chars || 0)}</div>
+        <div>阶段：${last.status_stage || '-'} | 细节：${last.status_detail || '-'}</div>
+      `;
+    }
+  }
+
+  if (metricsEl) {
+    const metrics = last?.metrics || {};
+    metricsEl.innerHTML = `
+      <div><strong>链路分段耗时</strong></div>
+      <div>音频载入：${metricValue(metrics, 'audio_file_loaded_ms')}</div>
+      <div>WebSocket 连接：${metricValue(metrics, 'websocket_connected_ms')}</div>
+      <div>首包发送：${metricValue(metrics, 'first_audio_sent_ms')}</div>
+      <div>首条响应：${metricValue(metrics, 'first_result_received_ms')}</div>
+      <div>首条有效文本：${metricValue(metrics, 'first_nonempty_text_received_ms')}</div>
+      <div>末包发送：${metricValue(metrics, 'final_payload_sent_ms')}</div>
+      <div>最终完成：${metricValue(metrics, 'completed_ms')}</div>
+    `;
+  }
+
+  if (transcript) {
+    transcript.textContent = last?.transcript || '这里会显示最近一次语音延迟测试返回的识别文本。';
+  }
+
+  if (historyEl) {
+    const history = Array.isArray(benchmark.history) ? benchmark.history : [];
+    if (!history.length) {
+      historyEl.innerHTML = '<div class="assistant-benchmark-history-empty">暂无历史记录</div>';
+    } else {
+      historyEl.innerHTML = history.map((item) => `
+        <div class="assistant-benchmark-history-item">
+          <div><strong>${item.started_at || '-'}</strong></div>
+          <div>总耗时 ${msToSeconds(item.elapsed_ms)} s | 字数 ${Number(item.transcript_chars || 0)}</div>
+          <div>首条响应 ${metricValue(item.metrics || {}, 'first_result_received_ms')} | 首条文本 ${metricValue(item.metrics || {}, 'first_nonempty_text_received_ms')}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  updateVoiceBenchmarkTimerLabel();
+}
+
 async function pollAssistantBenchmarkRun() {
   if (!assistantBenchmarkRunId) return;
   const payload = await api(`/api/assistant/benchmark-stream-state?run_id=${encodeURIComponent(assistantBenchmarkRunId)}`);
@@ -247,6 +464,7 @@ async function pollAssistantBenchmarkRun() {
 }
 
 export async function refreshTestingState() {
+  state.app.testing_subview = normalizeTestingSubview(state.app.testing_subview);
   try {
     const payload = await api('/api/assistant/benchmark-state');
     if (!payload.ok) throw new Error(payload.error || 'assistant benchmark state failed');
@@ -257,7 +475,18 @@ export async function refreshTestingState() {
   } catch {
     // Keep testing page usable even if preview state fails.
   }
+  try {
+    const payload = await api('/api/testing/voice-latency-state');
+    if (!payload.ok) throw new Error(payload.error || 'voice latency state failed');
+    const benchmark = normalizeVoiceBenchmark(payload.state || {}, state.assistant.voice_benchmark?.history || []);
+    benchmark.last_result = state.assistant.voice_benchmark?.last_result || null;
+    state.assistant.voice_benchmark = benchmark;
+  } catch {
+    // Keep testing page usable even if voice latency state fails.
+  }
+  syncTestingSubview();
   renderAssistantBenchmark();
+  renderVoiceBenchmark();
 }
 
 export async function openHotkeyProbe() {
@@ -346,20 +575,53 @@ export async function runAssistantBenchmark() {
   }
 }
 
+export async function runVoiceLatencyBenchmark() {
+  if (voiceBenchmarkRunning) return;
+
+  voiceBenchmarkRunning = true;
+  renderVoiceBenchmark();
+  startVoiceBenchmarkTimer();
+
+  try {
+    const payload = await api('/api/testing/run-voice-latency-benchmark', {
+      method: 'POST',
+      body: '{}'
+    });
+    if (!payload.ok) throw new Error(payload.error || 'voice latency benchmark failed');
+
+    applyVoiceBenchmarkResult(payload);
+    stopVoiceBenchmarkTimer();
+    voiceBenchmarkRunning = false;
+    renderVoiceBenchmark();
+    toast(`语音延迟测试完成: ${msToSeconds(payload.elapsed_ms)} s`);
+  } catch (e) {
+    voiceBenchmarkRunning = false;
+    stopVoiceBenchmarkTimer();
+    renderVoiceBenchmark();
+    toast(`语音测试失败: ${e.message}`);
+  }
+}
+
 export function initTestingHandlers() {
   const openBtn = byId('openHotkeyProbeBtn');
   const runBtn = byId('runOverlayRecordTestBtn');
   const benchmarkBtn = byId('assistantBenchmarkRunBtn');
   const benchmarkModel = byId('assistantBenchmarkModel');
+  const voiceBenchmarkBtn = byId('voiceBenchmarkRunBtn');
+  const subviewButtons = [
+    ['assistant_benchmark', byId('testingSubviewAssistantBtn')],
+    ['voice_benchmark', byId('testingSubviewVoiceBtn')],
+    ['overlay_record', byId('testingSubviewOverlayBtn')]
+  ];
 
   if (openBtn) {
-    openBtn.onclick = () => openHotkeyProbe().catch((e) => toast(`打开探针失败: ${e.message}`));
+    openBtn.onclick = () => openHotkeyProbe().catch((e) => toast(`open probe failed: ${e.message}`));
   }
   if (runBtn) {
-    runBtn.onclick = () => runOverlayRecordTest().catch((e) => toast(`执行测试失败: ${e.message}`));
+    runBtn.onclick = () => runOverlayRecordTest().catch((e) => toast(`run test failed: ${e.message}`));
   }
   if (benchmarkBtn) {
-    benchmarkBtn.onclick = () => runAssistantBenchmark().catch((e) => toast(`执行测试失败: ${e.message}`));
+    benchmarkBtn.onclick = () => runAssistantBenchmark().catch((e) => toast(`run test failed: ${e.message}`));
   }
   if (benchmarkModel) {
     benchmarkModel.onchange = () => {
@@ -367,6 +629,27 @@ export function initTestingHandlers() {
       renderAssistantBenchmark();
     };
   }
+  if (voiceBenchmarkBtn) {
+    voiceBenchmarkBtn.onclick = () => runVoiceLatencyBenchmark().catch((e) => toast(`run voice test failed: ${e.message}`));
+  }
 
+  subviewButtons.forEach(([id, button]) => {
+    if (!button) return;
+    button.onclick = () => setTestingSubview(id);
+    button.onkeydown = (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      const currentIndex = TESTING_SUBVIEW_ORDER.indexOf(state.app.testing_subview);
+      const step = event.key === 'ArrowRight' ? 1 : -1;
+      const nextIndex = (currentIndex + step + TESTING_SUBVIEW_ORDER.length) % TESTING_SUBVIEW_ORDER.length;
+      const nextId = TESTING_SUBVIEW_ORDER[nextIndex];
+      setTestingSubview(nextId);
+      const nextButton = subviewButtons.find(([candidate]) => candidate === nextId)?.[1];
+      if (nextButton) nextButton.focus();
+    };
+  });
+
+  syncTestingSubview();
   renderAssistantBenchmark();
+  renderVoiceBenchmark();
 }

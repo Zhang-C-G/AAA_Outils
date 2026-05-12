@@ -422,9 +422,34 @@
     </section>
 
     <section id="testingView" class="view hidden">
-      <section class="panel assistant-layout">
-        <div class="assistant-sections">
-          <section class="assistant-block assistant-benchmark-block">
+      <section class="panel testing-layout">
+        <div class="testing-sections">
+          <div class="testing-toolbar">
+            <div class="testing-toolbar-head">
+              <div class="testing-toolbar-title-wrap">
+                <h2 class="testing-toolbar-title">H 测试工作台</h2>
+                <div id="testingSubviewMeta" class="testing-toolbar-meta">当前：接口基线</div>
+              </div>
+              <div class="testing-toolbar-stats">
+                <div class="testing-toolbar-stat">
+                  <span class="testing-toolbar-stat-label">测试项</span>
+                  <strong class="testing-toolbar-stat-value">3</strong>
+                </div>
+                <div class="testing-toolbar-stat">
+                  <span class="testing-toolbar-stat-label">停留页</span>
+                  <strong class="testing-toolbar-stat-value">自动记住</strong>
+                </div>
+              </div>
+            </div>
+            <div class="testing-subview-switch" role="tablist" aria-label="H 测试子页面切换">
+              <button id="testingSubviewAssistantBtn" class="testing-subview-btn" type="button" role="tab" aria-controls="testingAssistantPanel" aria-selected="false">接口基线</button>
+              <button id="testingSubviewVoiceBtn" class="testing-subview-btn" type="button" role="tab" aria-controls="testingVoicePanel" aria-selected="false">语音延迟</button>
+              <button id="testingSubviewOverlayBtn" class="testing-subview-btn" type="button" role="tab" aria-controls="testingOverlayPanel" aria-selected="false">录屏捕获</button>
+            </div>
+          </div>
+
+          <section id="testingAssistantPanel" class="testing-subview-panel" role="tabpanel" aria-labelledby="testingSubviewAssistantBtn">
+            <section class="assistant-block assistant-benchmark-block testing-block">
             <div class="assistant-block-head">
               <h2>API 基线测试</h2>
               <div class="assistant-benchmark-toolbar">
@@ -436,10 +461,7 @@
                 <button id="assistantBenchmarkRunBtn" class="btn primary" type="button">开始测试</button>
               </div>
             </div>
-            <p class="assistant-benchmark-note">
-              固定默认题图，直接测试“图片进入当前视觉 API，到拿到答案”为止的基础耗时。
-              这里不测 F1 截图、悬浮窗保护或 UI 展示，只测图片问答接口这一层。
-            </p>
+            <div class="testing-panel-note">固定题图直连当前视觉接口，只看图片问答这条链路的基础耗时。</div>
             <div class="assistant-benchmark-layout">
               <div class="assistant-benchmark-preview">
                 <img id="assistantBenchmarkImage" alt="API 基线测试默认题图" />
@@ -455,11 +477,38 @@
               <div id="assistantBenchmarkHistory" class="assistant-benchmark-history"></div>
             </div>
           </section>
+          </section>
 
-          <section class="assistant-block">
+          <section id="testingVoicePanel" class="testing-subview-panel hidden" role="tabpanel" aria-labelledby="testingSubviewVoiceBtn">
+            <section class="assistant-block assistant-benchmark-block testing-block">
+            <div class="assistant-block-head">
+              <h2>F3 语音延迟测试</h2>
+              <div class="assistant-benchmark-toolbar">
+                <div id="voiceBenchmarkEngine" class="assistant-benchmark-chip">讯飞 WebSocket 语音识别</div>
+                <div id="voiceBenchmarkTimer" class="assistant-benchmark-timer">0.0 s</div>
+                <button id="voiceBenchmarkRunBtn" class="btn primary" type="button">开始测试</button>
+              </div>
+            </div>
+            <div class="testing-panel-note">固定中文样本送入当前 F3 识别链路，只看语音识别本身的返回延迟。</div>
+            <div class="assistant-benchmark-meta">
+              <div id="voiceBenchmarkMeta" class="assistant-benchmark-meta-card"></div>
+              <div id="voiceBenchmarkSummary" class="assistant-benchmark-summary"></div>
+              <div id="voiceBenchmarkMetrics" class="assistant-benchmark-meta-card"></div>
+              <pre id="voiceBenchmarkTranscript" class="assistant-benchmark-answer"></pre>
+            </div>
+            <div>
+              <h3 class="assistant-benchmark-history-title">最近测试</h3>
+              <div id="voiceBenchmarkHistory" class="assistant-benchmark-history"></div>
+            </div>
+          </section>
+          </section>
+
+          <section id="testingOverlayPanel" class="testing-subview-panel hidden" role="tabpanel" aria-labelledby="testingSubviewOverlayBtn">
+            <section class="assistant-block testing-block">
             <div class="assistant-block-head">
               <h2>录屏捕获检测</h2>
             </div>
+            <div class="testing-panel-note">直接验证录屏捕获链路是否稳定拿到输出，方便复测截图与悬浮层干扰问题。</div>
             <div class="assistant-grid">
               <label><span>测试时长（秒）</span><input id="testDurationSec" type="number" min="4" max="30" value="6" /></label>
               <label><span>录制帧率（FPS）</span><input id="testFps" type="number" min="5" max="30" value="10" /></label>
@@ -469,6 +518,7 @@
               </div>
               <label><span>测试输出</span><textarea id="testOutput" readonly></textarea></label>
             </div>
+          </section>
           </section>
         </div>
       </section>

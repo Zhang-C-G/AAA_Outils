@@ -13,6 +13,7 @@
 - 总规则：`docs/AI_HANDOFF.md`
 - 开发总指引：`docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
 - 全局偏好总入口：`docs/extension/全局私人偏好文档.md`
+- 工作区模板：`docs/templates/LIST_OUTLINE_BODY_WORKSPACE_TEMPLATE.md`
 - 自动保存偏好：`docs/extension/global_preferences/04_自动保存与保存按钮偏好.md`
 - 列表排序偏好：`docs/extension/global_preferences/components/13_列表排序偏好.md`
 - 结构目录偏好：`docs/extension/global_preferences/components/16_结构目录偏好.md`
@@ -38,6 +39,24 @@
 - 从当前正文中抽取目录结构
 - 基于目录标题形成模块筛选入口
 - 保持自动保存优先，不引入保存式交互
+
+## 5.1 模板层与 B 专属层拆分
+
+### 通用工作区模板层
+
+- 三栏工作区：列表 / 结构目录 / 正文工作区
+- 笔记列表的新建、删除、切换、拖拽排序
+- 目录生成、目录点击跳转、目录复制
+- `Markdown / 最终版本` 共用同一正文工作区
+- 自动保存优先与对应状态恢复
+
+### B 模块专属扩展层
+
+- 提取区
+- 提取结果显示、编辑与回写
+- 与提取结果相关的结构处理细节
+
+后续其他模块如对标 B，应默认继承“通用工作区模板层”，而不是只参考 B 的外观。
 
 ## 6. 本阶段范围
 

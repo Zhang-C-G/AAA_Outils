@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import os
+import time
 import sys
 from email.utils import formatdate
 from pathlib import Path
@@ -25,6 +26,46 @@ except Exception:
 
 
 CHUNK_SIZE = 640
+
+
+class StatusReporter:
+    def __init__(self, status_path: str, bootstrap_metrics: dict[str, int] | None = None):
+        self.status_path = status_path
+        self.started_at = time.perf_counter()
+        self.metrics: dict[str, int] = {}
+        if isinstance(bootstrap_metrics, dict):
+            for key, value in bootstrap_metrics.items():
+                try:
+                    self.metrics[str(key)] = int(value)
+                except Exception:
+                    continue
+
+    def elapsed_ms(self) -> int:
+        return int((time.perf_counter() - self.started_at) * 1000)
+
+    def mark(self, name: str) -> int:
+        value = self.elapsed_ms()
+        self.metrics[f"{name}_ms"] = value
+        return value
+
+    def update(self, stage: str, detail: str = "", mark: str | None = None, extra_metrics: dict[str, int] | None = None) -> None:
+        if not self.status_path:
+            return
+        if mark:
+            self.mark(mark)
+        if isinstance(extra_metrics, dict):
+            for key, value in extra_metrics.items():
+                try:
+                    self.metrics[str(key)] = int(value)
+                except Exception:
+                    continue
+
+        lines = [f"stage={stage}"]
+        if detail:
+            lines.append(f"detail={detail}")
+        for key in sorted(self.metrics):
+            lines.append(f"metric_{key}={self.metrics[key]}")
+        Path(self.status_path).write_text("\n".join(lines), encoding="utf-8")
 
 
 def build_auth_url(api_key: str, api_secret: str) -> str:
@@ -119,13 +160,26 @@ def build_audio_payload(chunk: bytes, status: int, app_id: str, include_headers:
     return payload
 
 
-async def transcribe_file(audio_path: Path, app_id: str, api_key: str, api_secret: str) -> str:
+async def transcribe_file(
+    audio_path: Path,
+    app_id: str,
+    api_key: str,
+    api_secret: str,
+    status_path: str = "",
+) -> str:
     url = build_auth_url(api_key, api_secret)
+    reporter = StatusReporter(status_path)
+    reporter.update("starting", "audio_file_loading")
     audio_bytes = audio_path.read_bytes()
+    reporter.update("connecting", "websocket_connect_begin", mark="audio_file_loaded")
     slots: list[str] = []
     last_text = ""
+    first_audio_sent = False
+    first_result_received = False
+    first_nonempty_text_received = False
 
     async with websockets.connect(url, max_size=None, ping_interval=None) as ws:
+        reporter.update("streaming", "websocket_connected", mark="websocket_connected")
         if audio_bytes:
             offset = 0
             first = True
@@ -134,8 +188,12 @@ async def transcribe_file(audio_path: Path, app_id: str, api_key: str, api_secre
                 status = 0 if first else (2 if offset + len(chunk) >= len(audio_bytes) else 1)
                 payload = build_audio_payload(chunk, status, app_id, first)
                 await send_payload(ws, payload)
+                if not first_audio_sent:
+                    first_audio_sent = True
+                    reporter.update("streaming", "first_audio_sent", mark="first_audio_sent")
                 offset += len(chunk)
                 first = False
+            reporter.update("streaming", "final_payload_sent", mark="final_payload_sent")
         else:
             await send_payload(
                 ws,
@@ -156,9 +214,13 @@ async def transcribe_file(audio_path: Path, app_id: str, api_key: str, api_secre
                     },
                 },
             )
+            reporter.update("streaming", "final_payload_sent", mark="final_payload_sent")
 
         while True:
             raw = await ws.recv()
+            if not first_result_received:
+                first_result_received = True
+                reporter.update("streaming", "first_result_received", mark="first_result_received")
             payload = json.loads(raw)
             code = int(payload.get("code", 0) or 0)
             if code != 0:
@@ -167,9 +229,14 @@ async def transcribe_file(audio_path: Path, app_id: str, api_key: str, api_secre
             merged = merge_segments(slots, payload)
             if merged:
                 last_text = merged
+                if not first_nonempty_text_received:
+                    first_nonempty_text_received = True
+                    reporter.update("streaming", "first_nonempty_text_received", mark="first_nonempty_text_received")
             if int(payload.get("data", {}).get("status", 1) or 1) == 2:
+                reporter.update("done", "final_result_received", mark="final_result_received")
                 break
 
+    reporter.update("done", "completed", mark="completed")
     return last_text.strip()
 
 
@@ -181,6 +248,7 @@ async def transcribe_live(
     app_id: str,
     api_key: str,
     api_secret: str,
+    bootstrap_metrics: dict[str, int] | None = None,
 ) -> str:
     if sd is not None:
         try:
@@ -192,6 +260,7 @@ async def transcribe_live(
                 app_id=app_id,
                 api_key=api_key,
                 api_secret=api_secret,
+                bootstrap_metrics=bootstrap_metrics,
             )
         except Exception:
             # Fall back to ffmpeg/dshow when sounddevice is unavailable for the selected device.
@@ -205,6 +274,7 @@ async def transcribe_live(
         app_id=app_id,
         api_key=api_key,
         api_secret=api_secret,
+        bootstrap_metrics=bootstrap_metrics,
     )
 
 
@@ -249,6 +319,7 @@ async def transcribe_live_sounddevice(
     app_id: str,
     api_key: str,
     api_secret: str,
+    bootstrap_metrics: dict[str, int] | None = None,
 ) -> str:
     if sd is None:
         raise RuntimeError("sounddevice unavailable")
@@ -265,17 +336,20 @@ async def transcribe_live_sounddevice(
     if device_index is None:
         raise RuntimeError("no sounddevice input device available")
 
-    def update_status(stage: str, detail: str = "") -> None:
-        if not status_path:
-            return
-        text = f"stage={stage}"
-        if detail:
-            text += f"\ndetail={detail}"
-        Path(status_path).write_text(text, encoding="utf-8")
+    reporter = StatusReporter(status_path, bootstrap_metrics)
+    reporter.update("starting", "python_worker_booting", mark="python_worker_boot")
+    first_audio_captured = False
+    first_audio_sent = False
+    first_result_received = False
+    first_nonempty_text_received = False
 
     def audio_callback(indata, frames, time_info, status) -> None:
+        nonlocal first_audio_captured
         if status:
             pass
+        if not first_audio_captured:
+            first_audio_captured = True
+            reporter.update("listening", "first_audio_captured", mark="first_audio_captured")
         try:
             loop.call_soon_threadsafe(audio_queue.put_nowait, bytes(indata))
         except RuntimeError:
@@ -288,7 +362,7 @@ async def transcribe_live_sounddevice(
         while not stop_requested and not send_done.is_set():
             if stop_file.exists():
                 stop_requested = True
-                update_status("finalizing", "stop_requested")
+                reporter.update("finalizing", "stop_requested", mark="stop_requested")
                 try:
                     loop.call_soon_threadsafe(audio_queue.put_nowait, None)
                 except RuntimeError:
@@ -297,16 +371,19 @@ async def transcribe_live_sounddevice(
             await asyncio.sleep(0.02)
 
     async def stream_audio(ws) -> None:
-        nonlocal stop_requested
+        nonlocal stop_requested, first_audio_sent
         first = True
         try:
-            update_status("capturing", "capturing_audio")
+            reporter.update("capturing", "capturing_audio", mark="stream_audio_started")
             while True:
                 chunk = await audio_queue.get()
                 if chunk is None:
                     break
                 if not chunk:
                     continue
+                if not first_audio_sent:
+                    first_audio_sent = True
+                    reporter.update("capturing", "first_audio_sent", mark="first_audio_sent")
                 payload = build_audio_payload(chunk, 0 if first else 1, app_id, first)
                 await send_payload(ws, payload)
                 first = False
@@ -322,15 +399,18 @@ async def transcribe_live_sounddevice(
                     "dwa": "wpgs",
                 }
             await send_payload(ws, final_payload)
-            update_status("recognizing", "waiting_final_result")
+            reporter.update("recognizing", "waiting_final_result", mark="final_payload_sent")
         finally:
             stop_requested = True
             send_done.set()
 
     async def receive_results(ws) -> None:
-        nonlocal last_text
+        nonlocal last_text, first_result_received, first_nonempty_text_received
         while True:
             raw = await ws.recv()
+            if not first_result_received:
+                first_result_received = True
+                reporter.update("streaming", "first_result_received", mark="first_result_received")
             payload = json.loads(raw)
             code = int(payload.get("code", 0) or 0)
             if code != 0:
@@ -338,14 +418,19 @@ async def transcribe_live_sounddevice(
                 raise RuntimeError(f"xunfei asr failed ({code}): {message}")
             merged = merge_segments(slots, payload)
             if merged and merged != last_text:
+                if not first_nonempty_text_received:
+                    first_nonempty_text_received = True
+                    reporter.update("streaming", "first_nonempty_text_received", mark="first_nonempty_text_received")
                 last_text = merged
                 write_output(transcript_path, last_text)
-                update_status("streaming", "streaming_text")
+                reporter.update("streaming", "streaming_text")
             if int(payload.get("data", {}).get("status", 1) or 1) == 2 and send_done.is_set():
+                reporter.update("recognizing", "final_result_received", mark="final_result_received")
                 break
 
+    reporter.update("starting", "connecting_service", mark="websocket_connect_begin")
     async with websockets.connect(url, max_size=None, ping_interval=None) as ws:
-        update_status("connected", "service_connected")
+        reporter.update("connected", "service_connected", mark="websocket_connected")
         stream = sd.RawInputStream(
             samplerate=16000,
             blocksize=CHUNK_SIZE // 2,
@@ -359,6 +444,7 @@ async def transcribe_live_sounddevice(
         recv_task = asyncio.create_task(receive_results(ws))
         try:
             stream.start()
+            reporter.update("listening", "audio_stream_ready", mark="audio_stream_ready")
             done, pending = await asyncio.wait(
                 {watcher_task, send_task, recv_task},
                 return_when=asyncio.FIRST_EXCEPTION,
@@ -383,10 +469,10 @@ async def transcribe_live_sounddevice(
     result = last_text.strip()
     if result:
         write_output(transcript_path, result)
-        update_status("completed", "completed_with_text")
+        reporter.update("completed", "completed_with_text", mark="completed")
     elif transcript_path:
         write_output(transcript_path, "")
-        update_status("completed", "completed_empty")
+        reporter.update("completed", "completed_empty", mark="completed")
     return result
 
 
@@ -398,6 +484,7 @@ async def transcribe_live_ffmpeg(
     app_id: str,
     api_key: str,
     api_secret: str,
+    bootstrap_metrics: dict[str, int] | None = None,
 ) -> str:
     url = build_auth_url(api_key, api_secret)
     ffmpeg = await asyncio.create_subprocess_exec(
@@ -428,13 +515,11 @@ async def transcribe_live_ffmpeg(
     audio_started = False
     send_done = asyncio.Event()
 
-    def update_status(stage: str, detail: str = "") -> None:
-        if not status_path:
-            return
-        text = f"stage={stage}"
-        if detail:
-            text += f"\ndetail={detail}"
-        Path(status_path).write_text(text, encoding="utf-8")
+    reporter = StatusReporter(status_path, bootstrap_metrics)
+    reporter.update("starting", "python_worker_booting", mark="python_worker_boot")
+    first_audio_sent = False
+    first_result_received = False
+    first_nonempty_text_received = False
 
     async def stop_watcher() -> None:
         nonlocal stop_requested
@@ -443,7 +528,7 @@ async def transcribe_live_ffmpeg(
         while not stop_requested and not send_done.is_set():
             if stop_file.exists():
                 stop_requested = True
-                update_status("finalizing", "stop_requested")
+                reporter.update("finalizing", "stop_requested", mark="stop_requested")
                 try:
                     if ffmpeg.stdin and not ffmpeg.stdin.is_closing():
                         ffmpeg.stdin.write(b"q\n")
@@ -454,16 +539,21 @@ async def transcribe_live_ffmpeg(
             await asyncio.sleep(0.03)
 
     async def stream_audio(ws) -> None:
-        nonlocal audio_started, stop_requested
+        nonlocal audio_started, stop_requested, first_audio_sent
         first = True
         try:
-            update_status("capturing", "capturing_audio")
+            reporter.update("capturing", "capturing_audio", mark="stream_audio_started")
             while True:
                 if ffmpeg.stdout is None:
                     break
                 chunk = await ffmpeg.stdout.read(CHUNK_SIZE)
                 if not chunk:
                     break
+                if not audio_started:
+                    reporter.update("listening", "first_audio_captured", mark="first_audio_captured")
+                if not first_audio_sent:
+                    first_audio_sent = True
+                    reporter.update("capturing", "first_audio_sent", mark="first_audio_sent")
                 payload = build_audio_payload(chunk, 0 if first else 1, app_id, first)
                 await send_payload(ws, payload)
                 audio_started = True
@@ -479,15 +569,18 @@ async def transcribe_live_ffmpeg(
                     "dwa": "wpgs",
                 }
             await send_payload(ws, final_payload)
-            update_status("recognizing", "waiting_final_result")
+            reporter.update("recognizing", "waiting_final_result", mark="final_payload_sent")
         finally:
             stop_requested = True
             send_done.set()
 
     async def receive_results(ws) -> None:
-        nonlocal last_text
+        nonlocal last_text, first_result_received, first_nonempty_text_received
         while True:
             raw = await ws.recv()
+            if not first_result_received:
+                first_result_received = True
+                reporter.update("streaming", "first_result_received", mark="first_result_received")
             payload = json.loads(raw)
             code = int(payload.get("code", 0) or 0)
             if code != 0:
@@ -495,15 +588,20 @@ async def transcribe_live_ffmpeg(
                 raise RuntimeError(f"xunfei asr failed ({code}): {message}")
             merged = merge_segments(slots, payload)
             if merged and merged != last_text:
+                if not first_nonempty_text_received:
+                    first_nonempty_text_received = True
+                    reporter.update("streaming", "first_nonempty_text_received", mark="first_nonempty_text_received")
                 last_text = merged
                 write_output(transcript_path, last_text)
-                update_status("streaming", "streaming_text")
+                reporter.update("streaming", "streaming_text")
             if int(payload.get("data", {}).get("status", 1) or 1) == 2 and send_done.is_set():
+                reporter.update("recognizing", "final_result_received", mark="final_result_received")
                 break
 
     try:
+        reporter.update("starting", "connecting_service", mark="websocket_connect_begin")
         async with websockets.connect(url, max_size=None, ping_interval=None) as ws:
-            update_status("connected", "service_connected")
+            reporter.update("connected", "service_connected", mark="websocket_connected")
             watcher_task = asyncio.create_task(stop_watcher())
             send_task = asyncio.create_task(stream_audio(ws))
             recv_task = asyncio.create_task(receive_results(ws))
@@ -534,10 +632,10 @@ async def transcribe_live_ffmpeg(
     result = last_text.strip()
     if result:
         write_output(transcript_path, result)
-        update_status("completed", "completed_with_text")
+        reporter.update("completed", "completed_with_text", mark="completed")
     elif transcript_path:
         write_output(transcript_path, "")
-        update_status("completed", "completed_empty")
+        reporter.update("completed", "completed_empty", mark="completed")
     return result
 
 
@@ -558,7 +656,16 @@ def main() -> int:
     parser.add_argument("--api-secret", default=os.environ.get("XUNFEI_API_SECRET", ""))
     parser.add_argument("--output", default="")
     parser.add_argument("--error-output", default="")
+    parser.add_argument("--bootstrap-metrics", default="")
     args = parser.parse_args()
+
+    bootstrap_metrics: dict[str, int] = {}
+    if args.bootstrap_metrics:
+        with contextlib.suppress(Exception):
+            raw_metrics = json.loads(args.bootstrap_metrics)
+            if isinstance(raw_metrics, dict):
+                for key, value in raw_metrics.items():
+                    bootstrap_metrics[str(key)] = int(value)
 
     if not args.app_id or not args.api_key or not args.api_secret:
         message = "xunfei websocket credentials missing"
@@ -577,6 +684,7 @@ def main() -> int:
                     app_id=args.app_id,
                     api_key=args.api_key,
                     api_secret=args.api_secret,
+                    bootstrap_metrics=bootstrap_metrics,
                 )
             )
         else:
@@ -591,7 +699,15 @@ def main() -> int:
                 write_output(args.error_output, message)
                 print(message, file=sys.stderr)
                 return 2
-            text = asyncio.run(transcribe_file(audio_path, args.app_id, args.api_key, args.api_secret))
+            text = asyncio.run(
+                transcribe_file(
+                    audio_path,
+                    args.app_id,
+                    args.api_key,
+                    args.api_secret,
+                    status_path=args.status_path,
+                )
+            )
     except InvalidStatus as exc:
         body = ""
         response = getattr(exc, "response", None)

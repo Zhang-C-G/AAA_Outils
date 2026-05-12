@@ -1,6 +1,6 @@
 ﻿{
     "version":  1,
-    "updated_at":  "2026-05-09 12:03:37",
+    "updated_at":  "2026-05-09 12:46:52",
     "sections":  [
                      {
                          "id":  "basic_info",
@@ -729,9 +729,9 @@
                               "id":  "company_01",
                               "company":  "阿里巴巴",
                               "url":  "https://talent.alibaba.com/",
-                              "company_type":  "",
-                              "company_scale":  "large",
-                              "job_type":  "daily_intern",
+                              "company_type":  "state_owned",
+                              "company_scale":  "medium",
+                              "job_type":  "conversion_intern",
                               "progress":  "not_applied"
                           },
                           {

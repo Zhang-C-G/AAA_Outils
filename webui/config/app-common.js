@@ -9,6 +9,9 @@
     mode_order: ['shortcuts', 'notes', 'notes_display', 'capture', 'assistant', 'resume', 'hotkeys', 'testing', 'api_center'],
     notes_sidebar_compact: 0,
     notes_display_sidebar_compact: 0,
+    notes_display_current_id: '',
+    notes_display_content_view: 'rendered',
+    testing_subview: 'assistant_benchmark',
     notes_extract_collapsed: 0,
     shell_theme_mode: 'solid',
     shell_theme_primary: '#111111',
@@ -55,6 +58,14 @@
       image_kb: 0,
       note: '',
       selected_model: '',
+      last_result: null,
+      history: []
+    },
+    voice_benchmark: {
+      engine_id: 'xunfei_websocket_asr',
+      engine_label: '讯飞 WebSocket 语音识别',
+      sample_text: '',
+      note: '',
       last_result: null,
       history: []
     }
