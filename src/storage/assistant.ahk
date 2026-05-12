@@ -1438,8 +1438,13 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
             if (InStr(statusText, "stage=capturing") || InStr(statusText, "stage=streaming") || InStr(statusText, "stage=recognizing") || InStr(statusText, "stage=finalizing")) {
                 sawActiveStage := true
             }
+            if (InStr(statusText, "stage=listening") || InStr(statusText, "stage=connected")) {
+                sawActiveStage := true
+            }
             if (InStr(statusText, "stage=completed") || InStr(statusText, "stage=failed")) {
-                break
+                if sawActiveStage {
+                    break
+                }
             }
             if (InStr(statusText, "stage=ready") && sawActiveStage) {
                 break

@@ -6,6 +6,7 @@
 gDataFile := A_ScriptDir "\\config.ini"
 gSnapshotFile := A_ScriptDir "\\config.snapshot.ini"
 gLogFile := A_ScriptDir "\\action.log"
+gAssistantVoiceBenchmarkFile := A_ScriptDir "\\assistant_voice_sessions.jsonl"
 gUsageFile := A_ScriptDir "\\usage.ini"
 gAssistantRateFile := A_ScriptDir "\\assistant_rate.ini"
 gNotesDir := A_ScriptDir "\\notes"

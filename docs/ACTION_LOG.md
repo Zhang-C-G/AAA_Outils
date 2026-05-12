@@ -2,6 +2,8 @@
 
 日志文件：`action.log`
 
+语音测试样本文件：`assistant_voice_sessions.jsonl`
+
 本文件定义软件关键动作日志，便于排障、回溯操作和分析使用习惯。每行一条记录。
 
 ## 日志格式
@@ -92,6 +94,9 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `assistant_answer_show` / `assistant_answer_failed`：模型回答展示成功/失败
 - `assistant_rate_consume` / `assistant_rate_limited`：每小时限流计数消耗 / 命中上限
 - `assistant_secret_protect_failed` / `assistant_secret_unprotect_failed`：密钥加解密失败（排障用）
+- `assistant_voice_input_start` / `assistant_voice_input_text` / `assistant_voice_input_empty` / `assistant_voice_input_stop_failed`：F3 语音输入启动、成功出文、空结果、停止失败
+- `assistant_voice_stage` / `assistant_voice_detail` / `assistant_voice_metric`：F3 语音链路阶段、细节状态与分段时长埋点
+- `assistant_voice_session_summary`：每轮 F3 语音识别测试样本摘要，包含文本长度、总耗时、按住时长、整理时长与各段 metric
 
 ### 简历自动填写
 

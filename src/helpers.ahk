@@ -20,6 +20,16 @@ WriteLog(action, details := "") {
     FileAppend(line, gLogFile, "UTF-8")
 }
 
+JsonEscape(str) {
+    s := "" str
+    s := StrReplace(s, "\", "\\")
+    s := StrReplace(s, '"', '\"')
+    s := StrReplace(s, "`r", "\r")
+    s := StrReplace(s, "`n", "\n")
+    s := StrReplace(s, "`t", "\t")
+    return s
+}
+
 IsMatch(q, key, value) {
     if (q = "") {
         return true

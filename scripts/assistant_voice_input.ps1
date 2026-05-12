@@ -39,6 +39,14 @@ function Write-StatusFile {
   [IO.File]::WriteAllText($StatusPath, $text, $Utf8NoBom)
 }
 
+function Build-MetricsJson {
+  param([hashtable]$Metrics)
+  if ($null -eq $Metrics -or $Metrics.Count -eq 0) {
+    return '{}'
+  }
+  return ($Metrics | ConvertTo-Json -Compress)
+}
+
 function Read-CommandFile {
   if ([string]::IsNullOrWhiteSpace($CommandPath) -or -not (Test-Path -LiteralPath $CommandPath)) {
     return ''
@@ -686,6 +694,8 @@ if ($Mode -eq 'service') {
   $pythonStdOutPath = ''
   $pythonStdErrPath = ''
   $lastCommand = ''
+  $serviceSessionStartTick = 0
+  $serviceReturnToReadyAfterTick = 0
   Write-StatusFile 'ready' ('device=' + $deviceName)
 
   try {
@@ -695,6 +705,8 @@ if ($Mode -eq 'service') {
         $lastCommand = $command
         if ($command -like 'start*') {
           if ($null -eq $pythonProc -or $pythonProc.HasExited) {
+            $serviceReturnToReadyAfterTick = 0
+            $serviceSessionStartTick = [Environment]::TickCount64
             Ensure-TranscriptFile
             [IO.File]::WriteAllText($TranscriptPath, '', $Utf8NoBom)
             if (-not [string]::IsNullOrWhiteSpace($ErrorPath)) {
@@ -714,6 +726,9 @@ if ($Mode -eq 'service') {
             if ($null -eq $pythonCmd) {
               throw 'python not found for xunfei websocket asr'
             }
+            $bootstrapMetrics = @{
+              service_command_to_python_launch_ms = [int]([Environment]::TickCount64 - $serviceSessionStartTick)
+            }
             $args = @(
               ('"' + ($PSScriptRoot + '\xunfei_asr.py') + '"'),
               '--device-name', ('"' + $deviceName + '"'),
@@ -721,7 +736,8 @@ if ($Mode -eq 'service') {
               '--transcript-path', ('"' + $TranscriptPath + '"'),
               '--status-path', ('"' + $StatusPath + '"'),
               '--output', ('"' + $pythonOutPath + '"'),
-              '--error-output', ('"' + $pythonErrPath + '"')
+              '--error-output', ('"' + $pythonErrPath + '"'),
+              '--bootstrap-metrics', ('"' + (Build-MetricsJson $bootstrapMetrics).Replace('"', '\"') + '"')
             )
             $pythonProc = Start-Process -FilePath $pythonCmd.Source -ArgumentList $args -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $pythonStdOutPath -RedirectStandardError $pythonStdErrPath
           }
@@ -729,7 +745,7 @@ if ($Mode -eq 'service') {
           if (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
             [IO.File]::WriteAllText($serviceStopPath, 'stop', $Utf8NoBom)
           }
-          Write-StatusFile 'finalizing' 'service_stop_requested'
+          Write-StatusFile 'finalizing' 'stopping_capture_and_flushing_audio'
         } elseif ($command -like 'exit*') {
           if (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
             [IO.File]::WriteAllText($serviceStopPath, 'stop', $Utf8NoBom)
@@ -784,24 +800,33 @@ if ($Mode -eq 'service') {
           Write-ErrorFile $fallbackError
           Write-StatusFile 'failed' 'worker_failed'
         } elseif (Test-Path -LiteralPath $pythonOutPath) {
+          Write-StatusFile 'recognizing' 'building_final_transcript'
           $finalText = ([IO.File]::ReadAllText($pythonOutPath, [Text.Encoding]::UTF8)).Trim()
           if ($finalText -ne '') {
             [IO.File]::WriteAllText($TranscriptPath, $finalText, $Utf8NoBom)
-            Write-StatusFile 'completed' 'completed_with_text'
+            Write-StatusFile 'completed' 'final_transcript_ready'
+            $serviceReturnToReadyAfterTick = [Environment]::TickCount64 + 280
           } elseif ($stdOutText -ne '') {
             [IO.File]::WriteAllText($TranscriptPath, $stdOutText, $Utf8NoBom)
-            Write-StatusFile 'completed' 'completed_with_stdout'
+            Write-StatusFile 'completed' 'final_transcript_ready_from_stdout'
+            $serviceReturnToReadyAfterTick = [Environment]::TickCount64 + 280
           } else {
-            Write-StatusFile 'completed' 'completed_empty'
+            Write-StatusFile 'completed' 'final_transcript_empty'
+            $serviceReturnToReadyAfterTick = [Environment]::TickCount64 + 280
           }
         } else {
-          Write-StatusFile 'completed' 'completed_empty'
+          Write-StatusFile 'completed' 'final_transcript_empty'
+          $serviceReturnToReadyAfterTick = [Environment]::TickCount64 + 280
         }
         $pythonProc.Dispose()
         $pythonProc = $null
         $serviceStopPath = ''
         $pythonStdOutPath = ''
         $pythonStdErrPath = ''
+      }
+      if ($null -eq $pythonProc -and $serviceReturnToReadyAfterTick -gt 0 -and [Environment]::TickCount64 -ge $serviceReturnToReadyAfterTick) {
+        Write-StatusFile 'ready' ('device=' + $deviceName)
+        $serviceReturnToReadyAfterTick = 0
       }
       Start-Sleep -Milliseconds 40
     }

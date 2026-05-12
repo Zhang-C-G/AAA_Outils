@@ -1,6 +1,6 @@
 # 模块修改过程记录：E 截图问答
 
-最近同步：`2026-05-11`  
+最近同步：`2026-05-12`  
 状态：`active`
 
 ## 1. 当前状态
@@ -9,6 +9,31 @@
 - 当前重点：F3 讯飞语音识别的低延迟、流式转写、状态可视化与常驻待命优化
 
 ## 2. 修改记录
+
+### 2026-05-12 / F3 待命状态可视化与悬浮窗预热常驻收口
+- 改动内容：
+  - 将 F3 的讯飞 service 待命态正式收成“悬浮窗打开即预热”，不再等第一次按下 F3 才临时拉起
+  - 为悬浮窗待命栏补上语音状态细分：`未开启 / 未预热 / 预热中 / 已就绪 / 启动失败`
+  - 新增 idle watcher，在悬浮窗可见且 F3 空闲时持续观察语音 service 状态；若 service 掉线，会按冷却节奏自动补拉起
+  - F3 按下前新增 `ready` 确认；如果 service 还没真正进入待命，会先等待 ready，再必要时重建一次 service，避免“按下 F3 但实际上还不能录音”
+  - PowerShell service 在一次识别完成后不再长期停留在 `completed`，而是短暂保留完成态后自动回到 `ready`，让悬浮窗能稳定显示“已就绪”
+  - 将 F3 的交互状态改为更贴近实际操作：`请开始说话 -> 正在听你说话 -> 已松开，正在整理识别结果 -> 你刚才说的是...`
+  - 若上一轮 F3 在松开后的整理阶段尚未结束，用户再次按下 F3 会立即放弃上一轮结果，并自动切入新一轮语音输入
+  - 将松开后的整理阶段再拆细为：`正在结束收音并上传尾段 -> 正在整理最终文本`
+  - 修正讯飞 service 的阶段判定：`completed` 不再被当成新一轮 F3 的 `ready` 或有效启动成功，避免把上一轮空结果的完成态误判成“本轮已经准备好/已识别完成”，导致持续出现“未识别到语音内容”
+  - 新增 F3 测试样本记录：每次语音识别结束后，都会把本轮的 `总耗时 / 按住时长 / 松开后整理时长 / 各段 metric / 识别文本 / 字符数 / 结果类型 / 错误信息` 汇总记录到结构化 `assistant_voice_sessions.jsonl`，并同步写一条 `assistant_voice_session_summary` 到 `action.log`
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `scripts/assistant_voice_input.ps1`
+  - `src/storage/assistant.ahk`
+  - `src/helpers.ahk`
+  - `src/app_state.ahk`
+  - `docs/ACTION_LOG.md`
+- 测试：
+  - PowerShell Parser 校验：`[System.Management.Automation.Language.Parser]::ParseFile('scripts/assistant_voice_input.ps1',[ref]$null,[ref]$null)`
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+  - 进程校验：确认当前仅存在 1 个 `AutoHotkey64.exe` 主实例
+- 测试结果：`通过`
 
 ### 2026-04-26 / 麦克风与语音链路阶段
 - 改动内容：
@@ -225,4 +250,20 @@
   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
   - service 状态观察：临时拉起 `assistant_voice_input.ps1 -Mode service -Provider xunfei_websocket_asr` 后，状态文件已可推进到 `stage=streaming`
   - transcript 运行态观察：当前 transcript 文件可实时写入内容，不再只停留在空结果路径
+- 测试结果：`通过`
+
+### 2026-05-11 / F3 语音链路分段时长埋点
+- 改动内容：
+  - 为 F3 语音链路补齐可分段测试的时长埋点，不再只看“总感觉慢”
+  - 在 `scripts/xunfei_asr.py` 新增状态报告器，持续写出 `metric_*` 指标，覆盖：Python worker 启动、WebSocket 开始连接、WebSocket 已连接、音频流 ready、首帧采集、首包发送、首个服务响应、首个非空文字结果、停止请求、最终结果返回、整次完成
+  - 在 `scripts/assistant_voice_input.ps1` 中补上 service 收到命令后到 Python 拉起的时长，并作为 bootstrap 指标传入 Python worker
+  - 在 `src/assistant_overlay.ahk` 中解析状态文件里的 `detail` 与 `metric_*`，把每段时长转存进 `action.log`
+  - 当前这套设计的目标，是后续可以直接从日志判断主要延迟究竟卡在：service 启动、识别服务连接、音频采集、首包发送，还是首条结果返回
+- 测试：
+  - `py_compile.compile('scripts/xunfei_asr.py', doraise=True)`
+  - PowerShell Parser 校验：`[System.Management.Automation.Language.Parser]::ParseFile('scripts/assistant_voice_input.ps1',[ref]$null,[ref]$null)`
+  - service 冒烟观察：状态文件已成功写出分段指标
+  - 当前实测样本：`websocket_connected_ms=269`、`audio_stream_ready_ms=308`、`first_audio_captured_ms=351`、`first_audio_sent_ms=352`
+  - 我自行追加了 3 轮 live service 测试；有效样本显示：`websocket_connected_ms=225-257`、`first_audio_sent_ms=302-336`、`first_result_received_ms=1108-1127`、`completed_ms=2187-2191`
+  - 由此确认：当前主要延迟不在本地麦克风首帧，而更集中在“首包发出后到识别服务返回第一条有效响应”这段
 - 测试结果：`通过`
