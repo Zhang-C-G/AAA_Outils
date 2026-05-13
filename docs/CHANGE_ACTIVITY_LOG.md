@@ -1,6 +1,6 @@
 # 变更流水文档
 
-最近同步：`2026-05-12`
+最近同步：`2026-05-13`
 状态：`active`
 
 ## 1. 文档定位
@@ -9,13 +9,13 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-12-f3-credential-preflight`
-- 当前连续改动次数：`3`
+- 轮次标识：`2026-05-13-post-f3-credential-checkpoint`
+- 当前连续改动次数：`0`
 - 本轮目标：
-  - 收口 F3 在讯飞凭据缺失场景下的失败提示与 service 状态表达
-- 上一个 git 检查点：`archive: sync checkpoint docs after main push`
+  - 当前轮次已归档，等待下一轮改动开始后重新累计
+- 上一个 git 检查点：`checkpoint: finalize F3 xunfei credential messaging`
 - 最近一次推送：
-  - 提交：`4053230`
+  - 提交：`a01ff90`
   - 目标：`origin/main`
   - 结果：`push 成功`
 - 历史追溯方式：`git log` / 远端提交记录
@@ -77,6 +77,6 @@
 
 ## 4. 是否触发 git
 
-- 当前累计：`3 / 3`
-- 本次是否触发 checkpoint：`是`
-- 下一步要求：本次完成 checkpoint commit + push 后，下一轮重新从 `0 / 3` 开始累计
+- 当前累计：`0 / 3`
+- 本次是否触发 checkpoint：`已完成`
+- 下一步要求：等待下一次有效改动累计
