@@ -32,8 +32,8 @@
 
 - 当前轮次：`2026-05-13-latency-stability-suite`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`1`
-- 下一次强制 git 阈值：`当前已累计 1 次有效改动；再完成 2 次并测试通过后，执行 checkpoint commit + push 到 origin/main`
+- 当前连续改动次数：`2`
+- 下一次强制 git 阈值：`当前已累计 2 次有效改动；再完成 1 次并测试通过后，执行 checkpoint commit + push 到 origin/main`
 - 上一个 git 检查点：`checkpoint: stabilize F3 xunfei service restart flow`
 - 最近一次已完成推送：
   - 提交：`73e90ce`
@@ -41,7 +41,8 @@
   - 结果：`push 成功`
 - 当前计数说明：
   - 第 `1` 次：新增 F3 延迟报告脚本与稳定性套件脚本，把启动延迟、讯飞首条文本基准、重启稳定性统一收束成自动化回归
-  - 当前状态：本轮正在进行，已累计 `1` 次有效改动
+  - 第 `2` 次：完成语音功能文档收口，统一模块主文档、changelog、AI handoff 与文档总变更记录中的最终口径
+  - 当前状态：本轮正在进行，已累计 `2` 次有效改动
 
 ## 5. 维护方式
 

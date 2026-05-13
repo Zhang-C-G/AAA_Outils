@@ -42,3 +42,8 @@ Track documentation-only updates.
 - Synced `docs/ACTION_LOG.md` with microphone chain restoration, service restart diagnosis, and final interface verification.
 - Added document-creation governance set: `docs/extension/DOC_CREATION_GUIDE.md` plus `docs/templates/STAGE1_DOC_TEMPLATE.md`, `docs/templates/STAGE2_CAPABILITY_TEMPLATE.md`, and `docs/templates/INCIDENT_TEMPLATE.md`.
 - Updated `docs/extension/README.md` to expose the new document-creation guide entry.
+
+## 2026-05-13
+- Synced assistant voice docs to the completed F3 xunfei baseline: module 06 now reflects prewarm, live transcript, final text-only return, restart interruption, and scripted latency/stability regression.
+- Updated `docs/modules/changelog/E_截图问答_修改过程.md` to mark the voice feature as stage-complete and archived the final documentation closeout.
+- Updated `docs/AI_HANDOFF.md` so future recovery work treats F3 voice as an already-closed mainline, with rollback anchored to the stable xunfei + regression-tested version.

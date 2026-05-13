@@ -10,7 +10,7 @@
 ## 2. 当前轮次
 
 - 轮次标识：`2026-05-13-latency-stability-suite`
-- 当前连续改动次数：`1`
+- 当前连续改动次数：`2`
 - 本轮目标：
   - 聚焦 F3 的延迟与稳定性，补齐可重复执行的自动化测试脚本与回归口径
 - 上一个 git 检查点：`checkpoint: stabilize F3 xunfei service restart flow`
@@ -39,6 +39,25 @@
 - 测试：
   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_latency_report.ps1 -RepoRoot . -OpenOverlayFirst -Iterations 3 -HoldMs 2200 -WaitAfterReleaseMs 4200`
   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_stability_suite.ps1 -RepoRoot . -OpenOverlayFirst -LatencyIterations 3 -RestartIterations 2`
+- 测试结果：`通过`
+
+### 第 2 次改动（当前轮次）
+- 时间：`2026-05-13`
+- 内容：
+  - 对“语音功能已基本完结”的现状做文档收口，统一模块主文档、模块修改过程文档、AI 交接文档、总文档变更记录中的最终口径
+  - 修正 `docs/extension/global_preferences/00_通用偏好结论.md` 开头误入的脏文本，避免后续继续把异常内容带进文档体系
+  - 将 E 模块语音现状统一收口为：`F3 = 讯飞 WebSocket 语音识别主链已完成`，并明确后续默认只做质量、体感与展示细节优化
+- 影响文件：
+  - `docs/extension/global_preferences/00_通用偏好结论.md`
+  - `docs/modules/06_assistant_capture_qa.md`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/AI_HANDOFF.md`
+  - `docs/DOC_CHANGELOG.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - 文档口径交叉校对：`docs/modules/06_assistant_capture_qa.md`、`docs/modules/changelog/E_截图问答_修改过程.md`、`docs/AI_HANDOFF.md`
+  - 依赖上一轮已通过的语音回归脚本结果作为当前功能收口依据
 - 测试结果：`通过`
 
 ### 第 1 次改动
@@ -99,6 +118,6 @@
 
 ## 4. 是否触发 git
 
-- 当前累计：`1 / 3`
+- 当前累计：`2 / 3`
 - 本次是否触发 checkpoint：`否`
-- 下一步要求：继续围绕 F3 延迟与稳定性推进；再完成 `2` 次有效改动并测试通过后，执行 checkpoint commit + push
+- 下一步要求：如再完成 `1` 次有效改动并测试通过，则执行 checkpoint commit + push
