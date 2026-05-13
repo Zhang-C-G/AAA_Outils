@@ -9,20 +9,37 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-13-post-checkpoint`
-- 当前连续改动次数：`0`
+- 轮次标识：`2026-05-13-latency-stability-suite`
+- 当前连续改动次数：`1`
 - 本轮目标：
-  - 恢复 F3 的讯飞必选模式，并在缺配置时直接报出具体缺失项
-- 上一个 git 检查点：`archive: sync checkpoint docs after F3 credential push`
+  - 聚焦 F3 的延迟与稳定性，补齐可重复执行的自动化测试脚本与回归口径
+- 上一个 git 检查点：`checkpoint: stabilize F3 xunfei service restart flow`
 - 最近一次推送：
-  - 提交：`5ba45b8`
+  - 提交：`73e90ce`
   - 目标：`origin/main`
   - 结果：`push 成功`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 当前 1-3 次改动窗口
 
-本轮 `3` 次改动已随提交 `5ba45b8` 推送到 `origin/main`，当前计数已清零；下面内容作为刚完成 checkpoint 的归档摘要保留，后续新的连续改动从 `0` 重新开始。
+上一轮 `3` 次改动已随提交 `73e90ce` 推送到 `origin/main`；下面保留上一轮摘要，同时开始记录本轮新的连续改动。
+
+### 第 1 次改动（当前轮次）
+- 时间：`2026-05-13`
+- 内容：
+  - 新增 `scripts/test_f3_latency_report.ps1`，把 F3 的自动化延迟回归拆成 `launch_ms / websocket_connected_ms / first_audio_sent_ms / finalize_ms` 等指标，并输出聚合统计
+  - 新增 `scripts/test_f3_stability_suite.ps1`，把延迟回归、讯飞文本延迟基准、F3 中断重启稳定性回归收束成一份统一测试套件
+  - 让本轮验收不再依赖单次体感，而是依赖脚本化结果：启动日志、会话汇总、首条文本基准、重启成功率
+- 影响文件：
+  - `scripts/test_f3_latency_report.ps1`
+  - `scripts/test_f3_stability_suite.ps1`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_latency_report.ps1 -RepoRoot . -OpenOverlayFirst -Iterations 3 -HoldMs 2200 -WaitAfterReleaseMs 4200`
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_stability_suite.ps1 -RepoRoot . -OpenOverlayFirst -LatencyIterations 3 -RestartIterations 2`
+- 测试结果：`通过`
 
 ### 第 1 次改动
 - 时间：`2026-05-13`
@@ -82,6 +99,6 @@
 
 ## 4. 是否触发 git
 
-- 当前累计：`0 / 3`
-- 本次是否触发 checkpoint：`已完成`
-- 下一步要求：后续新的有效改动重新累计；满 `3` 次后再次执行 checkpoint commit + push
+- 当前累计：`1 / 3`
+- 本次是否触发 checkpoint：`否`
+- 下一步要求：继续围绕 F3 延迟与稳定性推进；再完成 `2` 次有效改动并测试通过后，执行 checkpoint commit + push

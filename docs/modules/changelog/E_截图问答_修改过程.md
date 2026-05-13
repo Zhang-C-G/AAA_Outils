@@ -347,3 +347,22 @@
     - `start_events=2`
     - `stop_failed_events=0`
     - `first_nonempty_text_received_ms=546`
+
+### 2026-05-13 / F3 延迟与稳定性自动化回归脚本
+- 改动内容：
+  - 新增 `scripts/test_f3_latency_report.ps1`，自动拉起悬浮窗并触发 F3，按轮次汇总 `launch_ms / websocket_connected_ms / first_audio_sent_ms / finalize_ms`
+  - 新增 `scripts/test_f3_stability_suite.ps1`，把 F3 启动延迟回归、`test_xunfei_voice_latency.ps1` 文本首字基准、`test_f3_restart_flow.ps1` 中断重启回归整合成统一套件
+  - 让后续关于“现在还有没有变慢 / 会不会又不稳定”的判断可以直接落在脚本结果上，而不是手动感受
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_latency_report.ps1 -RepoRoot . -OpenOverlayFirst -Iterations 3 -HoldMs 2200 -WaitAfterReleaseMs 4200`
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_stability_suite.ps1 -RepoRoot . -OpenOverlayFirst -LatencyIterations 3 -RestartIterations 2`
+- 测试结果：
+  - 延迟报告：`通过`
+  - 稳定性套件：`通过`
+  - 关键结果：
+    - `launch_ms p95 = 63`
+    - `websocket_connected_ms p95 = 243`
+    - `first_audio_sent_ms p95 = 327`
+    - `benchmark first_nonempty_text_received_ms = 519`
+    - `restart_completed_total = 2`
+    - `restart_stop_failed_events = 0`

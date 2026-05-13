@@ -30,20 +30,18 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-13-post-checkpoint`
+- 当前轮次：`2026-05-13-latency-stability-suite`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
-- 下一次强制 git 阈值：`从 0 重新累计；后续再完成 3 次有效改动并测试通过后，执行 checkpoint commit + push 到 origin/main`
-- 上一个 git 检查点：`archive: sync checkpoint docs after F3 credential push`
+- 当前连续改动次数：`1`
+- 下一次强制 git 阈值：`当前已累计 1 次有效改动；再完成 2 次并测试通过后，执行 checkpoint commit + push 到 origin/main`
+- 上一个 git 检查点：`checkpoint: stabilize F3 xunfei service restart flow`
 - 最近一次已完成推送：
-  - 提交：`5ba45b8`
+  - 提交：`73e90ce`
   - 目标：`origin/main`
   - 结果：`push 成功`
 - 当前计数说明：
-  - 第 `1` 次：恢复 F3 的讯飞必选模式，并在缺配置时直接报出缺少的 `AppID / API Key / API Secret`
-  - 第 `2` 次：在本机补齐讯飞受保护配置并验证 service 预热进入 `ready`
-  - 第 `3` 次：修复 F3 讯飞 service 的残留命令文件与退出收尾清理，打通按住 F3 -> 松开 -> 再按下 F3 的中断重启链路
-  - 当前状态：本轮已完成 checkpoint，新的连续改动从 `0` 开始累计
+  - 第 `1` 次：新增 F3 延迟报告脚本与稳定性套件脚本，把启动延迟、讯飞首条文本基准、重启稳定性统一收束成自动化回归
+  - 当前状态：本轮正在进行，已累计 `1` 次有效改动
 
 ## 5. 维护方式
 
