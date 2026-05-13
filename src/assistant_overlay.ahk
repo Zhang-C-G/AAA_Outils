@@ -267,6 +267,10 @@ BuildAssistantVoiceIdleSummary() {
     if (provider != "xunfei_websocket_asr") {
         return providerLabel
     }
+    preflightError := GetAssistantVoicePreflightError(gAssistantSettings)
+    if (preflightError != "") {
+        return providerLabel " 未配置凭据"
+    }
     state := ReadAssistantVoiceServiceState(gAssistantVoiceService)
     if state["ready"] {
         return providerLabel " 已就绪"
@@ -433,6 +437,12 @@ PrimeAssistantVoiceService(force := false) {
         return false
     }
     if (GetAssistantVoiceInputProvider(gAssistantSettings) != "xunfei_websocket_asr") {
+        return false
+    }
+    preflightError := GetAssistantVoicePreflightError(gAssistantSettings)
+    if (preflightError != "") {
+        gAssistantVoiceServiceLastError := preflightError
+        UpdateAssistantOverlayIdleStatus()
         return false
     }
     if IsObject(gAssistantVoiceService) && IsAssistantVoiceServiceAlive(gAssistantVoiceService) {
@@ -1024,7 +1034,7 @@ StartAssistantCaptureFlow(showNotice := true) {
 }
 
 StartAssistantVoiceInputHold(showNotice := true) {
-    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceFinalizing, gAssistantVoiceRestartPending, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult, gAssistantVoiceTranscriptLastText, gAssistantVoiceStatusLastStage, gAssistantVoiceStatusLastDetail, gAssistantVoiceMetricLogState, gAssistantVoiceStartTick, gAssistantVoiceService
+    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceFinalizing, gAssistantVoiceRestartPending, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult, gAssistantVoiceTranscriptLastText, gAssistantVoiceStatusLastStage, gAssistantVoiceStatusLastDetail, gAssistantVoiceMetricLogState, gAssistantVoiceStartTick, gAssistantVoiceService, gAssistantVoiceServiceLastError, gAssistantVoiceSessionStartTick, gAssistantVoiceReleaseTick, gAssistantVoiceSessionId
 
     if gAssistantVoiceInputActive || gAssistantVoiceInputStarting {
         return Map("ok", 1, "error", "")
@@ -1068,6 +1078,18 @@ StartAssistantVoiceInputHold(showNotice := true) {
     gAssistantVoiceStartTick := A_TickCount
     session := ""
     provider := GetAssistantVoiceInputProvider(gAssistantSettings)
+    preflightError := GetAssistantVoicePreflightError(gAssistantSettings)
+    if (preflightError != "") {
+        gAssistantVoiceInputStarting := false
+        gAssistantVoiceServiceLastError := preflightError
+        SetAssistantOverlayText("需要到API中心补齐讯飞配置")
+        UpdateAssistantOverlayStatus("状态：需要到API中心补齐讯飞配置 | 识别：" providerLabel)
+        WriteLog("assistant_voice_input_start_failed", "error=" preflightError)
+        if showNotice {
+            MsgBox(preflightError)
+        }
+        return Map("ok", 0, "error", preflightError)
+    }
     if (provider = "xunfei_websocket_asr") {
         if IsObject(gAssistantVoiceService) && !IsAssistantVoiceServiceAlive(gAssistantVoiceService) {
             try ShutdownAssistantVoiceService(gAssistantVoiceService)

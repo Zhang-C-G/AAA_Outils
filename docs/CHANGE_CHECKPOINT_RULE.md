@@ -30,17 +30,19 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-12-post-f3-checkpoint`
+- 当前轮次：`2026-05-12-f3-credential-preflight`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
-- 下一次强制 git 阈值：`从下一次测试通过的有效改动开始重新累计，满 3 次后再次 checkpoint 并 push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: commit all current workspace changes`
+- 当前连续改动次数：`3`
+- 下一次强制 git 阈值：`已达到本轮强制 git 阈值；本次需立即执行 checkpoint commit + push 到 origin/main`
+- 上一个 git 检查点：`archive: sync checkpoint docs after main push`
 - 最近一次已完成推送：
-  - 提交：`d7413a1`
+  - 提交：`4053230`
   - 目标：`origin/main`
   - 结果：`push 成功`
 - 当前计数说明：
-  - 当前轮次已清零，等待下一轮改动开始后记录第 `1` 次
+  - 第 `1` 次：收口 F3 在讯飞凭据缺失场景下的失败提示与 service 状态表达，避免继续显示假 ready 或落成空结果
+  - 第 `2` 次：将 F3 缺凭据时的悬浮窗文案统一改成“目前讯飞语音识别配置不完整”，收口用户可见提示
+  - 第 `3` 次：继续将 F3 缺凭据文案统一改成“需要到API中心补齐讯飞配置”，与用户目标提示完全对齐
 
 ## 5. 维护方式
 

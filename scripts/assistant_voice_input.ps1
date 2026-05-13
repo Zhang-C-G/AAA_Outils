@@ -129,6 +129,17 @@ function Get-XunfeiConfig {
   }
 }
 
+function Test-XunfeiConfigReady {
+  param($Config)
+  if ($null -eq $Config) {
+    return $false
+  }
+  $appId = ([string]$Config.app_id).Trim()
+  $apiKey = ([string]$Config.api_key).Trim()
+  $apiSecret = ([string]$Config.api_secret).Trim()
+  return ($appId -ne '' -and $apiKey -ne '' -and $apiSecret -ne '')
+}
+
 try {
   Add-Type -TypeDefinition @"
 using System;
@@ -696,7 +707,14 @@ if ($Mode -eq 'service') {
   $lastCommand = ''
   $serviceSessionStartTick = 0
   $serviceReturnToReadyAfterTick = 0
-  Write-StatusFile 'ready' ('device=' + $deviceName)
+  $serviceConfig = Get-XunfeiConfig -IniPath $DataFile
+  if (Test-XunfeiConfigReady $serviceConfig) {
+    Write-ErrorFile ''
+    Write-StatusFile 'ready' ('device=' + $deviceName)
+  } else {
+    Write-ErrorFile 'xunfei websocket credentials missing'
+    Write-StatusFile 'failed' 'credentials_missing'
+  }
 
   try {
     while ($true) {
@@ -707,6 +725,12 @@ if ($Mode -eq 'service') {
           if ($null -eq $pythonProc -or $pythonProc.HasExited) {
             $serviceReturnToReadyAfterTick = 0
             $serviceSessionStartTick = [Environment]::TickCount64
+            $serviceConfig = Get-XunfeiConfig -IniPath $DataFile
+            if (-not (Test-XunfeiConfigReady $serviceConfig)) {
+              Write-ErrorFile 'xunfei websocket credentials missing'
+              Write-StatusFile 'failed' 'credentials_missing'
+              continue
+            }
             Ensure-TranscriptFile
             [IO.File]::WriteAllText($TranscriptPath, '', $Utf8NoBom)
             if (-not [string]::IsNullOrWhiteSpace($ErrorPath)) {
@@ -718,10 +742,9 @@ if ($Mode -eq 'service') {
             $pythonErrPath = Join-Path $env:TEMP ('raccourci_voice_service_err_' + [guid]::NewGuid().ToString('N') + '.txt')
             $pythonStdOutPath = Join-Path $env:TEMP ('raccourci_voice_service_stdout_' + [guid]::NewGuid().ToString('N') + '.txt')
             $pythonStdErrPath = Join-Path $env:TEMP ('raccourci_voice_service_stderr_' + [guid]::NewGuid().ToString('N') + '.txt')
-            $cfg = Get-XunfeiConfig -IniPath $DataFile
-            $env:XUNFEI_APP_ID = ([string]$cfg.app_id).Trim()
-            $env:XUNFEI_API_KEY = ([string]$cfg.api_key).Trim()
-            $env:XUNFEI_API_SECRET = ([string]$cfg.api_secret).Trim()
+            $env:XUNFEI_APP_ID = ([string]$serviceConfig.app_id).Trim()
+            $env:XUNFEI_API_KEY = ([string]$serviceConfig.api_key).Trim()
+            $env:XUNFEI_API_SECRET = ([string]$serviceConfig.api_secret).Trim()
             $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
             if ($null -eq $pythonCmd) {
               throw 'python not found for xunfei websocket asr'
@@ -742,10 +765,17 @@ if ($Mode -eq 'service') {
             $pythonProc = Start-Process -FilePath $pythonCmd.Source -ArgumentList $args -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $pythonStdOutPath -RedirectStandardError $pythonStdErrPath
           }
         } elseif ($command -like 'stop*') {
-          if (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
+          if ($null -eq $pythonProc -or $pythonProc.HasExited) {
+            if (Test-XunfeiConfigReady (Get-XunfeiConfig -IniPath $DataFile)) {
+              Write-StatusFile 'ready' ('device=' + $deviceName)
+            } else {
+              Write-ErrorFile 'xunfei websocket credentials missing'
+              Write-StatusFile 'failed' 'credentials_missing'
+            }
+          } elseif (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
             [IO.File]::WriteAllText($serviceStopPath, 'stop', $Utf8NoBom)
+            Write-StatusFile 'finalizing' 'stopping_capture_and_flushing_audio'
           }
-          Write-StatusFile 'finalizing' 'stopping_capture_and_flushing_audio'
         } elseif ($command -like 'exit*') {
           if (-not [string]::IsNullOrWhiteSpace($serviceStopPath)) {
             [IO.File]::WriteAllText($serviceStopPath, 'stop', $Utf8NoBom)
@@ -825,7 +855,13 @@ if ($Mode -eq 'service') {
         $pythonStdErrPath = ''
       }
       if ($null -eq $pythonProc -and $serviceReturnToReadyAfterTick -gt 0 -and [Environment]::TickCount64 -ge $serviceReturnToReadyAfterTick) {
-        Write-StatusFile 'ready' ('device=' + $deviceName)
+        if (Test-XunfeiConfigReady (Get-XunfeiConfig -IniPath $DataFile)) {
+          Write-ErrorFile ''
+          Write-StatusFile 'ready' ('device=' + $deviceName)
+        } else {
+          Write-ErrorFile 'xunfei websocket credentials missing'
+          Write-StatusFile 'failed' 'credentials_missing'
+        }
         $serviceReturnToReadyAfterTick = 0
       }
       Start-Sleep -Milliseconds 40

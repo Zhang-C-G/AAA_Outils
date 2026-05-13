@@ -10,6 +10,37 @@
 
 ## 2. 修改记录
 
+### 2026-05-13 / F3 缺凭据提示文案收口
+- 改动内容：
+  - 先将 F3 在讯飞配置缺失场景下的用户可见提示统一收口为：`目前讯飞语音识别配置不完整`
+  - 随后按交互要求继续统一为：`需要到API中心补齐讯飞配置`
+  - 悬浮窗正文、状态栏与前置校验返回值统一同一句式，避免同时出现“未配置凭据 / 凭据未配置完整 / 配置不完整”等多种说法
+  - 保留底层 `credentials_missing` service 判定，不改变现有排障语义
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `src/storage/assistant.ahk`
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+  - 文案检索：`rg -n "需要到API中心补齐讯飞配置|目前讯飞语音识别配置不完整" src/assistant_overlay.ahk src/storage/assistant.ahk -S`
+- 测试结果：`通过`
+
+### 2026-05-12 / F3 讯飞凭据缺失前置校验与失败态收口
+- 改动内容：
+  - 排障确认当前本机 `config.ini` 中 `xunfei_app_id / xunfei_api_key_protected / xunfei_api_secret_protected` 为空，F3 之前之所以频繁落到“未识别到语音内容”，真实根因是讯飞凭据缺失
+  - 为 F3 新增讯飞凭据前置校验；缺少 `AppID / API Key / API Secret` 时，悬浮窗待命状态显示为 `未配置凭据`，按下 F3 时直接明确提示“讯飞语音识别凭据未配置完整”
+  - `assistant_voice_input.ps1` 的 service 模式在启动和每次 `start` 时都重新检查讯飞配置；缺失时统一写出 `stage=failed` 与 `detail=credentials_missing`
+  - 修正 service 在 worker 已退出时仍被 `stop` 命令打到 `finalizing` 的状态错误，避免排障时被误导为“还在整理识别结果”
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `scripts/assistant_voice_input.ps1`
+  - `src/storage/assistant.ahk`
+- 测试：
+  - PowerShell Parser 校验：`[System.Management.Automation.Language.Parser]::ParseFile('scripts/assistant_voice_input.ps1',[ref]$null,[ref]$null)`
+  - `node --experimental-default-type=module --check webui/config/app-assistant.js`
+  - service 缺凭据自测：确认 `PREWARM / START / STOP` 都稳定返回 `stage=failed | detail=credentials_missing`
+  - AHK 进程校验：恢复到仅保留 1 个 `main.ahk` 主实例
+- 测试结果：`通过`
+
 ### 2026-05-12 / F3 待命状态可视化与悬浮窗预热常驻收口
 - 改动内容：
   - 将 F3 的讯飞 service 待命态正式收成“悬浮窗打开即预热”，不再等第一次按下 F3 才临时拉起

@@ -302,6 +302,47 @@ GetAssistantVoiceProviderLabel(settings) {
     }
 }
 
+GetAssistantXunfeiCredentialMissingParts(settings) {
+    missing := []
+    appId := ""
+    keyPlain := ""
+    keyProtected := ""
+    secretPlain := ""
+    secretProtected := ""
+    try appId := Trim(settings["xunfei_app_id"])
+    try keyPlain := Trim(settings["xunfei_api_key"])
+    try keyProtected := Trim(settings["xunfei_api_key_protected"])
+    try secretPlain := Trim(settings["xunfei_api_secret"])
+    try secretProtected := Trim(settings["xunfei_api_secret_protected"])
+    if (appId = "") {
+        missing.Push("AppID")
+    }
+    if (keyPlain = "" && keyProtected = "") {
+        missing.Push("API Key")
+    }
+    if (secretPlain = "" && secretProtected = "") {
+        missing.Push("API Secret")
+    }
+    return missing
+}
+
+HasAssistantXunfeiCredentials(settings) {
+    missing := GetAssistantXunfeiCredentialMissingParts(settings)
+    return missing.Length = 0
+}
+
+GetAssistantVoicePreflightError(settings) {
+    provider := GetAssistantVoiceInputProvider(settings)
+    if (provider != "xunfei_websocket_asr") {
+        return ""
+    }
+    missing := GetAssistantXunfeiCredentialMissingParts(settings)
+    if (missing.Length = 0) {
+        return ""
+    }
+    return "需要到API中心补齐讯飞配置"
+}
+
 BuildAssistantMockTextAnswer(queryText, settings) {
     template := settings.Has("active_template") ? settings["active_template"] : "default_template"
     ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
