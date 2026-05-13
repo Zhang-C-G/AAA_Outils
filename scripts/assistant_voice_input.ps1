@@ -10,7 +10,8 @@ param(
   [string]$SelectedDeviceId = '',
   [string]$DataFile = '',
   [string]$AudioPath = '',
-  [string]$CommandPath = ''
+  [string]$CommandPath = '',
+  [string]$PidPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,6 +66,37 @@ function Ensure-TranscriptFile {
   if (-not (Test-Path -LiteralPath $TranscriptPath)) {
     [IO.File]::WriteAllText($TranscriptPath, '', $Utf8NoBom)
   }
+}
+
+function Write-PidFile {
+  if ([string]::IsNullOrWhiteSpace($PidPath)) {
+    return
+  }
+  try {
+    [IO.File]::WriteAllText($PidPath, [string]$PID, $Utf8NoBom)
+  } catch {}
+}
+
+function Remove-PidFile {
+  if ([string]::IsNullOrWhiteSpace($PidPath)) {
+    return
+  }
+  try {
+    if (Test-Path -LiteralPath $PidPath) {
+      Remove-Item -LiteralPath $PidPath -Force
+    }
+  } catch {}
+}
+
+function Remove-CommandFile {
+  if ([string]::IsNullOrWhiteSpace($CommandPath)) {
+    return
+  }
+  try {
+    if (Test-Path -LiteralPath $CommandPath) {
+      Remove-Item -LiteralPath $CommandPath -Force
+    }
+  } catch {}
 }
 
 function Unprotect-AssistantSecret {
@@ -693,8 +725,10 @@ if ($Mode -eq 'service') {
     throw 'service command path missing'
   }
 
+  Write-PidFile
   $deviceName = Resolve-DShowAudioDeviceName -SelectedId $SelectedDeviceId
   if ([string]::IsNullOrWhiteSpace($deviceName)) {
+    Remove-PidFile
     throw 'no DirectShow microphone found for xunfei service'
   }
 
@@ -874,6 +908,8 @@ if ($Mode -eq 'service') {
       try { $pythonProc.Dispose() } catch {}
     }
     Write-StatusFile 'closed' 'service_closed'
+    Remove-CommandFile
+    Remove-PidFile
   }
   exit 0
 }

@@ -10,6 +10,34 @@
 
 ## 2. 修改记录
 
+### 2026-05-13 / 本机补齐讯飞配置并验证预热 ready
+- 改动内容：
+  - 已在本机补齐讯飞 WebSocket 识别所需配置，F3 继续保持讯飞链路，不回退到本地默认识别
+  - `API Key / API Secret` 通过现有受保护字段机制写入本地配置，不保留到普通明文字段，也不记录到文档
+  - 预热自测从 `credentials_missing` 收口为 `ready`，说明 service 已能正常读取并接受当前讯飞配置
+- 影响文件：
+  - `config.ini`
+- 测试：
+  - 配置读取校验：确认 `AppID / API Key / API Secret` 三项均可从本地配置正常解出
+  - service 预热校验：`stage=ready`
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+- 测试结果：`通过`
+
+### 2026-05-13 / F3 恢复讯飞必选模式并直报缺失项
+- 改动内容：
+  - 按当前测试目标恢复 F3 的讯飞必选模式，不再把缺配置场景临时切回本地默认语音识别
+  - F3 缺配置时改为直接报出缺失项，当前格式为：`讯飞语音识别配置缺失：缺少 AppID / API Key / API Secret。请到 API 中心补齐。`
+  - 实机核对确认当前 `config.ini` 中 `xunfei_app_id / xunfei_api_key_protected / xunfei_api_secret_protected` 为空，这就是讯飞链路当前无法正常工作的直接原因
+- 影响文件：
+  - `config.ini`
+  - `src/assistant_overlay.ahk`
+  - `src/storage/assistant.ahk`
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+  - 配置核对：确认 `voice_model=xunfei_websocket_asr`、`voice_input_provider=xunfei_websocket_asr`
+  - 文案检索：`rg -n "讯飞语音识别配置缺失|状态：讯飞配置缺失" src/assistant_overlay.ahk src/storage/assistant.ahk -S`
+- 测试结果：`通过`
+
 ### 2026-05-13 / F3 缺凭据提示文案收口
 - 改动内容：
   - 先将 F3 在讯飞配置缺失场景下的用户可见提示统一收口为：`目前讯飞语音识别配置不完整`
@@ -298,3 +326,24 @@
   - 我自行追加了 3 轮 live service 测试；有效样本显示：`websocket_connected_ms=225-257`、`first_audio_sent_ms=302-336`、`first_result_received_ms=1108-1127`、`completed_ms=2187-2191`
   - 由此确认：当前主要延迟不在本地麦克风首帧，而更集中在“首包发出后到识别服务返回第一条有效响应”这段
 - 测试结果：`通过`
+
+### 2026-05-13 / F3 讯飞 service 残留退出指令修复，重启链路打通
+- 改动内容：
+  - 修复讯飞常驻 service 的运行时残留文件问题：新 service 启动前，AHK 侧先清理旧的 `command / status / stop / pid / transcript / err`
+  - 修复 service 退出时的尾部清理：PowerShell service 在 `finally` 中删除旧 `command` 文件，避免下一轮启动刚 ready 就立即吃到上一轮遗留的 `exit|...`
+  - 补充 `ShutdownAssistantVoiceService()` 收尾删除 `command_path / stop_path / pid_path`
+  - 这次修复后，F3 第二次按下时已能稳定中断上一轮，并重新进入新一轮讯飞识别启动，不再报 `voice service did not become ready`
+- 测试：
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_restart_flow.ps1 -RepoRoot . -OpenOverlayFirst`
+  - 再次回归：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_f3_restart_flow.ps1 -RepoRoot . -OpenOverlayFirst`
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_xunfei_voice_latency.ps1 -DataFile config.ini`
+- 测试结果：
+  - F3 重启链路回归：`通过`
+  - 讯飞延迟基准：`通过`
+  - 关键结果：
+    - `restart_requested=1`
+    - `restart_completed=1`
+    - `start_events=2`
+    - `stop_failed_events=0`
+    - `first_nonempty_text_received_ms=546`

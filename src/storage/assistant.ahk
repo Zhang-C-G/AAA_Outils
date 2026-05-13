@@ -340,7 +340,9 @@ GetAssistantVoicePreflightError(settings) {
     if (missing.Length = 0) {
         return ""
     }
-    return "需要到API中心补齐讯飞配置"
+    return "讯飞语音识别配置缺失："
+        . "缺少 " StrJoin(missing, " / ")
+        . "。请到 API 中心补齐。"
 }
 
 BuildAssistantMockTextAnswer(queryText, settings) {
@@ -1375,7 +1377,19 @@ EnsureAssistantVoiceService(settings) {
     errPath := A_Temp "\\raccourci_voice_input_err.txt"
     statusPath := A_Temp "\\raccourci_voice_input_status.txt"
     commandPath := A_Temp "\\raccourci_voice_input_command.txt"
+    pidPath := A_Temp "\\raccourci_voice_input_service.pid"
     selectedDeviceId := settings.Has("voice_input_device_id") ? Trim(settings["voice_input_device_id"]) : ""
+
+    ; Clear stale runtime artifacts before launching a new persistent service.
+    ; In particular, an old `exit|...` command must not be replayed into the
+    ; fresh process, or the new service will close immediately after startup.
+    for path in [transcriptPath, stopPath, errPath, statusPath, commandPath, pidPath] {
+        try {
+            if FileExist(path) {
+                FileDelete(path)
+            }
+        }
+    }
 
     pid := 0
     try {
@@ -1387,6 +1401,7 @@ EnsureAssistantVoiceService(settings) {
             . ' -ErrorPath "' errPath '"'
             . ' -StatusPath "' statusPath '"'
             . ' -CommandPath "' commandPath '"'
+            . ' -PidPath "' pidPath '"'
             . ' -DataFile "' gDataFile '"'
         if (selectedDeviceId != "") {
             cmd .= ' -SelectedDeviceId "' selectedDeviceId '"'
@@ -1406,6 +1421,8 @@ EnsureAssistantVoiceService(settings) {
         "error_path", errPath,
         "status_path", statusPath,
         "command_path", commandPath,
+        "pid_path", pidPath,
+        "launch_tick", A_TickCount,
         "script_path", scriptPath
     )
 }
@@ -1444,9 +1461,17 @@ ShutdownAssistantVoiceService(service) {
             try ProcessClose(pid)
         }
     }
+    for path in ["command_path", "stop_path", "pid_path"] {
+        try {
+            if service.Has(path) && FileExist(service[path]) {
+                FileDelete(service[path])
+            }
+        }
+    }
 }
 
 StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
+    global gAssistantVoiceRestartPending
     if !IsObject(session) {
         return Map("ok", 0, "text", "", "error", "voice session missing")
     }
@@ -1457,7 +1482,7 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
         return Map("ok", 1, "text", "这是一次本地模拟语音输入。", "error", "")
     }
     if (provider = "xunfei_websocket_asr") {
-        timeoutMs := Max(timeoutMs, 8000)
+        timeoutMs := gAssistantVoiceRestartPending ? Min(Max(timeoutMs, 1200), 2200) : Max(timeoutMs, 8000)
     }
 
     stopPath := session.Has("stop_path") ? session["stop_path"] : ""
@@ -1469,6 +1494,7 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
         SendAssistantVoiceServiceCommand(session, "stop|" A_TickCount)
         deadline := A_TickCount + Max(400, Abs(Integer(timeoutMs)))
         sawActiveStage := false
+        restartFastDeadlineTrimmed := false
         loop {
             statusText := ""
             try {
@@ -1481,6 +1507,22 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
             }
             if (InStr(statusText, "stage=listening") || InStr(statusText, "stage=connected")) {
                 sawActiveStage := true
+            }
+            if (gAssistantVoiceRestartPending && !restartFastDeadlineTrimmed) {
+                deadline := Min(deadline, A_TickCount + 1500)
+                restartFastDeadlineTrimmed := true
+            }
+            if gAssistantVoiceRestartPending {
+                if (InStr(statusText, "stage=completed") || InStr(statusText, "stage=failed") || InStr(statusText, "stage=ready")) {
+                    if sawActiveStage {
+                        break
+                    }
+                }
+                if (A_TickCount >= deadline) {
+                    break
+                }
+                Sleep(40)
+                continue
             }
             if (InStr(statusText, "stage=completed") || InStr(statusText, "stage=failed")) {
                 if sawActiveStage {
@@ -1513,7 +1555,7 @@ StopAssistantVoiceRecognitionSession(session, timeoutMs := 2600) {
         }
     }
 
-    settleDeadline := A_TickCount + ((provider = "xunfei_websocket_asr") ? 700 : 400)
+    settleDeadline := A_TickCount + (gAssistantVoiceRestartPending ? 80 : ((provider = "xunfei_websocket_asr") ? 700 : 400))
     err := ""
     text := ""
     loop {

@@ -30,17 +30,20 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-13-post-f3-credential-checkpoint`
+- 当前轮次：`2026-05-13-post-checkpoint`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`0`
-- 下一次强制 git 阈值：`从下一次测试通过的有效改动开始重新累计，满 3 次后再次 checkpoint 并 push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: finalize F3 xunfei credential messaging`
+- 下一次强制 git 阈值：`从 0 重新累计；后续再完成 3 次有效改动并测试通过后，执行 checkpoint commit + push 到 origin/main`
+- 上一个 git 检查点：`archive: sync checkpoint docs after F3 credential push`
 - 最近一次已完成推送：
-  - 提交：`a01ff90`
+  - 提交：`5ba45b8`
   - 目标：`origin/main`
   - 结果：`push 成功`
 - 当前计数说明：
-  - 当前轮次已清零，等待下一轮改动开始后记录第 `1` 次
+  - 第 `1` 次：恢复 F3 的讯飞必选模式，并在缺配置时直接报出缺少的 `AppID / API Key / API Secret`
+  - 第 `2` 次：在本机补齐讯飞受保护配置并验证 service 预热进入 `ready`
+  - 第 `3` 次：修复 F3 讯飞 service 的残留命令文件与退出收尾清理，打通按住 F3 -> 松开 -> 再按下 F3 的中断重启链路
+  - 当前状态：本轮已完成 checkpoint，新的连续改动从 `0` 开始累计
 
 ## 5. 维护方式
 
