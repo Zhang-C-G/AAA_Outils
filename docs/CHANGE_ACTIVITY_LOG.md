@@ -9,11 +9,11 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-14-post-checkpoint-next-round-10`
-- 当前连续改动次数：`2`
+- 轮次标识：`2026-05-14-post-checkpoint-next-round-11`
+- 当前连续改动次数：`0`
 - 本轮目标：
   - 从新的 checkpoint 之后继续累计后续有效改动
-- 上一个 git 检查点：`checkpoint: refine explicit reply rules`
+- 上一个 git 检查点：`checkpoint: push docs sync to main`
 - 最近一次推送：
   - 提交：`本次 checkpoint 提交后见 git log`
   - 目标：`origin/main`
@@ -22,55 +22,15 @@
 
 ## 3. 当前 1-3 次改动窗口
 
-### 第 1 次改动（当前轮次）
-- 时间：`2026-05-14`
-- 内容：
-  - 修正总指引文档中的残留旧规则口径
-  - 压缩 `git 状态 / checkpoint 状态` 的重复回答要求
-- 影响文件：
-  - `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+- 本轮新的累计窗口已在本次 checkpoint 后重置为 `0 / 3`
+- 上一轮已完成并推送，详情请通过：
+  - `git log`
   - `docs/ACTION_LOG.md`
-  - `docs/DOC_CHANGELOG.md`
-- 测试：
-  - 文档静态校对
-  - 手工检查是否已补回 `USER_DOC_SYSTEM_GUIDE` 前置入口
-  - 手工检查是否已出现 `git 状态` 与 `checkpoint 状态` 的去重分工
-- 测试结果：`通过`
-
-### 第 2 次改动（当前轮次）
-- 时间：`2026-05-14`
-- 内容：
-  - 继续简化显性回答规则
-  - 移除独立的 `checkpoint 状态` 项，并统一并入 `git 状态`
-- 影响文件：
-  - `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-  - `docs/AI_HANDOFF.md`
-  - `docs/UPDATE_CHECKLIST.md`
-  - `docs/USER_DOC_SYSTEM_GUIDE.md`
-  - `docs/ACTION_LOG.md`
-  - `docs/DOC_CHANGELOG.md`
-- 测试：
-  - 文档静态校对
-  - 手工检查上述文档中是否已不再要求单列 `checkpoint 状态`
-- 测试结果：`通过`
-
-### 第 3 次改动（当前轮次）
-- 时间：`2026-05-14`
-- 内容：
-  - 修正 git 推送目标口径
-  - 将默认推送目标统一恢复为 `origin/main`
-- 影响文件：
-  - `docs/CHANGE_ACTIVITY_LOG.md`
-  - `docs/CHANGE_CHECKPOINT_RULE.md`
-  - `docs/ACTION_LOG.md`
-  - `docs/DOC_CHANGELOG.md`
-- 测试：
-  - 文档静态校对
-  - 手工检查状态文档中的推送目标是否已统一回到 `origin/main`
-- 测试结果：`通过`
+  - `docs/modules/changelog/*.md`
+  进行追溯
 
 ## 4. 是否触发 git
 
-- 当前累计：`3 / 3`
-- 本次是否触发 checkpoint：`是，当前轮次已达到强制阈值`
-- 下一步要求：立即执行下一次 checkpoint commit + push，并在完成后开启新一轮计数
+- 当前累计：`0 / 3`
+- 本次是否触发 checkpoint：`已触发并完成`
+- 下一步要求：从新一轮继续累计后续有效改动
