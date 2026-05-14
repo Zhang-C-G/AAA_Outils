@@ -80,4 +80,7 @@ Track documentation-only updates.
 - Consolidated the previously separated decision trees in `docs/USER_DOC_SYSTEM_GUIDE.md` into one single master tree, so the user can follow the whole flow in one place.
 - Corrected the master tree flow in `docs/USER_DOC_SYSTEM_GUIDE.md`: `总指挥` is now a single upfront entry step instead of being repeated inside later module/non-module branches.
 - Refined the `docs/USER_DOC_SYSTEM_GUIDE.md` flow again so `总指挥` is only entered for actual execution tasks, clarifying that it governs explicit response rules, status reporting, documentation sync, and checkpoint behavior.
+- Refined the `命中具体模块` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` so task type is evaluated before deciding whether the work belongs to phase one or phase two, instead of presenting those as parallel axes.
+- Expanded and reorganized the `命中具体模块` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` to better match the playbook: added config-entry tasks, structure-vs-runtime bug routing, phase-entry logic, preference-doc triggers, and stage-two risk KB triggers.
+- Further refined the `老模块新增能力` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` by splitting it into structure-only additions versus real closed-loop additions, with clearer examples for each.
 - Documented the install-guide reliability fix for module 11: extension-path detection now probes multiple repo anchors, folder opening goes through `explorer.exe`, and the Chrome extensions page is opened from the backend instead of relying on frontend `window.open`.
