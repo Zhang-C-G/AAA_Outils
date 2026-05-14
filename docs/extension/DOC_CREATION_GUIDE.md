@@ -14,11 +14,18 @@
 ## 2. 创建文档前的统一动作
 
 在新建或大改文档前，先做这几步：
-1. 先读 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-2. 如果要进入第一阶段或第二阶段，先做 git 检查点
-3. 如果能力涉及悬浮窗，再读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
-4. 找到目标模块现有文档：`docs/modules/*.md`
-5. 对照 `docs/extension/文档低耦合与拆分规则.md`，判断这次是“新建文档”还是“在原文档上加新章节”
+1. 先读 `docs/USER_DOC_SYSTEM_GUIDE.md`
+2. 再读 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+3. 如果要进入第一阶段或第二阶段，先做 git 检查点
+4. 如果能力涉及悬浮窗，再读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
+5. 找到目标模块现有文档：`docs/modules/*.md`
+6. 对照 `docs/extension/文档低耦合与拆分规则.md`，判断这次是“新建文档”还是“在原文档上加新章节”
+
+补充规则：
+
+- `docs/USER_DOC_SYSTEM_GUIDE.md` 和 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md` 属于同级核心入口文档
+- 前者负责总判断树与收尾路径
+- 后者负责阶段执行规则与强制约束
 
 ## 2.1 文档拆分前置判断
 
@@ -162,7 +169,8 @@
 9. 更新 `AI_HANDOFF.md`
 
 ### 8.2 旧模块扩展
-1. 先判断是第一阶段扩结构，还是第二阶段接链路
-2. 进入对应阶段前先做 git 检查点
-3. 先补文档，再动代码
-4. 验收后补交接与记录
+1. 先按 `docs/USER_DOC_SYSTEM_GUIDE.md` 判断任务类型
+2. 再判断是第一阶段补结构，还是第二阶段接链路
+3. 进入对应阶段前先做 git 检查点
+4. 先补文档，再动代码
+5. 验收后补交接与记录

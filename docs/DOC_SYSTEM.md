@@ -17,7 +17,7 @@
 
 1. 根入口层
 2. 业务模块层
-3. 共享契约层
+3. 跨模块共用规则层
 4. 系统实现层
 5. 开发规范层
 
@@ -37,8 +37,9 @@
 
 当前核心入口文件：
 
-- `docs/COMPONENTS.md`
 - `docs/USER_DOC_SYSTEM_GUIDE.md`
+- `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+- `docs/COMPONENTS.md`
 - `docs/AI_HANDOFF.md`
 - `docs/UPDATE_CHECKLIST.md`
 - `docs/ACTION_LOG.md`
@@ -67,11 +68,11 @@
 - `docs/modules/` 当前除了业务模块，也暂时保留了一部分系统实现说明文档
 - 这是历史遗留结构，不代表最终理想边界
 
-### 3.3 共享契约层
+### 3.3 跨模块共用规则层
 
 位于 `docs/shared/`。
 
-用于放跨多个模块复用的规则和契约，例如：
+用于放跨多个模块复用的规则和统一约定，例如：
 
 - 全局热键
 - 状态与模式
@@ -193,19 +194,21 @@
 
 ### 6.1 日常开发
 
-1. `docs/COMPONENTS.md`
+1. `docs/USER_DOC_SYSTEM_GUIDE.md`
 2. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-3. 如涉及悬浮窗，读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
-4. 目标模块文档 `docs/modules/*.md`
-5. 如涉及共享能力，再读 `docs/shared/*.md`
-6. 如涉及系统实现，再读 `docs/components/*.md`
+3. `docs/COMPONENTS.md`
+4. 如涉及悬浮窗，读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
+5. 目标模块文档 `docs/modules/*.md`
+6. 如涉及跨模块共用规则，再读 `docs/shared/*.md`
+7. 如涉及系统实现，再读 `docs/components/*.md`
 
 ### 6.2 接手恢复
 
 1. `docs/AI_HANDOFF.md`
-2. `docs/COMPONENTS.md`
+2. `docs/USER_DOC_SYSTEM_GUIDE.md`
 3. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-4. 目标模块文档
+4. `docs/COMPONENTS.md`
+5. 目标模块文档
 
 ## 7. 后续整理方向
 

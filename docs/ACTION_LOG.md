@@ -263,6 +263,9 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-05-14`：补回 `docs/USER_DOC_SYSTEM_GUIDE.md` 中新模块第一阶段的偏好读取要求，明确 UI 结构、控件样式、交互骨架都必须先经过偏好文档检查。
 - `2026-05-14`：继续压缩 `docs/USER_DOC_SYSTEM_GUIDE.md` 中“bug 修复”分支的写法，将 incident 规则改成短并列关键点，减少长句堆叠。
 - `2026-05-14`：继续优化 `docs/USER_DOC_SYSTEM_GUIDE.md`：压缩“新配置项接入”分支写法，并将“如果进入阶段判断”改为“一旦已判断出阶段”，明确它是阶段通用规则入口，不是重复分类。
+- `2026-05-14`：继续优化 `docs/USER_DOC_SYSTEM_GUIDE.md` 的可操作性：新增“先用这 5 步”最短使用法，补强“只补文档”规则，并把“老模块新增能力”改成与新模块更一致的树形结构和完成标准。
+- `2026-05-14`：开始按 `docs/USER_DOC_SYSTEM_GUIDE.md` 反向整理上层文档：同步修正 `AI_DEVELOPMENT_PLAYBOOK`、`DOC_CREATION_GUIDE`、`AI_HANDOFF` 的入口顺序、任务类型口径与阶段入口说明，并将用户指导文档与总指引文档固定为同级核心入口。
+- `2026-05-14`：继续按 `docs/USER_DOC_SYSTEM_GUIDE.md` 全面整理二级总览文档：同步修正 `UPDATE_CHECKLIST`、`extension/README`、`文档体系总图`、`DOC_SYSTEM` 的入口顺序、术语与收尾口径，统一到新的总判断树结构。
 - `2026-05-14`：修复 F 模块安装弹窗的扩展目录识别与打开动作：目录识别改为多路探测，`打开插件目录` 改为后端调用 `explorer.exe`，`打开扩展页` 改为后端触发 `chrome://extensions/`。
 
 ## 维护约定

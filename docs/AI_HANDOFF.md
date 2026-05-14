@@ -41,13 +41,20 @@
 
 ## 4. 当前主要文档入口
 
-1. `docs/COMPONENTS.md`
-2. `docs/DOC_SYSTEM.md`
-3. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-4. 如涉及悬浮窗，继续读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
-5. 对应模块文档 `docs/modules/*.md`
-6. 如进入第一阶段，还要读 `docs/extension/全局私人偏好文档.md` 与相关 UI 类偏好子文档
-7. 如进入第二阶段真实闭环开发，还要读 `docs/incidents/STAGE2_RISK_KB.md`
+1. `docs/USER_DOC_SYSTEM_GUIDE.md`
+2. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+3. `docs/COMPONENTS.md`
+4. `docs/DOC_SYSTEM.md`
+5. 如涉及悬浮窗，继续读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
+6. 对应模块文档 `docs/modules/*.md`
+7. 如进入第一阶段，还要读 `docs/extension/全局私人偏好文档.md` 与相关 UI 类偏好子文档
+8. 如进入第二阶段真实闭环开发，还要读 `docs/incidents/STAGE2_RISK_KB.md`
+
+补充定位：
+
+- `docs/USER_DOC_SYSTEM_GUIDE.md` 与 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md` 是当前最重要的两个核心入口文档
+- 前者负责总判断树、任务分流、阶段入口与收尾路径
+- 后者负责开发执行原则、阶段边界与强制规则
 
 ## 5. 强制开发入口规则
 
@@ -58,7 +65,7 @@
   - 新功能开发
   - 旧功能扩展
   - bug 修复
-  - 回归修复
+  - 回归问题处理
   - 热键调整
   - 配置项新增
 
@@ -208,19 +215,21 @@
 
 ### 10.1 日常开发
 
-1. `docs/COMPONENTS.md`
+1. `docs/USER_DOC_SYSTEM_GUIDE.md`
 2. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-3. 如涉及悬浮窗，读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
-4. 目标模块文档
-5. 如涉及共享能力，再读 `docs/shared/*.md`
-6. 如涉及系统实现，再读 `docs/components/*.md`
+3. `docs/COMPONENTS.md`
+4. 如涉及悬浮窗，读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
+5. 目标模块文档
+6. 如涉及共享能力，再读 `docs/shared/*.md`
+7. 如涉及系统实现，再读 `docs/components/*.md`
 
 ### 10.2 排障恢复
 
 1. `docs/AI_HANDOFF.md`
-2. `docs/COMPONENTS.md`
+2. `docs/USER_DOC_SYSTEM_GUIDE.md`
 3. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-4. 目标模块文档
+4. `docs/COMPONENTS.md`
+5. 目标模块文档
 
 ## 11. 提交说明要求
 

@@ -6,14 +6,21 @@
 这个目录用于存放“如何开发新能力”的规范，而不是某一个具体业务模块的功能说明。
 如果要新增模块、扩展模块、增加悬浮窗、补配置项、补快捷键，先看这里。
 
+补充定位：
+
+- `docs/USER_DOC_SYSTEM_GUIDE.md` 和 `AI_DEVELOPMENT_PLAYBOOK.md` 是同级核心入口
+- 前者负责总判断树、任务分流、阶段入口与收尾路径
+- 后者负责开发执行原则、阶段边界与强制规则
+
 ## 2. 阅读顺序
 
-1. `AI_DEVELOPMENT_PLAYBOOK.md`
-2. 如果本轮涉及悬浮窗，再读 `OVERLAY_STAGE2_GUIDE.md`
-3. `NEW_MODE_CHECKLIST.md`
-4. 再读目标模块文档 `docs/modules/*.md`
-5. 再读目标模块修改过程文档 `docs/modules/changelog/*.md`
-6. 如涉及 UI、交互、结构、保存方式或文案，再读 `全局私人偏好文档.md` 与 `global_preferences/00_通用偏好结论.md`
+1. `docs/USER_DOC_SYSTEM_GUIDE.md`
+2. `AI_DEVELOPMENT_PLAYBOOK.md`
+3. 如果本轮涉及悬浮窗，再读 `OVERLAY_STAGE2_GUIDE.md`
+4. `NEW_MODE_CHECKLIST.md`
+5. 再读目标模块文档 `docs/modules/*.md`
+6. 再读目标模块修改过程文档 `docs/modules/changelog/*.md`
+7. 如涉及 UI、交互、结构、保存方式或文案，再读 `全局私人偏好文档.md` 与 `global_preferences/00_通用偏好结论.md`
 
 ## 3. 文档列表
 

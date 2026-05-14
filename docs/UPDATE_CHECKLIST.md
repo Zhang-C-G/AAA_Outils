@@ -2,9 +2,11 @@
 
 ## 必做
 
-0. 本轮开发开始前，先读取 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`；如涉及悬浮窗，再读取 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
-0.1 如涉及具体业务模块，必须同时读取对应模块主文档：`docs/modules/*.md`
-0.2 如涉及具体业务模块，必须同时读取对应模块修改过程文档：`docs/modules/changelog/*.md`
+0. 本轮如果属于实际任务，先读取 `docs/USER_DOC_SYSTEM_GUIDE.md`
+0.1 再读取 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+0.2 如涉及悬浮窗，再读取 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
+0.3 如涉及具体业务模块，必须同时读取对应模块主文档：`docs/modules/*.md`
+0.4 如涉及具体业务模块，必须同时读取对应模块修改过程文档：`docs/modules/changelog/*.md`
 1. 更新受影响模块文档：`docs/modules/*.md`
 1.1 更新受影响模块修改过程文档：`docs/modules/changelog/*.md`
 2. 更新受影响公用块文档：`docs/shared/*.md`（如涉及）
@@ -23,11 +25,14 @@
 5. 改整体目标、当前优先级、已知风险或交接方式：必须更新 `docs/AI_HANDOFF.md`
 6. 发生线上故障：创建 `docs/incidents/TEMP_*.md`，修复后删除临时文档并在日志中记录“已关闭”
 7. 链路级修复完成并通过验证：补充 bug 文档归档，并在必要时生成新的 git 检查点
+8. 如果只是只补文档：不进入阶段判断，但仍要同步对应文档、`docs/ACTION_LOG.md`、`docs/DOC_CHANGELOG.md`
+9. 如果改到了规则本身：还要同步相关总入口或规则文档
 
 ## 完成标准
 
 1. 不允许“只改代码不改文档”。
 1.1 不允许“只看模块主文档，不看模块修改过程文档”。
+1.2 不允许跳过 `docs/USER_DOC_SYSTEM_GUIDE.md` 直接开改实际任务。
 2. 不允许“只改代码不改 AI 交接状态”。
 3. 交付说明里必须列出已更新的文档清单。
 4. 若修复了临时故障，必须关闭/移除对应 TEMP 文档。
@@ -41,6 +46,7 @@
 5.1 不再强制要求在回复中写 `当前轮次` 或 `第 N 轮`
 5.2 `git / checkpoint 状态` 必须说明这是“本轮是否执行”的状态汇报，不能只写模糊结论
 5.3 `git 状态` 必须显式写明当前处于本轮 `3` 次改动循环中的第几次，例如 `第 1 / 3 次`、`第 2 / 3 次`
+5.4 如果本轮属于规则讨论或文档整理，也必须明确说明是否进入实际任务链路
 
 ## Governance Additions
 
