@@ -32,17 +32,19 @@
 
 - 当前轮次：`2026-05-14-post-checkpoint-next-round-10`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`0`
-- 当前循环进度：`第 0 / 3 次有效改动`
-- 下一次强制 git 阈值：`从当前轮次起，再完成 3 次有效改动并测试通过后，执行下一次 checkpoint commit + push`
+- 当前连续改动次数：`3`
+- 当前循环进度：`第 3 / 3 次有效改动`
+- 下一次强制 git 阈值：`当前已累计 3 次有效改动；按规则应立即执行下一次 checkpoint commit + push`
 - 上一个 git 检查点：`checkpoint: refine explicit reply rules`
 - 最近一次已完成推送：
   - 提交：`本次 checkpoint 提交后见 git log`
-  - 目标：`当前分支推送到 origin`
+  - 目标：`origin/main`
   - 结果：`本次已执行 push`
 - 当前计数说明：
-  - 上一轮已完成 checkpoint，内容涵盖：历史残留口径清理、模板与规则文档对齐、显性回答规则优化
-  - 当前状态：已进入新一轮，计数从 `0` 重新开始
+  - 第 `1` 次：修正总指引文档中的残留旧规则口径，并压缩 git / checkpoint 的重复回答要求
+  - 第 `2` 次：移除独立的 checkpoint 状态项，并统一并入 git 状态
+  - 第 `3` 次：修正 git 推送目标口径，统一恢复为直接推送 `origin/main`
+  - 当前状态：本轮已累计 `3` 次有效改动，按规则应立即执行 checkpoint
 
 ## 5. 维护方式
 

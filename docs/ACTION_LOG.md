@@ -269,6 +269,9 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-05-14`：继续清理历史残留口径：同步修正 `COMPONENTS`、`NEW_MODE_CHECKLIST`、`全局私人偏好文档`、`AI_DEVELOPMENT_PLAYBOOK` 与 `USER_DOC_SYSTEM_GUIDE` 中的旧入口顺序和“共享契约”表述，使其继续向新总判断树收口。
 - `2026-05-14`：继续按现有总纲整理模板与规则拆分类文档：同步修正 `文档低耦合与拆分规则`、`模块库总索引`、`STAGE2_CAPABILITY_TEMPLATE`、`MODULE_CHANGELOG_TEMPLATE`，补齐用户指导总纲作为前置判断入口的口径。
 - `2026-05-14`：继续优化总指引文档中的显性回答规则：明确每次回复应采用“短总结 + 关键状态”的写法，目标是帮助用户快速判断该做的步骤是否已做、哪些已完成、哪些未完成，而不是把回答写得过长。
+- `2026-05-14`：修正 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md` 中残留的旧规则口径：补回 `USER_DOC_SYSTEM_GUIDE` 前置入口、移除 `回归修复` 独立分类、将“共享契约”改为“跨模块共用规则”，并把 `git 状态 / checkpoint 状态` 的显性回答要求压缩为去重后的判断式写法。
+- `2026-05-14`：继续简化显性回答规则：移除独立的 `checkpoint 状态` 项，统一并入 `git 状态`，要求由 `git 状态` 一次性说明 commit、push、推送目标与计数状态。
+- `2026-05-14`：修正 git 推送目标口径与执行方式：统一恢复为直接推送 `origin/main`，不再把“当前分支推送到 origin”当成默认目标表述。
 - `2026-05-14`：修复 F 模块安装弹窗的扩展目录识别与打开动作：目录识别改为多路探测，`打开插件目录` 改为后端调用 `explorer.exe`，`打开扩展页` 改为后端触发 `chrome://extensions/`。
 
 ## 维护约定

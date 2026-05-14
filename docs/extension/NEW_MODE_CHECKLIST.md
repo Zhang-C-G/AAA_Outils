@@ -3,13 +3,14 @@
 用于新增一个新的顶层模式、页面或独立模块。
 
 开始前先读：
-1. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
-2. `docs/extension/文档低耦合与拆分规则.md`
-3. `docs/extension/全局私人偏好文档.md`
-4. `docs/extension/global_preferences/` 下与本次能力相关的子文档
-5. 如模块包含悬浮窗，再读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
-6. 对应模块文档 `docs/modules/*.md`
-7. 如本轮与已有模块高度相似，再读 `docs/extension/模块库总索引.md`
+1. `docs/USER_DOC_SYSTEM_GUIDE.md`
+2. `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
+3. `docs/extension/文档低耦合与拆分规则.md`
+4. `docs/extension/全局私人偏好文档.md`
+5. `docs/extension/global_preferences/` 下与本次能力相关的子文档
+6. 如模块包含悬浮窗，再读 `docs/extension/OVERLAY_STAGE2_GUIDE.md`
+7. 对应模块文档 `docs/modules/*.md`
+8. 如本轮与已有模块高度相似，再读 `docs/extension/模块库总索引.md`
 
 ## 1. 第一阶段：界面与结构
 

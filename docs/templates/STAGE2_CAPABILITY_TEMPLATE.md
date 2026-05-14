@@ -8,6 +8,7 @@
 - 本文档是实现依据，不是事后补说明
 
 ## 输入文档
+- 用户指导总纲：`docs/USER_DOC_SYSTEM_GUIDE.md`
 - 第一阶段文档
 - 模块主文档：`docs/modules/*.md`
 - 开发总指引：`docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
