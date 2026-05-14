@@ -1,6 +1,6 @@
 ﻿{
     "version":  1,
-    "updated_at":  "2026-05-09 12:46:52",
+    "updated_at":  "2026-05-14 13:50:29",
     "sections":  [
                      {
                          "id":  "basic_info",
@@ -45,7 +45,7 @@
                                       {
                                           "id":  "current_city",
                                           "label":  "现居城市",
-                                          "value":  "法国尼斯",
+                                          "value":  "浙江省杭州市",
                                           "aliases":  "现居城市,所在城市,居住地",
                                           "type":  "text"
                                       },
@@ -192,7 +192,7 @@
                                       {
                                           "id":  "salary",
                                           "label":  "期望薪资",
-                                          "value":  "10000",
+                                          "value":  "7000",
                                           "aliases":  "期望薪资,薪资要求",
                                           "type":  "text"
                                       },
@@ -234,7 +234,7 @@
                                       {
                                           "id":  "school",
                                           "label":  "学校名称",
-                                          "value":  "约兹大学（尼斯蔚蓝大学）",
+                                          "value":  "",
                                           "aliases":  "学校,院校,毕业院校",
                                           "type":  "text"
                                       },
@@ -353,14 +353,14 @@
                                       {
                                           "id":  "intern_desc",
                                           "label":  "实习内容",
-                                          "value":  "公司：Wikicampers\n行业类别：其他\n工作地点：法国比达尔\n所在部门：产品与技术部\n职位名称：JAVA后端开发实习生\n工作时间：2025-04-01 至 2025-08-01\n详细内容：\n1. 查询能力规范化：抽象查询 DTO，支持状态、日期区间、更新时间、用户视角过滤，补齐参数校验与 Postman 文档。\n2. 接口校验与错误码标准化：完善日期边界与区间冲突校验，通过 @ControllerAdvice 实现统一异常映射与错误码返回。\n3. 对关键人工修改增加状态流转校验与幂等保护，减少重复提交与并发覆盖风险。\n实习成果：\n1. 抽象通用查询 DTO，统一查询口径，提升接口复用性与可维护性。\n2. 完善日期校验与错误返回，提升接口健壮性与可测试性。\n3. 补充 Backoffice 关键链路测试与 Postman 接口联调，降低回归风险。",
+                                          "value":  "\n所在部门：产品与技术部\n职位名称：JAVA后端开发实习生\n工作时间：2025-04-01 至 2025-08-01\n详细内容：\n1. 查询能力规范化：抽象查询 DTO，支持状态、日期区间、更新时间、用户视角过滤，补齐参数校验与 Postman 文档。\n2. 接口校验与错误码标准化：完善日期边界与区间冲突校验，通过 @ControllerAdvice 实现统一异常映射与错误码返回。\n3. 对关键人工修改增加状态流转校验与幂等保护，减少重复提交与并发覆盖风险。\n实习成果：\n1. 抽象通用查询 DTO，统一查询口径，提升接口复用性与可维护性。\n2. 完善日期校验与错误返回，提升接口健壮性与可测试性。\n3. 补充 Backoffice 关键链路测试与 Postman 接口联调，降低回归风险。",
                                           "aliases":  "工作内容,职责描述,实习描述",
                                           "type":  "textarea"
                                       },
                                       {
                                           "id":  "intern_entry_01",
-                                          "label":  "实习经历01",
-                                          "value":  "公司名称：Wikicampers\n行业类别：其他\n工作地点：法国比达尔\n所在部门：产品与技术部\n职位名称：JAVA后端开发实习生\n起止日期：2025-04-01 至 2025-08-01\n详细内容：查询能力规范化、接口校验与错误码标准化、状态流转校验与幂等保护、Postman 文档与联调测试。\n实习成果：抽象通用查询 DTO，提升接口复用性；完善日期校验和错误返回；补充 Backoffice 关键链路测试，降低回归风险。",
+                                          "label":  "实习经历",
+                                          "value":  "❑查询能力规范化：抽象查询DTO支持状态/日期区间/更新时间/用户视角过滤；补齐参数校验与Postman文档，补齐现有项目的规范漏洞、提升复用性。\n\n❑ 接口校验与错误码标准化：完善日期边界与区间冲突校验，通过@ControllerAdvice实现统一异常映射与错误码返回，减少脏数据与排查成本；对关键人工修改增加状态流转校验与幂等保护，避免重复提交和并发覆盖。\n❑ 验证门禁：在现有CI/发版流程补齐Backoffice关键链路门禁，覆盖列表、修改、日期冲突三类场景；整理出10–15条Postman验证请求，并配置到发版流程中，降低漏测与线上回归风险。\n❑ 性能优化：协助定位慢查询/高频慢接口，完成SQL改写、索引优化与N+1修复；接口耗时在压测监控\n口径下降，并补充Micrometer指标与traceId结构化日志用于追踪定位；补充Backoffice操作审计信息以支持追溯与问题排查。",
                                           "aliases":  "实习经历01,Wikicampers",
                                           "type":  "textarea"
                                       }
@@ -729,10 +729,11 @@
                               "id":  "company_01",
                               "company":  "阿里巴巴",
                               "url":  "https://talent.alibaba.com/",
-                              "company_type":  "state_owned",
-                              "company_scale":  "medium",
-                              "job_type":  "conversion_intern",
-                              "progress":  "not_applied"
+                              "company_type":  "",
+                              "company_scale":  "large",
+                              "job_type":  "daily_intern",
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-12"
                           },
                           {
                               "id":  "company_02",
@@ -740,8 +741,9 @@
                               "url":  "https://join.qq.com/",
                               "company_type":  "",
                               "company_scale":  "large",
-                              "job_type":  "",
-                              "progress":  "not_applied"
+                              "job_type":  "daily_intern",
+                              "progress":  "applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_03",
@@ -749,8 +751,9 @@
                               "url":  "https://jobs.bytedance.com/",
                               "company_type":  "",
                               "company_scale":  "large",
-                              "job_type":  "",
-                              "progress":  "not_applied"
+                              "job_type":  "daily_intern",
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-12"
                           },
                           {
                               "id":  "company_04",
@@ -758,8 +761,9 @@
                               "url":  "https://talent.baidu.com/jobs",
                               "company_type":  "",
                               "company_scale":  "large",
-                              "job_type":  "",
-                              "progress":  "not_applied"
+                              "job_type":  "daily_intern",
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-12"
                           },
                           {
                               "id":  "company_05",
@@ -767,8 +771,9 @@
                               "url":  "https://campus.jd.com/",
                               "company_type":  "",
                               "company_scale":  "large",
-                              "job_type":  "",
-                              "progress":  "not_applied"
+                              "job_type":  "daily_intern",
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_06",
@@ -776,8 +781,9 @@
                               "url":  "https://zhaopin.meituan.com/",
                               "company_type":  "",
                               "company_scale":  "large",
-                              "job_type":  "",
-                              "progress":  "not_applied"
+                              "job_type":  "daily_intern",
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-13"
                           },
                           {
                               "id":  "company_07",
@@ -786,7 +792,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "rejected",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_08",
@@ -795,7 +802,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "paused",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_09",
@@ -803,8 +811,9 @@
                               "url":  "https://hr.xiaomi.com/",
                               "company_type":  "",
                               "company_scale":  "large",
-                              "job_type":  "",
-                              "progress":  "not_applied"
+                              "job_type":  "daily_intern",
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-13"
                           },
                           {
                               "id":  "company_10",
@@ -813,7 +822,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "paused",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_11",
@@ -822,7 +832,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-13"
                           },
                           {
                               "id":  "company_12",
@@ -831,7 +842,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-14"
                           },
                           {
                               "id":  "company_13",
@@ -840,7 +852,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "paused",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_14",
@@ -849,16 +862,18 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-14"
                           },
                           {
                               "id":  "company_15",
                               "company":  "携程",
-                              "url":  "https://campus.ctrip.com/",
+                              "url":  "campus.ctrip.com",
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "applied",
+                              "applied_date":  "2026-05-14"
                           },
                           {
                               "id":  "company_16",
@@ -867,7 +882,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_17",
@@ -876,7 +892,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_18",
@@ -885,7 +902,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_19",
@@ -894,7 +912,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_20",
@@ -903,7 +922,8 @@
                               "company_type":  "",
                               "company_scale":  "large",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_21",
@@ -912,7 +932,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_22",
@@ -921,7 +942,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_23",
@@ -930,7 +952,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_24",
@@ -939,7 +962,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_25",
@@ -948,7 +972,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_26",
@@ -957,7 +982,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_27",
@@ -966,7 +992,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_28",
@@ -975,7 +1002,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_29",
@@ -984,7 +1012,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_30",
@@ -993,7 +1022,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_31",
@@ -1002,7 +1032,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_32",
@@ -1011,7 +1042,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_33",
@@ -1020,7 +1052,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_34",
@@ -1029,7 +1062,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_35",
@@ -1038,7 +1072,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_36",
@@ -1047,7 +1082,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_37",
@@ -1056,7 +1092,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_38",
@@ -1065,7 +1102,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_39",
@@ -1074,7 +1112,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_40",
@@ -1083,7 +1122,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_41",
@@ -1092,7 +1132,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_42",
@@ -1101,7 +1142,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_43",
@@ -1110,7 +1152,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_44",
@@ -1119,7 +1162,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_45",
@@ -1128,7 +1172,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_46",
@@ -1137,7 +1182,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_47",
@@ -1146,7 +1192,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_48",
@@ -1155,7 +1202,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_49",
@@ -1164,7 +1212,8 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           },
                           {
                               "id":  "company_50",
@@ -1173,8 +1222,9 @@
                               "company_type":  "",
                               "company_scale":  "medium",
                               "job_type":  "",
-                              "progress":  "not_applied"
+                              "progress":  "not_applied",
+                              "applied_date":  ""
                           }
                       ],
-    "editor_mode":  "companies"
+    "editor_mode":  "profile"
 }

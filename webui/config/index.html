@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Raccourci Control Web UI</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -220,15 +221,16 @@
               </button>
             </div>
             <div class="assistant-grid assistant-grid-basic">
-              <label><span>问答模型选择</span><select id="assistantModel"></select></label>
-              <label><span>语音模型选择</span><select id="assistantVoiceModel"></select></label>
               <label><span>模板选择</span><select id="assistantTemplateSelect"></select></label>
               <label><span>模板名称</span><input id="assistantTemplateName" type="text" /></label>
               <div class="assistant-template-actions assistant-template-actions-basic">
                 <button id="assistantAddTplBtn" class="btn ghost">新增模板</button>
                 <button id="assistantDeleteTplBtn" class="btn danger">删除模板</button>
               </div>
-              <label><span>Prompt</span><textarea id="assistantPrompt"></textarea></label>
+              <div class="assistant-prompt-profile-grid">
+                <label><span>个人基本信息</span><textarea id="assistantProfile" placeholder="例如：工作方向、年限、擅长技术、目标岗位、回答偏好。模型会先读取这段背景，再读取 Prompt。"></textarea></label>
+                <label><span>Prompt</span><textarea id="assistantPrompt"></textarea></label>
+              </div>
             </div>
           </section>
 
@@ -236,68 +238,103 @@
             <div class="assistant-block-head">
               <h2>高级设置</h2>
             </div>
-            <div id="assistantAdvancedBody" class="assistant-grid assistant-grid-advanced hidden">
-              <div class="assistant-opacity-group">
-                <span>透明度档位</span>
-                <div id="assistantOpacityChoices" class="assistant-opacity-choices">
-                  <button class="assistant-opacity-choice" type="button" data-value="20">20%</button>
-                  <button class="assistant-opacity-choice" type="button" data-value="50">50%</button>
-                  <button class="assistant-opacity-choice" type="button" data-value="75">75%</button>
-                  <button class="assistant-opacity-choice" type="button" data-value="100">100%</button>
+            <div id="assistantAdvancedBody" class="assistant-advanced-body hidden">
+              <section class="assistant-advanced-group">
+                <div class="assistant-advanced-group-head">
+                  <h3>通用</h3>
+                  <p>控制悬浮窗展示和通用调用策略。</p>
                 </div>
-              </div>
-              <label class="assistant-color-field">
-                <span>悬浮球主色</span>
-                <div class="assistant-color-picker-row">
-                  <input id="assistantOverlayBallColor" type="color" />
-                  <input id="assistantOverlayBallColorText" type="text" readonly />
+                <div class="assistant-grid assistant-advanced-grid">
+                  <div class="assistant-opacity-group">
+                    <span>透明度档位</span>
+                    <div id="assistantOpacityChoices" class="assistant-opacity-choices">
+                      <button class="assistant-opacity-choice" type="button" data-value="20">20%</button>
+                      <button class="assistant-opacity-choice" type="button" data-value="50">50%</button>
+                      <button class="assistant-opacity-choice" type="button" data-value="75">75%</button>
+                      <button class="assistant-opacity-choice" type="button" data-value="100">100%</button>
+                    </div>
+                  </div>
+                  <label class="assistant-color-field">
+                    <span>悬浮球主色</span>
+                    <div class="assistant-color-picker-row">
+                      <input id="assistantOverlayBallColor" type="color" />
+                      <input id="assistantOverlayBallColorText" type="text" readonly />
+                    </div>
+                  </label>
+                  <label class="assistant-toggle-row">
+                    <span>禁止复制悬浮窗答案</span>
+                    <span class="assistant-inline-switch">
+                      <input id="assistantDisableCopy" type="checkbox" />
+                      <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                    </span>
+                  </label>
+                  <label class="assistant-toggle-row">
+                    <span>启用每小时限流</span>
+                    <span class="assistant-inline-switch">
+                      <input id="assistantRateEnabled" type="checkbox" />
+                      <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                    </span>
+                  </label>
+                  <label><span>每小时最多调用次数</span><input id="assistantRatePerHour" type="number" min="1" max="10000" /></label>
                 </div>
-              </label>
-              <label class="assistant-toggle-row">
-                <span>增强模式：截图时本地可见，截图不可见，录屏不可见</span>
-                <span class="assistant-inline-switch">
-                  <input id="assistantEnhancedCaptureMode" type="checkbox" />
-                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
-                </span>
-              </label>
-              <label class="assistant-toggle-row">
-                <span>禁止复制悬浮窗答案</span>
-                <span class="assistant-inline-switch">
-                  <input id="assistantDisableCopy" type="checkbox" />
-                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
-                </span>
-              </label>
-              <label class="assistant-toggle-row">
-                <span>启用每小时限流</span>
-                <span class="assistant-inline-switch">
-                  <input id="assistantRateEnabled" type="checkbox" />
-                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
-                </span>
-              </label>
-              <label><span>每小时最多调用次数</span><input id="assistantRatePerHour" type="number" min="1" max="10000" /></label>
-              <label class="assistant-toggle-row">
-                <span>开启语音识别功能</span>
-                <span class="assistant-inline-switch">
-                  <input id="assistantVoiceEnabled" type="checkbox" />
-                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
-                </span>
-              </label>
-              <label class="assistant-toggle-row">
-                <span>语音模型激活</span>
-                <span class="assistant-inline-switch">
-                  <input id="assistantVoiceModelEnabled" type="checkbox" />
-                  <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
-                </span>
-              </label>
-              <label class="assistant-topmost-field"><span>麦克风选择</span><select id="assistantVoiceDevice"></select></label>
+              </section>
+
+              <section class="assistant-advanced-group">
+                <div class="assistant-advanced-group-head">
+                  <h3>截图笔试</h3>
+                  <p>管理截图问答链路的模型、保护模式和保存目录。</p>
+                </div>
+                <div class="assistant-grid assistant-advanced-grid">
+                  <label><span>问答模型选择</span><select id="assistantModel"></select></label>
+                  <label class="assistant-toggle-row">
+                    <span>增强模式：截图时本地可见，截图不可见，录屏不可见</span>
+                    <span class="assistant-inline-switch">
+                      <input id="assistantEnhancedCaptureMode" type="checkbox" />
+                      <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                    </span>
+                  </label>
+                  <div class="assistant-folder-row assistant-advanced-span">
+                    <label><span>截图保存目录</span><input id="assistantCaptureDir" type="text" readonly /></label>
+                    <button id="assistantOpenFolderInlineBtn" class="btn ghost" type="button">打开目录</button>
+                    <button id="assistantPickFolderBtn" class="btn" type="button">修改目录</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="assistant-advanced-group">
+                <div class="assistant-advanced-group-head">
+                  <h3>语音面试</h3>
+                  <p>管理 F3 语音识别、自动分析和上下文记忆。</p>
+                </div>
+                <div class="assistant-grid assistant-advanced-grid">
+                  <label><span>语音模型选择</span><select id="assistantVoiceModel"></select></label>
+                  <label class="assistant-toggle-row">
+                    <span>开启语音识别功能</span>
+                    <span class="assistant-inline-switch">
+                      <input id="assistantVoiceEnabled" type="checkbox" />
+                      <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                    </span>
+                  </label>
+                  <label class="assistant-toggle-row">
+                    <span>语音模型激活</span>
+                    <span class="assistant-inline-switch">
+                      <input id="assistantVoiceModelEnabled" type="checkbox" />
+                      <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                    </span>
+                  </label>
+                  <label class="assistant-topmost-field"><span>麦克风选择</span><select id="assistantVoiceDevice"></select></label>
+                  <label class="assistant-toggle-row">
+                    <span>开启语音分析上下文记忆（仅 F3 语音转文字后自动问答）</span>
+                    <span class="assistant-inline-switch">
+                      <input id="assistantVoiceContextEnabled" type="checkbox" />
+                      <span class="assistant-inline-switch-track"><span class="assistant-inline-switch-dot"></span></span>
+                    </span>
+                  </label>
+                  <label><span>语音上下文记忆轮次</span><input id="assistantVoiceContextRounds" type="number" min="1" max="10" /></label>
+                </div>
+              </section>
             </div>
           </section>
-        </div>
-
-        <div class="assistant-folder-row">
-          <label><span>截图保存目录</span><input id="assistantCaptureDir" type="text" readonly /></label>
-          <button id="assistantOpenFolderInlineBtn" class="btn ghost" type="button">打开目录</button>
-          <button id="assistantPickFolderBtn" class="btn" type="button">修改目录</button>
         </div>
 
       </section>
@@ -305,35 +342,40 @@
 
     <section id="resumeView" class="view hidden">
       <section class="panel resume-layout">
-        <aside class="resume-sidebar">
-          <div class="resume-sidebar-head">
-            <h2>简历分区</h2>
-          </div>
-          <div id="resumeSections" class="resume-sections"></div>
-        </aside>
-        <div class="resume-main">
-          <div class="resume-main-head">
-            <div>
-              <h2 id="resumeSectionTitle">简历自动填写</h2>
-            </div>
-            <div id="resumeEntryBar" class="resume-entry-bar">
-              <span id="resumeEntryBarLabel" class="resume-entry-bar-label">进入公司链接界面：</span>
-              <button id="resumeToggleCompanyViewBtn" class="resume-entry-bar-link" type="button">点击进入</button>
+          <div class="resume-main">
+            <div class="resume-main-head">
+              <div id="resumeTitleBlock">
+                <h2 id="resumeSectionTitle">简历自动填写</h2>
+              </div>
+              <div class="resume-topbar">
+                <div class="resume-page-switch" role="tablist" aria-label="F 模块页面切换">
+                  <button id="resumePageProfileBtn" class="resume-page-switch-btn" type="button" role="tab" aria-controls="resumeProfilePanel" aria-selected="true">简历信息</button>
+                  <button id="resumePageCompaniesBtn" class="resume-page-switch-btn" type="button" role="tab" aria-controls="resumeCompanyPanel" aria-selected="false">公司信息</button>
+                </div>
+                <div class="resume-topbar-tools">
+                  <button id="resumeInstallChromeExtensionBtn" class="btn ghost" type="button">安装 Chrome 插件</button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div id="resumeProfilePanel" class="resume-subview">
-            <div class="table-wrap resume-table-wrap">
-              <table>
-                <thead>
-                  <tr><th>字段名</th><th>值</th><th>操作</th></tr>
-                </thead>
-                <tbody id="resumeRows"></tbody>
-              </table>
-            </div>
+          <div id="resumeProfileLayout" class="resume-profile-layout">
+            <aside id="resumeSidebar" class="resume-sidebar">
+              <div class="resume-sidebar-head resume-profile-topline">
+                <h2>简历分区</h2>
+              </div>
+              <div id="resumeSections" class="resume-sections"></div>
+            </aside>
 
-            <div class="row-actions">
-              <button id="resumeAddRowBtn" class="btn">新增字段</button>
+            <div id="resumeProfilePanel" class="resume-subview">
+              <div class="table-wrap resume-table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>字段名</th><th>值</th><th>字段名</th><th>值</th></tr>
+                  </thead>
+                  <tbody id="resumeRows"></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -355,7 +397,7 @@
                     </th>
                     <th>
                       <div class="resume-column-filter">
-                        <span>公司名称</span>
+                        <span>公司名</span>
                         <button id="resumeCompanyFilterCompanyBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
                       </div>
                     </th>
@@ -381,6 +423,12 @@
                       <div class="resume-column-filter">
                         <span>投递进度</span>
                         <button id="resumeCompanyFilterProgressBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="resume-column-filter">
+                        <span>投递日期</span>
+                        <button id="resumeCompanyFilterAppliedDateBtn" class="resume-filter-dot" type="button" aria-expanded="false">筛</button>
                       </div>
                     </th>
                     <th>
@@ -419,6 +467,46 @@
           </div>
         </div>
       </section>
+    </section>
+
+    <section id="resumeExtensionGuideHost" class="resume-guide-host hidden">
+      <div class="resume-guide-overlay">
+        <div class="resume-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="resumeExtensionGuideTitle">
+          <div class="resume-guide-head">
+            <div>
+              <div id="resumeExtensionGuideTitle" class="resume-guide-title">Chrome 插件安装指南</div>
+              <div class="resume-guide-subtitle">按下面步骤把本地简历自动填写插件加载到浏览器。</div>
+            </div>
+            <button id="resumeExtensionGuideCloseBtn" class="resume-guide-close" type="button" aria-label="关闭安装指南">×</button>
+          </div>
+          <div class="resume-guide-body">
+            <ol class="resume-guide-steps">
+              <li>打开 Chrome，进入 <code>chrome://extensions/</code></li>
+              <li>打开右上角 <code>开发者模式</code></li>
+              <li>点击 <code>加载已解压的扩展程序</code></li>
+              <li>选择下面这一路径作为扩展目录</li>
+            </ol>
+
+            <div class="resume-guide-path-card">
+              <div class="resume-guide-path-head">
+                <strong>自动识别到的插件目录</strong>
+                <button id="resumeExtensionGuideCopyBtn" class="btn ghost" type="button">复制目录</button>
+              </div>
+              <div id="resumeExtensionGuidePath" class="resume-guide-path">正在识别目录...</div>
+              <div id="resumeExtensionGuidePathStatus" class="resume-guide-path-status">如果识别失败，会在这里提示你手动检查。</div>
+            </div>
+
+            <div class="resume-guide-note">
+              插件装好后，回到招聘页面点击插件图标，先读取本地简历，再执行自动填写。
+            </div>
+          </div>
+          <div class="resume-guide-actions">
+            <button id="resumeExtensionGuideOpenFolderBtn" class="btn ghost" type="button">打开插件目录</button>
+            <button id="resumeExtensionGuideOpenChromeBtn" class="btn ghost" type="button">打开扩展页</button>
+            <button id="resumeExtensionGuideOkBtn" class="btn" type="button">我知道了</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="testingView" class="view hidden">

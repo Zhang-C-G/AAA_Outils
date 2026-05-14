@@ -12,6 +12,8 @@
 2. 如果本轮涉及悬浮窗，再读 `OVERLAY_STAGE2_GUIDE.md`
 3. `NEW_MODE_CHECKLIST.md`
 4. 再读目标模块文档 `docs/modules/*.md`
+5. 再读目标模块修改过程文档 `docs/modules/changelog/*.md`
+6. 如涉及 UI、交互、结构、保存方式或文案，再读 `全局私人偏好文档.md` 与 `global_preferences/00_通用偏好结论.md`
 
 ## 3. 文档列表
 

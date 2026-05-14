@@ -1,6 +1,6 @@
 ﻿ReloadAssistantPanel() {
     global gAssistantSettings, gAssistantEnabledCheckbox, gAssistantApiEndpointEdit, gAssistantApiKeyEdit
-    global gAssistantModelEdit, gAssistantPromptEdit, gAssistantOpacitySlider, gAssistantOpacityLabel, gAssistantCapturePathEdit, gAssistantResultEdit, gAssistantLastResult
+    global gAssistantModelEdit, gAssistantPromptEdit, gAssistantProfileEdit, gAssistantOpacitySlider, gAssistantOpacityLabel, gAssistantCapturePathEdit, gAssistantResultEdit, gAssistantLastResult
     global gCaptureDir
 
     if !IsObject(gAssistantApiEndpointEdit) {
@@ -12,6 +12,7 @@
     gAssistantApiKeyEdit.Value := gAssistantSettings["api_key"]
     gAssistantModelEdit.Value := gAssistantSettings["model"]
     gAssistantPromptEdit.Value := gAssistantSettings["prompt"]
+    gAssistantProfileEdit.Value := gAssistantSettings.Has("personal_profile") ? gAssistantSettings["personal_profile"] : ""
 
     opacity := ClampAssistantOpacity(gAssistantSettings["overlay_opacity"])
     gAssistantOpacitySlider.Value := opacity
@@ -29,7 +30,7 @@
 
 SaveAssistantSettingsFromGui() {
     global gAssistantSettings, gAssistantEnabledCheckbox, gAssistantApiEndpointEdit, gAssistantApiKeyEdit
-    global gAssistantModelEdit, gAssistantPromptEdit, gAssistantOpacitySlider
+    global gAssistantModelEdit, gAssistantPromptEdit, gAssistantProfileEdit, gAssistantOpacitySlider
 
     if !IsObject(gAssistantApiEndpointEdit) {
         return
@@ -51,6 +52,7 @@ SaveAssistantSettingsFromGui() {
     gAssistantSettings["api_key"] := Trim(gAssistantApiKeyEdit.Value)
     gAssistantSettings["model"] := model
     gAssistantSettings["prompt"] := prompt
+    gAssistantSettings["personal_profile"] := Trim(gAssistantProfileEdit.Value)
     gAssistantSettings["overlay_opacity"] := ClampAssistantOpacity(gAssistantOpacitySlider.Value)
     SetAssistantActiveTemplatePrompt(gAssistantSettings, prompt)
 }

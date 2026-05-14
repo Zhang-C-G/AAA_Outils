@@ -63,6 +63,7 @@ function defaults() {
     voice_model_api_key: '',
     has_voice_model_api_key: 0,
     prompt: DEFAULT_PROMPT,
+    personal_profile: '',
     active_template: 'default_template',
     templates: [{ name: 'default_template', prompt: DEFAULT_PROMPT }],
     overlay_opacity: 75,
@@ -70,6 +71,8 @@ function defaults() {
     enhanced_capture_mode: 0,
     disable_copy: 1,
     voice_input_enabled: 0,
+    voice_context_enabled: 0,
+    voice_context_rounds: 3,
     voice_input_device_id: '',
     voice_input_devices: [],
     rate_limit_enabled: 1,
@@ -317,6 +320,7 @@ function renderTemplateControls() {
 
   byId('assistantTemplateName').value = current.name;
   byId('assistantPrompt').value = current.prompt;
+  byId('assistantProfile').value = state.assistant.personal_profile || '';
   state.assistant.prompt = current.prompt;
 }
 
@@ -437,6 +441,7 @@ export function applyAssistantState(payload) {
   if (isBrokenPrompt(state.assistant.prompt)) {
     state.assistant.prompt = fallback.prompt;
   }
+  state.assistant.personal_profile = String(incoming.personal_profile ?? state.assistant.personal_profile ?? '').trim();
 
   state.assistant.templates = normalizeTemplates(incoming.templates || state.assistant.templates, fallback.prompt);
   state.assistant.overlay_opacity = normalizeOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
@@ -446,6 +451,8 @@ export function applyAssistantState(payload) {
   );
   state.assistant.enhanced_capture_mode = Number(incoming.enhanced_capture_mode ?? state.assistant.enhanced_capture_mode ?? 0) === 0 ? 0 : 1;
   state.assistant.voice_input_enabled = Number(incoming.voice_input_enabled ?? state.assistant.voice_input_enabled ?? 0) === 0 ? 0 : 1;
+  state.assistant.voice_context_enabled = Number(incoming.voice_context_enabled ?? state.assistant.voice_context_enabled ?? 0) === 0 ? 0 : 1;
+  state.assistant.voice_context_rounds = Math.min(10, Math.max(1, Math.round(Number(incoming.voice_context_rounds ?? state.assistant.voice_context_rounds ?? 3))));
   state.assistant.voice_model_enabled = Number(incoming.voice_model_enabled ?? state.assistant.voice_model_enabled ?? 0) === 0 ? 0 : 1;
   state.assistant.voice_input_device_id = String(incoming.voice_input_device_id ?? state.assistant.voice_input_device_id ?? '').trim();
   state.assistant.voice_input_devices = Array.isArray(incoming.voice_input_devices)
@@ -459,6 +466,8 @@ export function applyAssistantState(payload) {
   byId('assistantDisableCopy').checked = Number(state.assistant.disable_copy ?? 1) !== 0;
   byId('assistantEnhancedCaptureMode').checked = Number(state.assistant.enhanced_capture_mode ?? 0) !== 0;
   byId('assistantVoiceEnabled').checked = Number(state.assistant.voice_input_enabled ?? 0) !== 0;
+  byId('assistantVoiceContextEnabled').checked = Number(state.assistant.voice_context_enabled ?? 0) !== 0;
+  byId('assistantVoiceContextRounds').value = Math.min(10, Math.max(1, Number(state.assistant.voice_context_rounds || 3)));
   byId('assistantVoiceModelEnabled').checked = Number(state.assistant.voice_model_enabled ?? 0) !== 0;
   byId('assistantRateEnabled').checked = Number(state.assistant.rate_limit_enabled || 0) !== 0;
   byId('assistantRatePerHour').value = Math.max(1, Number(state.assistant.rate_limit_per_hour || 100));
@@ -489,11 +498,14 @@ function readAssistantFromUi() {
   state.assistant.enhanced_capture_mode = byId('assistantEnhancedCaptureMode').checked ? 1 : 0;
   state.assistant.disable_copy = byId('assistantDisableCopy').checked ? 1 : 0;
   state.assistant.voice_input_enabled = byId('assistantVoiceEnabled').checked ? 1 : 0;
+  state.assistant.voice_context_enabled = byId('assistantVoiceContextEnabled').checked ? 1 : 0;
+  state.assistant.voice_context_rounds = Math.min(10, Math.max(1, Math.round(Number(byId('assistantVoiceContextRounds').value || 3))));
   state.assistant.voice_model_enabled = byId('assistantVoiceModelEnabled').checked ? 1 : 0;
   state.assistant.voice_input_device_id = String(getVoiceDeviceSelect()?.value || '').trim();
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
   state.assistant.rate_limit_per_hour = Math.min(10000, Math.max(1, Math.round(Number(byId('assistantRatePerHour').value || 100))));
   state.assistant.api_endpoint = (state.assistant.api_endpoint || defaults().api_endpoint).trim() || defaults().api_endpoint;
+  state.assistant.personal_profile = String(byId('assistantProfile')?.value || '').trim();
   state.assistant.api_key = '';
   state.assistant.keep_api_key = Number(state.assistant.has_api_key || 0) !== 0 ? 1 : 0;
   state.assistant.voice_model_api_key = '';
@@ -548,6 +560,7 @@ async function pickAssistantFolder() {
 }
 
 export function initAssistantHandlers() {
+  enhanceTopLayerSelect('assistantModel');
   enhanceTopLayerSelect('assistantVoiceModel');
   enhanceTopLayerSelect('assistantVoiceDevice', { placeholder: '系统默认麦克风' });
 
@@ -582,6 +595,36 @@ export function initAssistantHandlers() {
     prompt.oninput = () => {
       syncCurrentTemplateFromUi();
       scheduleAssistantAutoSave();
+    };
+  }
+
+  const profile = byId('assistantProfile');
+  if (profile) {
+    profile.oninput = () => {
+      state.assistant.personal_profile = String(profile.value || '').trim();
+      scheduleAssistantAutoSave();
+    };
+  }
+
+  const voiceContextEnabled = byId('assistantVoiceContextEnabled');
+  if (voiceContextEnabled) {
+    voiceContextEnabled.onchange = () => {
+      state.assistant.voice_context_enabled = voiceContextEnabled.checked ? 1 : 0;
+      scheduleAssistantAutoSave(true);
+    };
+  }
+
+  const voiceContextRounds = byId('assistantVoiceContextRounds');
+  if (voiceContextRounds) {
+    voiceContextRounds.oninput = () => {
+      state.assistant.voice_context_rounds = Math.min(10, Math.max(1, Math.round(Number(voiceContextRounds.value || 3))));
+      voiceContextRounds.value = state.assistant.voice_context_rounds;
+      scheduleAssistantAutoSave();
+    };
+    voiceContextRounds.onchange = () => {
+      state.assistant.voice_context_rounds = Math.min(10, Math.max(1, Math.round(Number(voiceContextRounds.value || 3))));
+      voiceContextRounds.value = state.assistant.voice_context_rounds;
+      scheduleAssistantAutoSave(true);
     };
   }
 

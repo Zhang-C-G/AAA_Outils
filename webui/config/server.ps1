@@ -347,6 +347,20 @@ while ($true) {
         flat_map = (Get-ResumeFlatMap -Profile $profile)
       })
     }
+    elseif ($path -eq '/api/resume/extension-install' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{
+        ok = $true
+        state = (Get-ResumeExtensionInstallState)
+      })
+    }
+    elseif ($path -eq '/api/resume/open-extension-folder' -and $method -eq 'POST') {
+      $result = Open-ResumeExtensionFolder
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/resume/open-extension-page' -and $method -eq 'POST') {
+      $result = Open-ResumeExtensionPage
+      Send-Json $res $result
+    }
     elseif ($path -eq '/api/testing/open-hotkey-probe' -and $method -eq 'POST') {
       $result = Open-TestingHotkeyProbe
       Send-Json $res $result

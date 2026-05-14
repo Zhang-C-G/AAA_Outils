@@ -222,6 +222,27 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-04-26`：恢复助手麦克风链路：重新接回设备检测/设备选择/实时转写预览提交，并修正 `Get-AssistantVoiceInputScriptPath` 路径解析与 `/api/assistant/audio-input-devices` 数组返回格式。
 - `2026-04-26`：按现有故障文档机制归档麦克风链路问题，新增 `docs/incidents/RESOLVED_2026-04-26_assistant_microphone_chain.md`。
 - `2026-04-26`：补齐文档创建指南体系：新增第一阶段文档、第二阶段能力说明、故障文档模板，并新增 `docs/extension/DOC_CREATION_GUIDE.md` 作为统一入口。
+- `2026-05-13`：E 模块配置页重排为“基础设置 + 三段高级设置”，并补上分区边框/背景层级；F3 链路同步升级为“语音识别后自动问答”，新增语音上下文记忆设置与个人基本信息入模口径。
+- `2026-05-13`：补强项目文档执行流程：在 `AI_HANDOFF` 与 `UPDATE_CHECKLIST` 中明确“涉及模块改动时必须同时读取和更新模块主文档 + 模块修改过程文档”。
+- `2026-05-13`：补强开发入口顺序：在 `AI_DEVELOPMENT_PLAYBOOK`、`全局私人偏好文档`、`docs/extension/README.md` 中明确“先判断第一阶段/第二阶段，再读模块主文档与修改过程文档，再进入私人偏好系统”的统一开工路径。
+- `2026-05-13`：补强回答格式约束：在 `AI_DEVELOPMENT_PLAYBOOK`、`AI_HANDOFF`、`UPDATE_CHECKLIST` 中明确每次回复都要显式说明已做事项、未做事项、文档状态、测试状态与 git/checkpoint 状态。
+- `2026-05-13`：为 Web 配置页新增黑白风站点图标：添加 `webui/config/favicon.svg`，并在 `webui/config/index.html` 挂接为浏览器页签图标。
+- `2026-05-13`：将 Web 配置页站点图标改为更简约、更白的浅底几何风格，减少大面积黑底，提升页签中的轻量感。
+- `2026-05-13`：根据用户提供的简历截图，整理并写入 E 模块当前本地 `personal_profile`，作为面试问答时优先读取的个人背景；本次仅改当前配置，不改默认值。
+- `2026-05-13`：修正 E 模块 `个人基本信息 / Prompt` 长文本保存逻辑，改为保留换行与段落结构，并将该规则写入私人偏好文档。
+- `2026-05-14`：为 F 模块补上右下角自动保存提示；同时为浏览器扩展建立站点策略骨架，并新增 `docs/resume_autofill/` 用于公司填写分析与疑难问题沉淀。
+- `2026-05-14`：基于用户提供的首张 Bilibili 投递截图，完成第一版页面动作拆解，已将教育经历多段块、月份区间、至今复选框、复合手机号控件与上传跳过策略写入简历自动投递文档。
+- `2026-05-14`：基于第二批 Bilibili 截图，进一步确认性别下拉、出生日期日历、经历年月面板和项目经历分组，并将 B 站策略细化为 basic/education/experience/project 四个子策略方向。
+- `2026-05-14`：已将 Bilibili 首版浏览器插件策略正式落地到 `site-strategies.js`，支持基本信息、教育、实习/工作、项目经历四类表单分组的站点专用填表。
+- `2026-05-14`：将 F 模块正式拆为“简历信息 / 公司信息”两个页面入口；简历页保留左侧分区导航，公司页隐藏侧栏并让投递表独占主区域。
+- `2026-05-14`：在 F 模块“简历信息”页补上 Chrome 插件安装指南弹窗，并通过本地接口自动识别 `browser_extension/resume_autofill` 目录，支持一键复制。
+- `2026-05-14`：继续增强 F 模块安装指南弹窗，补上“打开扩展页”与“打开插件目录”动作，减少手动定位步骤。
+- `2026-05-14`：基于用户提供的蚂蚁集团投递页截图，新增第二份公司分析文档，补充教育细字段、国家/地区下拉、手机号复合控件与标签式技术栈录入规则。
+- `2026-05-14`：修正全局回答格式约束：在 `AI_DEVELOPMENT_PLAYBOOK`、`AI_HANDOFF`、`UPDATE_CHECKLIST` 中移除“每次汇报必须显式说明当前轮次”的硬要求，保留 git/checkpoint 状态按本轮口径汇报的要求。
+- `2026-05-14`：补强 git 状态口径：在 `AI_DEVELOPMENT_PLAYBOOK`、`AI_HANDOFF`、`UPDATE_CHECKLIST` 与 `CHANGE_CHECKPOINT_RULE` 中明确 git 状态必须显式说明当前处于本轮 `3` 次改动循环中的第几次。
+- `2026-05-14`：新增 `携程` 投递页截图分析文档，补充简历自动投递在完整日期控件、细粒度教育字段、获奖列表与项目职责最小映射上的站点策略判断。
+- `2026-05-14`：优化 F 模块教育经历结构，补入 `education_gpa / education_rank / second_major / research_direction / advisor`，并统一教育时间与学历口径以适配携程教育块。
+- `2026-05-14`：修复 F 模块安装弹窗的扩展目录识别与打开动作：目录识别改为多路探测，`打开插件目录` 改为后端调用 `explorer.exe`，`打开扩展页` 改为后端触发 `chrome://extensions/`。
 
 ## 维护约定
 
@@ -232,4 +253,4 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 
 
 - `2026-04-21`: Documentation governance upgrade completed (ADR/config/dependency/extension/testing/glossary/encoding policy + doc changelog).
-
+- `2026-05-14`：将 F 模块基础简历区改为四列配对布局，锁定字段名，移除删除/新增字段入口，并把值输入框调整为固定高度且允许内部纵向滚动。

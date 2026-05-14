@@ -107,11 +107,14 @@ SaveData() {
     lines.Push("voice_model_enabled=" (gAssistantSettings.Has("voice_model_enabled") ? gAssistantSettings["voice_model_enabled"] : 0))
     lines.Push("model=" gAssistantSettings["model"])
     lines.Push("active_template=" gAssistantSettings["active_template"])
-    lines.Push("prompt=" StrReplace(StrReplace(GetAssistantPromptByTemplate(gAssistantSettings), "`r", " "), "`n", " "))
+    lines.Push("prompt=" EncodeAssistantIniMultiline(GetAssistantPromptByTemplate(gAssistantSettings)))
+    lines.Push("personal_profile=" (gAssistantSettings.Has("personal_profile") ? EncodeAssistantIniMultiline(gAssistantSettings["personal_profile"]) : ""))
     lines.Push("overlay_opacity=" gAssistantSettings["overlay_opacity"])
     lines.Push("enhanced_capture_mode=" (gAssistantSettings.Has("enhanced_capture_mode") ? gAssistantSettings["enhanced_capture_mode"] : 0))
     lines.Push("disable_copy=" (gAssistantSettings.Has("disable_copy") ? gAssistantSettings["disable_copy"] : 1))
     lines.Push("voice_input_enabled=" (gAssistantSettings.Has("voice_input_enabled") ? gAssistantSettings["voice_input_enabled"] : 0))
+    lines.Push("voice_context_enabled=" (gAssistantSettings.Has("voice_context_enabled") ? gAssistantSettings["voice_context_enabled"] : 0))
+    lines.Push("voice_context_rounds=" (gAssistantSettings.Has("voice_context_rounds") ? ClampAssistantVoiceContextRounds(gAssistantSettings["voice_context_rounds"]) : 3))
     lines.Push("rate_limit_enabled=" gAssistantSettings["rate_limit_enabled"])
     lines.Push("rate_limit_per_hour=" gAssistantSettings["rate_limit_per_hour"])
     lines.Push("voice_input_provider=" GetAssistantVoiceInputProvider(gAssistantSettings))
@@ -131,7 +134,7 @@ SaveData() {
     lines.Push("[AssistantTemplates]")
     for t in gAssistantSettings["templates"] {
         tName := Trim(t["name"])
-        tPrompt := StrReplace(StrReplace(Trim(t["prompt"]), "`r", " "), "`n", " ")
+        tPrompt := EncodeAssistantIniMultiline(Trim(t["prompt"]))
         if (tName = "") {
             continue
         }

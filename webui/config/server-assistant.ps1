@@ -184,6 +184,7 @@ function Invoke-AssistantByImage {
     $model = Resolve-AssistantModel -Requested ([string](Get-Prop $Settings 'model' 'doubao-seed-2-0-lite-260215')) -Fallback 'doubao-seed-2-0-lite-260215'
     $prompt = ([string](Get-AssistantPromptByTemplate -Settings $Settings)).Trim()
     if ($prompt -eq '') { $prompt = Get-AssistantDefaultPrompt }
+    $instruction = Build-AssistantInstruction -Prompt $prompt -PersonalProfile (Get-AssistantPersonalProfileText -Settings $Settings)
 
     if (Test-AssistantMockMode -Settings $Settings) {
       return [ordered]@{ ok=$true; text=(Get-AssistantMockAnswer -ImagePath $ImagePath -Settings $Settings); error='' }
@@ -206,8 +207,8 @@ function Invoke-AssistantByImage {
           [ordered]@{
             role = 'user'
             content = @(
-              [ordered]@{ type='input_image'; image_url=$imgUrl },
-              [ordered]@{ type='input_text'; text=$prompt }
+              [ordered]@{ type='input_text'; text=$instruction },
+              [ordered]@{ type='input_image'; image_url=$imgUrl }
             )
           }
         )
@@ -219,7 +220,7 @@ function Invoke-AssistantByImage {
           [ordered]@{
             role = 'user'
             content = @(
-              [ordered]@{ type='text'; text=$prompt },
+              [ordered]@{ type='text'; text=$instruction },
               [ordered]@{ type='image_url'; image_url=[ordered]@{ url=$imgUrl } }
             )
           }
@@ -369,6 +370,7 @@ function Start-AssistantBenchmarkStreamRun {
   $model = Resolve-AssistantModel -Requested ([string](Get-Prop $settings 'model' 'doubao-seed-2-0-lite-260215')) -Fallback 'doubao-seed-2-0-lite-260215'
   $prompt = ([string](Get-AssistantPromptByTemplate -Settings $settings)).Trim()
   if ($prompt -eq '') { $prompt = Get-AssistantDefaultPrompt }
+  $prompt = Build-AssistantInstruction -Prompt $prompt -PersonalProfile (Get-AssistantPersonalProfileText -Settings $settings)
 
   $initial = [ordered]@{
     ok = $true
@@ -502,8 +504,8 @@ try {
       [ordered]@{
         role = 'user'
         content = @(
-          [ordered]@{ type='input_image'; image_url=`$imgUrl },
-          [ordered]@{ type='input_text'; text=`$prompt }
+          [ordered]@{ type='input_text'; text=`$prompt },
+          [ordered]@{ type='input_image'; image_url=`$imgUrl }
         )
       }
     )
@@ -653,6 +655,7 @@ function Invoke-AssistantByImageWithPerf {
     $model = Resolve-AssistantModel -Requested ([string](Get-Prop $Settings 'model' 'doubao-seed-2-0-lite-260215')) -Fallback 'doubao-seed-2-0-lite-260215'
     $prompt = ([string](Get-AssistantPromptByTemplate -Settings $Settings)).Trim()
     if ($prompt -eq '') { $prompt = Get-AssistantDefaultPrompt }
+    $instruction = Build-AssistantInstruction -Prompt $prompt -PersonalProfile (Get-AssistantPersonalProfileText -Settings $Settings)
 
     if (Test-AssistantMockMode -Settings $Settings) {
       $text = Get-AssistantMockAnswer -ImagePath $ImagePath -Settings $Settings
@@ -702,8 +705,8 @@ function Invoke-AssistantByImageWithPerf {
           [ordered]@{
             role = 'user'
             content = @(
-              [ordered]@{ type='input_image'; image_url=$imgUrl },
-              [ordered]@{ type='input_text'; text=$prompt }
+              [ordered]@{ type='input_text'; text=$instruction },
+              [ordered]@{ type='input_image'; image_url=$imgUrl }
             )
           }
         )
@@ -715,7 +718,7 @@ function Invoke-AssistantByImageWithPerf {
           [ordered]@{
             role = 'user'
             content = @(
-              [ordered]@{ type='text'; text=$prompt },
+              [ordered]@{ type='text'; text=$instruction },
               [ordered]@{ type='image_url'; image_url=[ordered]@{ url=$imgUrl } }
             )
           }

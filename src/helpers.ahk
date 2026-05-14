@@ -17,7 +17,19 @@ WriteLog(action, details := "") {
         line .= " | " clean
     }
     line .= "`n"
-    FileAppend(line, gLogFile, "UTF-8")
+    retryCount := 6
+    loop retryCount {
+        try {
+            FileAppend(line, gLogFile, "UTF-8")
+            return true
+        } catch {
+            Sleep(25 * A_Index)
+        }
+    }
+    try {
+        FileAppend(line, gLogFile ".fallback", "UTF-8")
+    }
+    return false
 }
 
 JsonEscape(str) {

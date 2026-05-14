@@ -1,6 +1,7 @@
-import { state, byId, api, toast } from './app-common.js';
+﻿import { state, byId, api, toast } from './app-common.js';
 
 let resumeAutoSaveTimer = 0;
+let resumeAutoSaveNotifyPending = false;
 
 const RESUME_EDITOR_MODES = {
   PROFILE: 'profile',
@@ -45,11 +46,14 @@ const resumeCompanyFilters = {
   company_scale: '',
   job_type: '',
   progress: '',
+  applied_date: '',
   openKeys: []
 };
 
 const DEFAULT_COMPANY_PAGE_SIZE = 10;
 const COMPANY_PAGE_SIZE_OPTIONS = [5, 10, 20];
+let resumeExtensionInstallState = null;
+let resumeExtensionGuideLoaded = false;
 
 function normalizeRow(row, index = 0) {
   const type = String(row?.type || 'text').trim().toLowerCase();
@@ -75,6 +79,7 @@ function normalizeCompanyLink(row, index = 0) {
   const scale = String(row?.company_scale || '').trim().toLowerCase();
   const jobType = String(row?.job_type || '').trim().toLowerCase();
   const progress = String(row?.progress || 'not_applied').trim().toLowerCase();
+  const appliedDate = String(row?.applied_date || '').trim();
   return {
     id: String(row?.id || `company_${index + 1}`).trim() || `company_${index + 1}`,
     company: String(row?.company || '').trim(),
@@ -82,7 +87,8 @@ function normalizeCompanyLink(row, index = 0) {
     company_type: COMPANY_TYPE_OPTIONS.some((item) => item.value === type) ? type : '',
     company_scale: COMPANY_SCALE_OPTIONS.some((item) => item.value === scale) ? scale : '',
     job_type: COMPANY_JOB_TYPE_OPTIONS.some((item) => item.value === jobType) ? jobType : '',
-    progress: COMPANY_PROGRESS_OPTIONS.some((item) => item.value === progress) ? progress : 'not_applied'
+    progress: COMPANY_PROGRESS_OPTIONS.some((item) => item.value === progress) ? progress : 'not_applied',
+    applied_date: /^\d{4}-\d{2}-\d{2}$/.test(appliedDate) ? appliedDate : ''
   };
 }
 
@@ -119,10 +125,27 @@ function ensureSelectedSection() {
   return sections[0];
 }
 
-function scheduleAutoSave() {
+function notifyResumeChange(message = '简历信息已变更，正在自动保存...') {
+  resumeAutoSaveNotifyPending = true;
+  toast.info(message, {
+    dedupeKey: 'resume-autosave-pending',
+    duration: 1400
+  });
+}
+
+function scheduleAutoSave(options = {}) {
+  if (options.notify) {
+    notifyResumeChange(options.message);
+  }
   if (resumeAutoSaveTimer) clearTimeout(resumeAutoSaveTimer);
   resumeAutoSaveTimer = window.setTimeout(() => {
-    void saveResumeProfile({ silent: true });
+    const shouldNotify = resumeAutoSaveNotifyPending;
+    resumeAutoSaveNotifyPending = false;
+    void saveResumeProfile({ silent: true, autoNotify: shouldNotify }).catch((error) => {
+      toast.error(`简历自动保存失败: ${error.message}`, {
+        dedupeKey: 'resume-autosave-failed'
+      });
+    });
   }, 700);
 }
 
@@ -159,13 +182,125 @@ function renderOptionList(options, selectedValue) {
     .join('');
 }
 
+function fallbackCopyText(text) {
+  const temp = document.createElement('textarea');
+  temp.value = String(text || '');
+  temp.setAttribute('readonly', 'readonly');
+  temp.style.position = 'fixed';
+  temp.style.opacity = '0';
+  temp.style.pointerEvents = 'none';
+  document.body.appendChild(temp);
+  temp.select();
+  temp.setSelectionRange(0, temp.value.length);
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch {
+    copied = false;
+  }
+  document.body.removeChild(temp);
+  return copied;
+}
+
+function renderResumeExtensionGuideState() {
+  const pathEl = byId('resumeExtensionGuidePath');
+  const statusEl = byId('resumeExtensionGuidePathStatus');
+  const copyBtn = byId('resumeExtensionGuideCopyBtn');
+  if (!pathEl || !statusEl || !copyBtn) return;
+
+  const detectedPath = String(resumeExtensionInstallState?.extension_dir || '').trim();
+  const exists = resumeExtensionInstallState?.exists !== false;
+  pathEl.textContent = detectedPath || '未识别到插件目录';
+  statusEl.textContent = detectedPath
+    ? (exists ? '已自动识别到本机扩展目录，直接复制后在 Chrome 里选择这个文件夹即可。' : '已给出推测目录，但当前目录不存在，请先检查项目文件是否完整。')
+    : '暂时没有拿到本机扩展目录，请稍后重试或手动定位 browser_extension/resume_autofill。';
+  copyBtn.disabled = !detectedPath;
+}
+
+async function loadResumeExtensionInstallState(forceReload = false) {
+  if (!forceReload && resumeExtensionInstallState) return resumeExtensionInstallState;
+  const payload = await api('/api/resume/extension-install');
+  if (!payload.ok) {
+    throw new Error(payload.error || 'load extension install state failed');
+  }
+  resumeExtensionInstallState = payload.state || {};
+  renderResumeExtensionGuideState();
+  return resumeExtensionInstallState;
+}
+
+function closeResumeExtensionGuide() {
+  byId('resumeExtensionGuideHost')?.classList.add('hidden');
+}
+
+async function openResumeExtensionGuide() {
+  byId('resumeExtensionGuideHost')?.classList.remove('hidden');
+  renderResumeExtensionGuideState();
+  try {
+    await loadResumeExtensionInstallState(true);
+  } catch (error) {
+    renderResumeExtensionGuideState();
+    toast.error(`插件目录识别失败: ${error.message}`);
+  }
+}
+
+async function copyResumeExtensionDir() {
+  const text = String(resumeExtensionInstallState?.extension_dir || '').trim();
+  if (!text) {
+    toast.warning('当前没有可复制的插件目录');
+    return;
+  }
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else if (!fallbackCopyText(text)) {
+      throw new Error('clipboard unavailable');
+    }
+    toast.success('插件目录已复制');
+  } catch (error) {
+    if (fallbackCopyText(text)) {
+      toast.success('插件目录已复制');
+      return;
+    }
+    toast.error(`复制失败: ${error.message}`);
+  }
+}
+
+function openChromeExtensionsPage() {
+  void (async () => {
+    try {
+      const payload = await api('/api/resume/open-extension-page', { method: 'POST', body: '{}' });
+      if (!payload.ok) {
+        throw new Error(payload.error || 'open extension page failed');
+      }
+      toast.success('已尝试打开 Chrome 扩展页');
+    } catch (error) {
+      toast.error(`打开扩展页失败: ${error.message}`);
+    }
+  })();
+}
+
+async function openResumeExtensionFolder() {
+  try {
+    const payload = await api('/api/resume/open-extension-folder', { method: 'POST', body: '{}' });
+    if (!payload.ok) {
+      throw new Error(payload.error || 'open extension folder failed');
+    }
+    toast.success('已打开插件目录');
+  } catch (error) {
+    toast.error(`打开插件目录失败: ${error.message}`);
+  }
+}
+
 function syncRowFromDom(sectionId, rowIndex, tr) {
   const section = state.resume.profile.sections.find((item) => item.id === sectionId);
   if (!section || !section.rows[rowIndex]) return;
+  const valueEl = tr.querySelector(`[data-k="value"][data-row-index="${rowIndex}"]`);
+  if (!valueEl) return;
   section.rows[rowIndex] = normalizeRow({
     ...section.rows[rowIndex],
-    label: tr.querySelector('[data-k="label"]').value,
-    value: tr.querySelector('[data-k="value"]').value
+    label: section.rows[rowIndex].label,
+    value: valueEl.value
   }, rowIndex);
 }
 
@@ -188,38 +323,67 @@ function renderSectionList() {
   }
 }
 
+function shouldUseResumeMultilineValue(row) {
+  if (!row) return false;
+
+  const rowId = String(row.id || '').trim().toLowerCase();
+  const type = String(row.type || 'text').trim().toLowerCase();
+  const label = String(row.label || '').trim();
+  const value = String(row.value || '');
+
+  if (type === 'textarea') return true;
+  if (type === 'text' || type === 'date' || type === 'select') return false;
+
+  if (value.includes('\n')) return true;
+  if (/(^|_)(desc|intro|summary|content|courses?)$/i.test(rowId)) return true;
+  if (/(描述|介绍|说明|内容|职责|亮点|总结|课程|经历)/.test(label)) {
+    return true;
+  }
+  if (value.length >= 80) return true;
+  return false;
+}
+
+function renderResumeValueControl(row, index) {
+  const value = escText(row?.value || '');
+  const multiline = shouldUseResumeMultilineValue(row);
+  if (multiline) {
+    return `<textarea class="resume-profile-value resume-profile-value-multiline" data-k="value" data-row-index="${index}">${value}</textarea>`;
+  }
+  return `<input class="resume-profile-value resume-profile-value-singleline" data-k="value" data-row-index="${index}" type="text" value="${escAttr(row?.value || '')}" />`;
+}
+
 function renderRows(section) {
   const body = byId('resumeRows');
   body.innerHTML = '';
 
-  section.rows.forEach((row, index) => {
+  for (let index = 0; index < section.rows.length; index += 2) {
+    const left = section.rows[index];
+    const right = section.rows[index + 1] || null;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" data-k="label" value="${escAttr(row.label)}" /></td>
-      <td><textarea data-k="value">${escText(row.value)}</textarea></td>
-      <td><button class="btn ghost" type="button" data-k="delete">删除</button></td>
+      <td class="resume-profile-label-cell"><div class="resume-profile-label">${escText(left.label)}</div></td>
+      <td class="resume-profile-value-cell">${renderResumeValueControl(left, index)}</td>
+      ${right ? `
+      <td class="resume-profile-label-cell"><div class="resume-profile-label">${escText(right.label)}</div></td>
+      <td class="resume-profile-value-cell">${renderResumeValueControl(right, index + 1)}</td>
+      ` : `
+      <td class="resume-profile-label-cell resume-profile-empty-cell"></td>
+      <td class="resume-profile-value-cell resume-profile-empty-cell"></td>
+      `}
     `;
 
-    autoResizeResumeTextarea(tr.querySelector('[data-k="value"]'));
-
-    tr.querySelectorAll('input, textarea').forEach((el) => {
+    tr.querySelectorAll('[data-k="value"]').forEach((el) => {
       el.addEventListener('input', () => {
-        if (el.tagName === 'TEXTAREA') {
-          autoResizeResumeTextarea(el);
+        const rowIndex = Number(el.dataset.rowIndex || -1);
+        if (Number.isInteger(rowIndex) && rowIndex >= 0) {
+          syncRowFromDom(section.id, rowIndex, tr);
         }
-        syncRowFromDom(section.id, index, tr);
-        scheduleAutoSave();
+        scheduleAutoSave({ notify: true, message: '简历字段内容已更新，正在自动保存...' });
       });
     });
 
-    tr.querySelector('[data-k="delete"]').onclick = () => {
-      section.rows.splice(index, 1);
-      renderResumeEditor();
-      scheduleAutoSave();
-    };
-
     body.appendChild(tr);
-  });
+  }
 }
 
 function syncCompanyRowFromDom(index, tr) {
@@ -231,7 +395,8 @@ function syncCompanyRowFromDom(index, tr) {
     company_type: tr.querySelector('[data-k="company_type"]').value,
     company_scale: tr.querySelector('[data-k="company_scale"]').value,
     job_type: tr.querySelector('[data-k="job_type"]').value,
-    progress: tr.querySelector('[data-k="progress"]').value
+    progress: tr.querySelector('[data-k="progress"]').value,
+    applied_date: tr.querySelector('[data-k="applied_date"]').value
   }, index);
 }
 
@@ -282,6 +447,7 @@ function syncCompanyFilterUi() {
     ['company_scale', 'resumeCompanyFilterScaleBtn'],
     ['job_type', 'resumeCompanyFilterJobTypeBtn'],
     ['progress', 'resumeCompanyFilterProgressBtn'],
+    ['applied_date', 'resumeCompanyFilterAppliedDateBtn'],
     ['url', 'resumeCompanyFilterUrlBtn']
   ];
 
@@ -380,6 +546,14 @@ function getResumeCompanyFilterMeta() {
         </label>
       `
     },
+    applied_date: {
+      title: '投递日期筛选',
+      render: () => `
+        <label>
+          <input id="resumeCompanyFilterAppliedDate" type="date" aria-label="投递日期筛选" value="${escAttr(resumeCompanyFilters.applied_date)}" />
+        </label>
+      `
+    },
     url: {
       title: '链接地址筛选',
       render: () => `
@@ -425,6 +599,7 @@ function renderResumeCompanyFilterBar() {
     ['resumeCompanyFilterScale', 'company_scale', 'change'],
     ['resumeCompanyFilterJobType', 'job_type', 'change'],
     ['resumeCompanyFilterProgress', 'progress', 'change'],
+    ['resumeCompanyFilterAppliedDate', 'applied_date', 'change'],
     ['resumeCompanyFilterUrl', 'url', 'input']
   ];
 
@@ -449,6 +624,7 @@ function getFilteredCompanyLinks() {
       if (resumeCompanyFilters.company_scale && row.company_scale !== resumeCompanyFilters.company_scale) return false;
       if (resumeCompanyFilters.job_type && row.job_type !== resumeCompanyFilters.job_type) return false;
       if (resumeCompanyFilters.progress && row.progress !== resumeCompanyFilters.progress) return false;
+      if (resumeCompanyFilters.applied_date && row.applied_date !== resumeCompanyFilters.applied_date) return false;
       if (companyKeyword && !String(row.company || '').toLowerCase().includes(companyKeyword)) return false;
       if (urlKeyword && !String(row.url || '').toLowerCase().includes(urlKeyword)) return false;
       return true;
@@ -474,7 +650,7 @@ function renderCompanyRows() {
   const { all: visibleRows, pageRows } = getPagedCompanyLinks();
   renderCompanyPagination(visibleRows.length);
   if (!visibleRows.length) {
-    body.innerHTML = '<tr><td colspan="8" class="resume-company-empty">当前筛选条件下没有公司记录</td></tr>';
+    body.innerHTML = '<tr><td colspan="9" class="resume-company-empty">当前筛选条件下没有公司记录</td></tr>';
     syncResumeCompanySelectAllState();
     return;
   }
@@ -516,6 +692,9 @@ function renderCompanyRows() {
           </select>
         </div>
       </td>
+      <td class="resume-company-date-cell">
+        <input data-k="applied_date" class="resume-company-date-input" type="date" value="${escAttr(row.applied_date || '')}" />
+      </td>
       <td>
         <div class="resume-company-url-cell">
           <textarea data-k="url" class="resume-company-inline-textarea" wrap="off" placeholder="公司投递或招聘链接">${escText(row.url)}</textarea>
@@ -537,18 +716,21 @@ function renderCompanyRows() {
     });
     syncCompanyUrlButtonState(tr, row.url);
 
-    tr.querySelectorAll('textarea, select').forEach((el) => {
-      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+    tr.querySelectorAll('textarea, select, input[type="date"]').forEach((el) => {
+      const eventName = el.tagName === 'SELECT' || el.type === 'date' ? 'change' : 'input';
+      el.addEventListener(eventName, () => {
         if (el.tagName === 'TEXTAREA') {
           autoResizeResumeTextarea(el, el.classList.contains('resume-company-inline-textarea') ? 44 : 72);
         } else {
-          syncCompanySelectTheme(el);
+          if (el.tagName === 'SELECT') {
+            syncCompanySelectTheme(el);
+          }
         }
         syncCompanyRowFromDom(index, tr);
         if (el.getAttribute('data-k') === 'url') {
           syncCompanyUrlButtonState(tr, el.value);
         }
-        scheduleAutoSave();
+        scheduleAutoSave({ notify: true, message: '公司投递信息已更新，正在自动保存...' });
       });
     });
 
@@ -572,7 +754,7 @@ function renderCompanyRows() {
     tr.querySelector('[data-k="delete"]').onclick = () => {
       state.resume.company_links.splice(index, 1);
       renderResumeEditor();
-      scheduleAutoSave();
+      scheduleAutoSave({ notify: true, message: '公司记录已删除，正在自动保存...' });
     };
 
     body.appendChild(tr);
@@ -583,41 +765,42 @@ function renderCompanyRows() {
 function renderResumeSubview() {
   ensureResumeEditorMode();
   const isCompanies = state.resume.editor_mode === RESUME_EDITOR_MODES.COMPANIES;
+  const layout = byId('resumeView')?.querySelector('.resume-layout');
+  const profileLayout = byId('resumeProfileLayout');
+  const sidebar = byId('resumeSidebar');
+  const titleBlock = byId('resumeTitleBlock');
   byId('resumeProfilePanel')?.classList.toggle('hidden', isCompanies);
   byId('resumeCompanyPanel')?.classList.toggle('hidden', !isCompanies);
+  layout?.classList.toggle('companies-mode', isCompanies);
+  profileLayout?.classList.toggle('hidden', isCompanies);
+  sidebar?.classList.toggle('hidden', isCompanies);
+  titleBlock?.classList.add('hidden');
 
-  const label = byId('resumeEntryBarLabel');
-  const btn = byId('resumeToggleCompanyViewBtn');
-  const title = byId('resumeSectionTitle');
+  const profileBtn = byId('resumePageProfileBtn');
+  const companiesBtn = byId('resumePageCompaniesBtn');
 
-  if (label) {
-    label.textContent = isCompanies ? '返回简历字段界面：' : '进入公司链接界面：';
+  if (profileBtn) {
+    profileBtn.classList.toggle('active', !isCompanies);
+    profileBtn.setAttribute('aria-selected', !isCompanies ? 'true' : 'false');
   }
-  if (btn) {
-    btn.textContent = isCompanies ? '点击返回' : '点击进入';
-    btn.classList.toggle('active', isCompanies);
-  }
-  if (title && isCompanies) {
-    title.textContent = '公司链接维护';
+  if (companiesBtn) {
+    companiesBtn.classList.toggle('active', isCompanies);
+    companiesBtn.setAttribute('aria-selected', isCompanies ? 'true' : 'false');
   }
 }
-
 function renderResumeEditor() {
   const section = ensureSelectedSection();
   ensureCompanyLinks();
   ensureResumeEditorMode();
   renderSectionList();
 
-  const title = byId('resumeSectionTitle');
   if (!section) {
-    if (title) title.textContent = '简历自动填写';
     byId('resumeRows').innerHTML = '';
     renderCompanyRows();
     renderResumeSubview();
     return;
   }
 
-  if (title) title.textContent = section.title;
   renderRows(section);
   renderCompanyRows();
   renderResumeSubview();
@@ -639,6 +822,7 @@ function initCompanyFilterHandlers() {
     ['resumeCompanyFilterScaleBtn', 'company_scale'],
     ['resumeCompanyFilterJobTypeBtn', 'job_type'],
     ['resumeCompanyFilterProgressBtn', 'progress'],
+    ['resumeCompanyFilterAppliedDateBtn', 'applied_date'],
     ['resumeCompanyFilterUrlBtn', 'url']
   ].forEach(([id, key]) => {
     const el = byId(id);
@@ -660,6 +844,7 @@ function initCompanyFilterHandlers() {
       resumeCompanyFilters.company_scale = '';
       resumeCompanyFilters.job_type = '';
       resumeCompanyFilters.progress = '';
+      resumeCompanyFilters.applied_date = '';
       resumeCompanyFilters.openKeys = [];
       renderCompanyRows();
     };
@@ -699,7 +884,7 @@ function openSelectedCompanyLinks() {
 
   renderCompanyRows();
   if (hasChanged) {
-    scheduleAutoSave();
+    scheduleAutoSave({ notify: true, message: '投递进度已更新，正在自动保存...' });
   }
   toast(`已打开 ${validRows.length} 个投递链接`);
 }
@@ -726,6 +911,7 @@ export function applyResumeState(payload) {
 
 export async function saveResumeProfile(options = {}) {
   const silent = !!options.silent;
+  const autoNotify = options.autoNotify === true;
   ensureCompanyLinks();
   const payload = await api('/api/resume/save', {
     method: 'POST',
@@ -741,32 +927,81 @@ export async function saveResumeProfile(options = {}) {
   }
   applyResumeState({ resume: payload.state || state.resume });
   if (!silent) {
-    toast('简历资料已保存');
+    toast('\u7b80\u5386\u8d44\u6599\u5df2\u4fdd\u5b58');
+  } else if (autoNotify) {
+    toast.success('\u7b80\u5386\u4fe1\u606f\u5df2\u81ea\u52a8\u4fdd\u5b58', {
+      dedupeKey: 'resume-autosave-success',
+      duration: 1600
+    });
   }
 }
 
 export function initResumeHandlers() {
   initCompanyFilterHandlers();
-  const toggleCompanyBtn = byId('resumeToggleCompanyViewBtn');
-  if (toggleCompanyBtn) {
-    toggleCompanyBtn.onclick = () => {
-      ensureResumeEditorMode();
-      state.resume.editor_mode = state.resume.editor_mode === RESUME_EDITOR_MODES.COMPANIES
-        ? RESUME_EDITOR_MODES.PROFILE
-        : RESUME_EDITOR_MODES.COMPANIES;
-      renderResumeEditor();
-    };
-  }
-
-  const addBtn = byId('resumeAddRowBtn');
-  if (addBtn) {
-    addBtn.onclick = () => {
-      const section = ensureSelectedSection();
-      if (!section) return;
-      section.rows.push(normalizeRow({}, section.rows.length));
+  const profileBtn = byId('resumePageProfileBtn');
+  if (profileBtn) {
+    profileBtn.onclick = () => {
+      state.resume.editor_mode = RESUME_EDITOR_MODES.PROFILE;
       renderResumeEditor();
       scheduleAutoSave();
     };
+  }
+  const companiesBtn = byId('resumePageCompaniesBtn');
+  if (companiesBtn) {
+    companiesBtn.onclick = () => {
+      state.resume.editor_mode = RESUME_EDITOR_MODES.COMPANIES;
+      renderResumeEditor();
+      scheduleAutoSave();
+    };
+  }
+
+  if (!resumeExtensionGuideLoaded) {
+    resumeExtensionGuideLoaded = true;
+
+    const openBtn = byId('resumeInstallChromeExtensionBtn');
+    if (openBtn) {
+      openBtn.onclick = () => {
+        void openResumeExtensionGuide();
+      };
+    }
+
+    const closeBtn = byId('resumeExtensionGuideCloseBtn');
+    if (closeBtn) {
+      closeBtn.onclick = () => closeResumeExtensionGuide();
+    }
+
+    const okBtn = byId('resumeExtensionGuideOkBtn');
+    if (okBtn) {
+      okBtn.onclick = () => closeResumeExtensionGuide();
+    }
+
+    const host = byId('resumeExtensionGuideHost');
+    const overlay = host?.querySelector('.resume-guide-overlay');
+    if (overlay) {
+      overlay.onclick = () => closeResumeExtensionGuide();
+    }
+    host?.querySelector('.resume-guide-dialog')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    const copyBtn = byId('resumeExtensionGuideCopyBtn');
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        void copyResumeExtensionDir();
+      };
+    }
+
+    const openFolderBtn = byId('resumeExtensionGuideOpenFolderBtn');
+    if (openFolderBtn) {
+      openFolderBtn.onclick = () => {
+        void openResumeExtensionFolder();
+      };
+    }
+
+    const openChromeBtn = byId('resumeExtensionGuideOpenChromeBtn');
+    if (openChromeBtn) {
+      openChromeBtn.onclick = () => openChromeExtensionsPage();
+    }
   }
 
   const addCompanyBtn = byId('resumeAddCompanyRowBtn');
@@ -778,7 +1013,7 @@ export function initResumeHandlers() {
       const { pageSize } = getCompanyPaginationState(total);
       state.resume.company_table_view.page = Math.max(1, Math.ceil(total / pageSize));
       renderResumeEditor();
-      scheduleAutoSave();
+      scheduleAutoSave({ notify: true, message: '公司记录已新增，正在自动保存...' });
     };
   }
 

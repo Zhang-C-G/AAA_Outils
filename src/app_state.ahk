@@ -95,6 +95,7 @@ Init() {
     BuildConfigGui()
     RegisterHotkeys()
     RestartAutoRefreshTimer()
+    EnsureWebConfigActionWatcher()
     OnExit(OnAppExit)
     RestoreWebConfigServerIfNeeded()
     StartDevAutoReloadWatcher()

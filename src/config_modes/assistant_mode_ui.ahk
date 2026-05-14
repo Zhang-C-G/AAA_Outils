@@ -1,7 +1,7 @@
 BuildAssistantModeBody() {
     global gConfigGui, gTheme
     global gAssistantEnabledCheckbox, gAssistantApiEndpointEdit, gAssistantApiKeyEdit, gAssistantModelEdit
-    global gAssistantPromptEdit, gAssistantOpacitySlider, gAssistantOpacityLabel, gAssistantCapturePathEdit, gAssistantResultEdit
+    global gAssistantPromptEdit, gAssistantProfileEdit, gAssistantOpacitySlider, gAssistantOpacityLabel, gAssistantCapturePathEdit, gAssistantResultEdit
 
     gConfigGui.AddText("x40 y130 w860 h24 c" gTheme["text_primary"], "Screenshot Assistant")
     gConfigGui.AddText("x40 y156 w860 h20 c" gTheme["text_hint"], "Capture by hotkey, send to model API, show answer in floating window.")
@@ -25,25 +25,28 @@ BuildAssistantModeBody() {
     gConfigGui.AddText("x40 y338 w120 h22 c" gTheme["text_primary"], "Prompt")
     gAssistantPromptEdit := gConfigGui.AddEdit("x160 y334 w780 h108 +Multi c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
 
-    runBtn := gConfigGui.AddButton("x160 y454 w220 h36 Background" gTheme["bg_header"] " c" gTheme["text_on_light"], "Run Capture + Ask")
+    gConfigGui.AddText("x40 y450 w120 h22 c" gTheme["text_primary"], "个人基本信息")
+    gAssistantProfileEdit := gConfigGui.AddEdit("x160 y446 w780 h92 +Multi c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
+
+    runBtn := gConfigGui.AddButton("x160 y550 w220 h36 Background" gTheme["bg_header"] " c" gTheme["text_on_light"], "Run Capture + Ask")
     runBtn.SetFont("s10 w700", "Segoe UI")
     runBtn.OnEvent("Click", OnAssistantRunNow)
 
-    mockBtn := gConfigGui.AddButton("x392 y454 w220 h36 Background" gTheme["bg_surface_alt"] " c" gTheme["text_primary"], "Run Local Mock")
+    mockBtn := gConfigGui.AddButton("x392 y550 w220 h36 Background" gTheme["bg_surface_alt"] " c" gTheme["text_primary"], "Run Local Mock")
     mockBtn.SetFont("s10 w700", "Segoe UI")
     mockBtn.OnEvent("Click", OnAssistantRunMock)
 
-    folderBtn := gConfigGui.AddButton("x624 y454 w150 h36 Background" gTheme["bg_surface_alt"] " c" gTheme["text_primary"], "Open Captures")
+    folderBtn := gConfigGui.AddButton("x624 y550 w150 h36 Background" gTheme["bg_surface_alt"] " c" gTheme["text_primary"], "Open Captures")
     folderBtn.SetFont("s10 w700", "Segoe UI")
     folderBtn.OnEvent("Click", OnOpenAssistantCaptureFolder)
 
-    saveBtn := gConfigGui.AddButton("x790 y454 w150 h36 Background" gTheme["bg_header"] " c" gTheme["text_on_light"], "Save Assistant")
+    saveBtn := gConfigGui.AddButton("x790 y550 w150 h36 Background" gTheme["bg_header"] " c" gTheme["text_on_light"], "Save Assistant")
     saveBtn.SetFont("s10 w700", "Segoe UI")
     saveBtn.OnEvent("Click", OnSaveAssistantSettings)
 
-    gConfigGui.AddText("x40 y504 w900 h20 c" gTheme["text_hint"], "Capture save folder (fixed)")
-    gAssistantCapturePathEdit := gConfigGui.AddEdit("x40 y528 w900 h28 ReadOnly c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
+    gConfigGui.AddText("x40 y600 w900 h20 c" gTheme["text_hint"], "Capture save folder (fixed)")
+    gAssistantCapturePathEdit := gConfigGui.AddEdit("x40 y624 w900 h28 ReadOnly c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
 
-    gConfigGui.AddText("x40 y568 w900 h20 c" gTheme["text_hint"], "Last answer")
-    gAssistantResultEdit := gConfigGui.AddEdit("x40 y592 w900 h156 +Multi ReadOnly c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
+    gConfigGui.AddText("x40 y664 w900 h20 c" gTheme["text_hint"], "Last answer")
+    gAssistantResultEdit := gConfigGui.AddEdit("x40 y688 w900 h156 +Multi ReadOnly c" gTheme["text_on_light"] " Background" gTheme["bg_header"])
 }

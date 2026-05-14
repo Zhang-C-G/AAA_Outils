@@ -23,6 +23,74 @@
   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart_main_ahk.ps1`
 - 测试结果：`通过`
 
+### 2026-05-13 / E 模块配置页重排、F3 自动分析与文档流程补强
+- 改动内容：
+  - 将 Assistant 基础设置重排为“模板管理 + 左右分栏的个人基本信息 / Prompt”，把个人背景信息正式抬升为一等输入项
+  - 将“问答模型选择”移动到高级设置的“截图笔试”分区，将“语音模型选择”移动到“语音面试”分区
+  - 将高级设置拆分为“通用 / 截图笔试 / 语音面试”三段，并把截图保存目录并入“截图笔试”
+  - 为三个高级分区补上独立边框、轻背景、标题分隔和内部浅面板，提升区域辨识度，收敛为简约深色风格
+  - 新增“语音分析上下文记忆”开关与轮次设置，默认关闭、默认 3 轮，仅作用于 F3 语音自动分析链路
+  - F3 链路从“语音识别后仅展示文本”升级为“语音识别后自动送入问答模型分析”，并继续统一回到 Assistant 悬浮窗展示结果
+  - 将“个人基本信息”正式接入 Assistant 指令拼装链路，让模型在回答前先读取提问者背景，再读取 Prompt
+  - 反向补强文档流程：明确后续涉及模块改动时，除了模块主文档外，也必须同时读取并更新对应的模块修改过程文档
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `src/storage/assistant.ahk`
+  - `src/storage/data_load.ahk`
+  - `src/storage/data_save.ahk`
+  - `webui/config/index.html`
+  - `webui/config/styles.css`
+  - `webui/config/app-common.js`
+  - `webui/config/app-assistant.js`
+  - `webui/config/server_state/assistant.ps1`
+  - `webui/config/server_state/config.ps1`
+  - `docs/modules/06_assistant_capture_qa.md`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/AI_HANDOFF.md`
+  - `docs/UPDATE_CHECKLIST.md`
+  - `docs/ACTION_LOG.md`
+  - `docs/DOC_CHANGELOG.md`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-assistant.js`
+  - PowerShell Parser 校验：`webui/config/server_state/assistant.ps1`
+  - PowerShell Parser 校验：`webui/config/server_state/config.ps1`
+  - 文档流程交叉校对：`docs/AI_HANDOFF.md`、`docs/UPDATE_CHECKLIST.md`、`docs/modules/06_assistant_capture_qa.md`、`docs/modules/changelog/E_截图问答_修改过程.md`
+- 测试结果：`通过`
+
+### 2026-05-13 / E 模块个人基本信息填充为当前本地求职画像
+- 改动内容：
+  - 根据用户提供的简历截图，整理出适合 Assistant 面试问答读取的个人背景摘要
+  - 直接写入当前本地配置 `config.ini` 的 `[Assistant] personal_profile`
+  - 明确这次写入的是“当前本地用户配置”，不是默认值，也不是模板默认文案
+- 影响文件：
+  - `config.ini`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/ACTION_LOG.md`
+  - `docs/DOC_CHANGELOG.md`
+- 测试：
+  - 配置检索：确认 `[Assistant] personal_profile=` 已存在且非空
+  - 语义校对：确认内容覆盖求职方向、技术栈、实习经历、项目经历、语言能力与回答偏好
+- 测试结果：`通过`
+
+### 2026-05-13 / E 模块长文本输入保留换行
+- 改动内容：
+  - 修正 Assistant 的 `personal_profile`、当前 `prompt`、以及模板 prompt 持久化逻辑
+  - 不再在保存时把换行直接压平成空格，改为写入可逆转义格式，并在读取时还原为真实换行
+  - 明确把“长文本编辑必须保留段落与换行”补入全局私人偏好文档
+- 影响文件：
+  - `src/storage/assistant.ahk`
+  - `src/storage/data_save.ahk`
+  - `webui/config/server_state/assistant.ps1`
+  - `docs/extension/global_preferences/02_编辑态与光标偏好.md`
+  - `docs/modules/06_assistant_capture_qa.md`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/ACTION_LOG.md`
+  - `docs/DOC_CHANGELOG.md`
+- 测试：
+  - 静态检查 AHK 与 PowerShell 存储链路，确认保存端使用编码、读取端使用解码
+  - 配置回读检查：确认 `prompt` 与 `personal_profile` 不再走“换行替空格”逻辑
+- 测试结果：`通过`
+
 ### 2026-05-13 / F3 恢复讯飞必选模式并直报缺失项
 - 改动内容：
   - 按当前测试目标恢复 F3 的讯飞必选模式，不再把缺配置场景临时切回本地默认语音识别

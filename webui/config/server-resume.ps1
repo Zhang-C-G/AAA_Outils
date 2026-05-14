@@ -327,6 +327,11 @@ function Normalize-ResumeProfile {
       $progress = 'not_applied'
     }
 
+    $appliedDate = ([string](Get-Prop $company 'applied_date' '')).Trim()
+    if ($appliedDate -notmatch '^\d{4}-\d{2}-\d{2}$') {
+      $appliedDate = ''
+    }
+
     $companyLinks += [ordered]@{
       id = $id
       company = ([string](Get-Prop $company 'company' '')).Trim()
@@ -335,6 +340,7 @@ function Normalize-ResumeProfile {
       company_scale = $companyScale
       job_type = $jobType
       progress = $progress
+      applied_date = $appliedDate
     }
     $companyIndex += 1
   }
@@ -401,6 +407,94 @@ function Get-ResumeState {
     flat_map = (Get-ResumeFlatMap -Profile $profile)
     company_links = @(Get-Prop $profile 'company_links' @())
     editor_mode = [string](Get-Prop $profile 'editor_mode' 'profile')
+  }
+}
+
+function Get-ResumeExtensionInstallState {
+  $candidateRoots = New-Object System.Collections.Generic.List[string]
+
+  $baseRoot = ([string]$Root).Trim()
+  if ($baseRoot -ne '') {
+    [void]$candidateRoots.Add($baseRoot)
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace([string]$ResumeProfileFile)) {
+    $resumeRoot = Split-Path -Parent ([string]$ResumeProfileFile)
+    if (-not [string]::IsNullOrWhiteSpace($resumeRoot)) {
+      [void]$candidateRoots.Add($resumeRoot)
+    }
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace([string]$PSScriptRoot)) {
+    [void]$candidateRoots.Add($PSScriptRoot)
+    $scriptParent = Split-Path -Parent $PSScriptRoot
+    if (-not [string]::IsNullOrWhiteSpace($scriptParent)) {
+      [void]$candidateRoots.Add($scriptParent)
+    }
+  }
+
+  $extensionDir = ''
+  foreach ($candidate in $candidateRoots) {
+    foreach ($repoRoot in @(
+      $candidate,
+      (Split-Path -Parent $candidate),
+      (Split-Path -Parent (Split-Path -Parent $candidate))
+    )) {
+      if ([string]::IsNullOrWhiteSpace([string]$repoRoot)) { continue }
+      $probe = Join-Path $repoRoot 'browser_extension\resume_autofill'
+      if ($extensionDir -eq '') {
+        $extensionDir = $probe
+      }
+      if (Test-Path -LiteralPath $probe) {
+        $extensionDir = $probe
+        break
+      }
+    }
+    if ($extensionDir -ne '' -and (Test-Path -LiteralPath $extensionDir)) {
+      break
+    }
+  }
+
+  $resolvedExtensionDir = $extensionDir
+  if ($extensionDir -ne '') {
+    try {
+      $resolved = Resolve-Path -LiteralPath $extensionDir -ErrorAction Stop
+      if ($resolved) {
+        $resolvedExtensionDir = [string]$resolved.Path
+      }
+    } catch {}
+  }
+
+  return [ordered]@{
+    extension_dir = $resolvedExtensionDir
+    exists = [bool]($extensionDir -and (Test-Path -LiteralPath $extensionDir))
+  }
+}
+
+function Open-ResumeExtensionFolder {
+  $state = Get-ResumeExtensionInstallState
+  $target = ([string](Get-Prop $state 'extension_dir' '')).Trim()
+  if ($target -eq '') {
+    return [ordered]@{ ok = $false; error = 'extension directory unavailable' }
+  }
+  if (-not (Test-Path -LiteralPath $target)) {
+    return [ordered]@{ ok = $false; error = 'extension directory not found'; path = $target }
+  }
+
+  try {
+    Start-Process explorer.exe -ArgumentList ('"{0}"' -f $target) | Out-Null
+    return [ordered]@{ ok = $true; path = $target }
+  } catch {
+    return [ordered]@{ ok = $false; error = $_.Exception.Message; path = $target }
+  }
+}
+
+function Open-ResumeExtensionPage {
+  try {
+    Start-Process 'chrome://extensions/' | Out-Null
+    return [ordered]@{ ok = $true; target = 'chrome://extensions/' }
+  } catch {
+    return [ordered]@{ ok = $false; error = $_.Exception.Message; target = 'chrome://extensions/' }
   }
 }
 

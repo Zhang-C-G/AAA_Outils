@@ -1,21 +1,69 @@
 # Resume Autofill Browser Extension
 
-这是 `ZCG-Raccourci Control` 的第一版浏览器插件骨架。
+This extension is the browser-side executor for F-module resume autofill.
 
-## 当前能力
+## Current architecture
 
-- 从本地服务读取 `http://127.0.0.1:8798/api/resume/profile`
-- 获取简历 `profile` 与 `flat_map`
-- 对当前网页的 `input / textarea / select` 做启发式字段匹配并尝试填值
+1. `content.js`
+   - generic fill engine
+   - fallback matching for visible `input / textarea / select`
+2. `site-strategies.js`
+   - site-specific strategy registry
+   - reserved for explicit actions such as dropdowns, date pickers, and add buttons
+3. `popup.js`
+   - loads local resume data from `http://127.0.0.1:8798/api/resume/profile`
+   - triggers fill on the active tab
+   - reports strategy hits vs generic fallback hits
 
-## 使用方式
+## Current capability
 
-1. 在主程序里打开 Web 配置页，进入“简历自动填写”模块并保存资料。
-2. 在浏览器扩展管理页加载本目录为“已解压的扩展程序”。
-3. 打开目标招聘表单页面。
-4. 点击插件图标，先点“读取本地简历”，再点“自动填写当前页”。
+- Read `profile` and `flat_map` from the local service
+- Try site strategy first when the current host matches
+- Fall back to generic field matching when no site action is available
 
-## 说明
+## Implemented site strategy
 
-- 这是第一版通用骨架，当前采用“字段名 / 别名 / placeholder / label / name”启发式匹配。
-- 后续如果某个招聘网站需要更高命中率，可以继续增加站点专用规则。
+Current first implemented site strategy: `Bilibili`
+
+- `basic_info_strategy`
+  - name
+  - gender
+  - birth date
+  - city
+  - phone
+  - email
+- `education_group_strategy`
+  - school
+  - month range
+  - major
+  - degree
+- `experience_group_strategy`
+  - company
+  - month range
+  - role
+  - description
+- `project_group_strategy`
+  - project name
+  - month range
+  - project role
+  - project description
+  - project link
+
+Current explicit skips:
+
+- attachments/upload widgets
+- internal referral code
+- fields requiring semantic/manual judgment
+
+## Near-term goal
+
+Reach 90%+ fill rate by layering:
+
+- generic direct-fill support
+- company/site strategies
+- issue-driven iteration from screenshots and failed samples
+
+## Working rule
+
+Do not keep adding UI complexity in the Web editor to chase fill rate.  
+Prefer encoding site-specific behavior in the extension strategy layer.

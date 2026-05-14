@@ -182,12 +182,12 @@ EnsureWebConfigActionWatcher() {
     if gWebConfigTimerEnabled {
         return
     }
-    SetTimer(ProcessWebConfigActionFile, 800)
+    SetTimer(ProcessWebConfigActionFile, 120)
     gWebConfigTimerEnabled := true
 }
 
 ProcessWebConfigActionFile(*) {
-    global gWebConfigActionFile
+    global gWebConfigActionFile, gAssistantOverlayVisible
     if !FileExist(gWebConfigActionFile) {
         return
     }
@@ -196,17 +196,46 @@ ProcessWebConfigActionFile(*) {
     try raw := FileRead(gWebConfigActionFile, "UTF-8")
     try FileDelete(gWebConfigActionFile)
 
-    if InStr(raw, "reload") {
+    raw := Trim(raw)
+
+    if (raw = "reload") {
         ReloadAppStateFromDisk()
         WriteLog("web_config_reload", "applied from web ui")
     }
-    if InStr(raw, "assistant_overlay_open") {
-        ToggleAssistantOverlay(false, "web_action")
-    }
-    if InStr(raw, "assistant_capture_now") {
-        StartAssistantCaptureFlow(false)
+    if (raw = "assistant_overlay_open_only") {
+        if !gAssistantOverlayVisible {
+            SetTimer(WebConfigOpenAssistantOverlayOnlyAction, -1)
+        }
+    } else if (raw = "assistant_overlay_open") {
+        SetTimer(WebConfigToggleAssistantOverlayAction, -1)
+    } else if (raw = "assistant_capture_now") {
+        SetTimer(WebConfigAssistantCaptureNowAction, -1)
         WriteLog("assistant_capture_triggered", "source=web_action")
+    } else if (raw = "assistant_voice_input_down") {
+        SetTimer(WebConfigAssistantVoiceInputDownAction, -1)
+    } else if (raw = "assistant_voice_input_up") {
+        SetTimer(WebConfigAssistantVoiceInputUpAction, -1)
     }
+}
+
+WebConfigToggleAssistantOverlayAction(*) {
+    ToggleAssistantOverlay(false, "web_action")
+}
+
+WebConfigOpenAssistantOverlayOnlyAction(*) {
+    StartAssistantOverlayOnly(false)
+}
+
+WebConfigAssistantCaptureNowAction(*) {
+    StartAssistantCaptureFlow(false)
+}
+
+WebConfigAssistantVoiceInputDownAction(*) {
+    StartAssistantVoiceInputHold(false)
+}
+
+WebConfigAssistantVoiceInputUpAction(*) {
+    StopAssistantVoiceInputHold(false)
 }
 
 ReloadAppStateFromDisk() {
@@ -228,6 +257,7 @@ ReloadAppStateFromDisk() {
 
     RegisterHotkeys()
     RestartAutoRefreshTimer()
+    EnsureWebConfigActionWatcher()
     try SyncAssistantOverlayAfterSettingsChange()
     try RebuildConfigWindow()
 }

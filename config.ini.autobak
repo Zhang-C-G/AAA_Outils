@@ -11,6 +11,7 @@ A75=A757850510A
 @zcg=@zcgZCG757850510
 16=16680512973
 1344=19855351344
+341=341323200203280732
 
 [Prompts]
 
@@ -23,6 +24,7 @@ codex-第二阶段=第一阶段已经完毕，现在进入第二阶段开发，�
 codex-第二阶段-修复=
 codex-全局个性新增=将下列的东西增加到全局个性文档中，你需要自己判断他是属于哪个子文档中，或者新建的对应文档。
 codex-第一阶段-后期补充优化=我们目前该模块的UI设计差不多了，需要你通过我们的需求，考虑UI界面是否有优化的方向，如果有，则直接告诉我。
+codex-文档遵守（弱模型必须用）=上面的优化方案，如果有明显优势，可以执行。然后你必须遵守我们文档架构，按照文档要求进行回答。然后处理下列问题
 
 [Category_cat_1777200228087]
 GPT-笔记制作=
@@ -48,14 +50,15 @@ active_mode=shortcuts
 mode_order=shortcuts,notes,notes_display,assistant,resume,testing,capture,api_center,hotkeys
 notes_sidebar_compact=0
 notes_display_sidebar_compact=0
-notes_display_current_id=20260512092624
+notes_display_current_id=20260509145517
 notes_display_content_view=rendered
-notes_extract_collapsed=0
+testing_subview=assistant_benchmark
+notes_extract_collapsed=1
 shell_theme_mode=solid
 shell_theme_primary=#1A2028
 shell_theme_secondary=#2C3542
 shell_theme_accent=#1A2028
-shortcuts_selected_category=fields
+shortcuts_selected_category=cat_1777196053431
 
 [Capture]
 upload_endpoint=https://0x0.st
@@ -66,23 +69,26 @@ bridge_port=8797
 enabled=1
 api_endpoint=https://ark.cn-beijing.volces.com/api/v3/responses
 api_key=
-api_key_protected=01000000d08c9ddf0115d1118c7a00c04fc297eb010000007c417113af00a045a8069541cc3a5637000000000200000000001066000000010000200000006c67763d40aee608644b1df5186258fe80dbc679b8c7ee79b6ecb9bab081d4a1000000000e80000000020000200000004d737b6d16cf51a9eddc623e373898d11e560019f0025ac8e98ae348193bc709e001000032841ca635fdab39d3ffeb85c811f3c31ee6ab541d2fadf6657590a7936d283c531a579dd421c37fb14eede9bbdd798bccfc01d52d84483ba1cbc40fc5e486116c41e39b6f7bce915d991851c65e9627221dbe3349dc581cd1e38cb041ec3fa6dc8ae2691f47b04cf85df9286ecdca900701a3653883e1734c79826cbfb6980dd0855395776ef3bd175bf2f1cb23ebf673d832810e7bfb16085ecd0e3ec784ff9eae7aafddaf1aa31ca9d0aa48aa25fd0cc1edbd05dc15a1375b3efeeed7f3f4d24d9c212eca76afee1f28d9dea30cfde7e9719d44269858002222edb136b55056fe470c9e4b7261be293b3f5a3443744d5c90773239073cee3fe3801f0fd3b7c769afa6ece136c7e2733c1781528c84c30d6f13959fdfe8697ac4ec171840d777afa976e79dbdae6f0c223ce3306f6cc35e72f09ebd268a92dda64ea42d574777914c9d67f592c05df0d9597997ddade516a6d8f32cb187286b68f698dae95f5ac2d6e02f3121517fc8b3dad4c837a11cccf9af79d72b9701793103ad1e778a297c3afc2f6267c42e3372747ce07bb572d3aa80a31678e157fb72118a362c79b9ec337d517be1d5df1dbebd58d31b2b5d14a7729471db36720228374ce7eb9a4218dd95a820439c987a1fb8c5264c2c7ef671d7b1dae132b5d37e89e4df27d540000000a7cc26c3fb65d1261a9627ca585b0258c58c52b0e48f2ddcb552de9356d833361e5ba0e1de9d4b9547d633009e5d605103497c685ff756566e28597efd4258d8
+api_key_protected=01000000d08c9ddf0115d1118c7a00c04fc297eb010000007c417113af00a045a8069541cc3a5637000000000200000000001066000000010000200000008cc0daf039e2a0003bdaf2c351867cccddc377d0e6bf8d958b52c0c471b02f50000000000e800000000200002000000068a62337eee2168d012b653e06dd1860b21658d30378f49aef455a56cc762bad200200000978c679b8d92d66df7f6639760a48a7bb1a2837ccb0b074be1d7804ae607bba955efb515cde0e0ba5df1a1cf7812bb4cfb9fce7a52a64457ac808e842f04b783f582bc324e8e4d035d6b4ade699bd1cb5c14a31300737cce290e51916281b547c64dae5bfe80e2fa2dd9b218613d6838ea8ce160cd2583c5701b6b9624729629997c26922fbf3d4bcbdae8c48f4c2597f7dd729c010c8352ab8f4055288931cb9da7fe8657001c607e2a73ac0f319ac2653852aad3b7fea722bf956da860fd89159a62d35915ad77656f72c36ac1b8c084b049bd6b392c6a7193917b6faa94d8dc739528e9faf5f9a54482978adbcbb3853df9adb1417e50effdbe700be553e5a3b86e957a4faacf8a0646b72f966b27fd3caa138fcf08b79193a5fe0165fae7f605752339b8992098e5d5c4fc887a659d8446dbdc480d439eb67b819b82784ab7a477c525258212e39d9902d8deefffe2ca2d6f0fb9b5d731eb235d67a27dd8825ffad0aac53b7b5805420736b222373c48d22c9216cb7bf5f6c81f129d41e0e0648cbc78f2b44148b1ab4639758809461707d03413fa667843b95d983eca0861294ac3623a9b3afb99e199fd3aa27e4d7b49e8fc2aaa8746249485c89234c63c715e9fcd0f308c0af5ff1d90d199e1bca3d656eab16c94172c87e16a91026f52bb03c435381ecb59687435da2db5140e647c4384f75b12f06cd4afbc96128982feecfc26fbc66767172486fda7b760f46bd657517b7b82205f2dfc3e519b14000000010e81b6f0e2197fabe473e3ba03b81a1d430c8f2755db906691d9bc984468c3cde4e884627a841acd9793fd250a9887611eaa86b33ab4afe379881346f8889ba
 deepseek_api_key=
-deepseek_api_key_protected=01000000d08c9ddf0115d1118c7a00c04fc297eb010000007c417113af00a045a8069541cc3a5637000000000200000000001066000000010000200000001323b59fe782c5f9fb34b2d2a287bee1b65146b538b387c6d42aca8f0f225530000000000e80000000020000200000001df958f7576dd3dece139c95dc96d899fbc1c3468cb1cc35a373641fadd04e4a800000009cbc49f83890697aa48116014e78ed94d608001f373f3d2ae93756b5dceb871c205724c5ccf74813fb9401a6064022e855028d2a2a1f1db986f4681320073c7c7c5d7f65da26b73d38fd2e03a1d740787968841d041d5c980bb4f1b86fee4b9f05eb00acbad58c2ccf497958e0fa8f2cdc49d8242eb2157a0419c4c56b62e746400000005c507f419ce5b6597a9a2fc44fed65ca330662986c3eaf8b48c6ea7678ad576b4c90dcf9253b0dc7370c85057a1b72709a8cfb0e0bdbe6e886119f7f9dbad0f4
-model=doubao-seed-2-0-pro-260215
+deepseek_api_key_protected=01000000d08c9ddf0115d1118c7a00c04fc297eb010000007c417113af00a045a8069541cc3a5637000000000200000000001066000000010000200000004583cc8b43a116edf1efdf0e0dc938d56ce7138fec91ba46d055ad445c74f1ad000000000e80000000020000200000004a8349ad37c28ed84958076f9382059441a4b5b980861e16a6a6e326077167e7c0000000675f88abe5b7bdb1394ae08a138a0a23d9373ceffc098c10474e9e85bb5e14a1b3f046566eb484160cdb05ae6d51d58d5e8f578b7d28e7ea76a9dee6df1b17b772e35b4928ed4483bf15f8993ea18201ca410f466eb400df42d8386e378bf6a964eb0efbb7bbaeab8bba3f85ee4d099101681cc54b8dc04939b19acf50d3f805a4f999cdb15573a4e8e85d5bd760ec59a506c991cadbc21577fe93f7e159a4a09420b7378fa77a5530b9a218e8f4921b37333c51f2cf96630a8488e0d9c5f771400000005fe0bf49a6ad81811f5183471d793fe4dc24e1afa79400009c28bf90fa5c4b3d6595b48c1d8cce9640662444fc87d81d1df8a683501bd1aa6b87c776c4b070fe
+model=doubao-seed-2-0-mini-260215
 active_template=面试
-prompt=我是大厂的面试官，你是面试者应届生身份。下面是我的问题，你需要用口语，条理清晰的表达自己的观点，具有强逻辑性。
+prompt=你现在是一名大厂 Java 面试官，我是一名应届 Java 后端求职者。\n\n我会输入面试题，你需要模拟候选人进行回答。\n\n回答要求：\n1. 使用口语化表达，像真人面试回答，不要像背书或写文章。\n2. 回答逻辑必须清晰，默认按照以下结构组织：\n   - 第一句：先解释核心概念（是什么）\n   - 第二部分：解释底层原理或核心机制（为什么）\n   - 第三部分：说明优点、缺点或使用场景（有什么用）\n   - 第四部分：如果适合，可以补充项目中或框架中的实际应用（怎么用）\n3. 每段控制在 1~3 句话，整体有停顿感，方便真实口述。\n4. 优先使用大厂 Java 面试高频术语，例如：JVM、类加载、AOP、IOC、反射、代理模式、线程安全、CAS、锁升级、索引失效、事务传播、缓存穿透等。\n5. 回答内容既要完整，也不能过长。应届生题目控制在 40 秒到 90 秒内可以说完。\n6. 不要使用书面连接词，例如“首先其次最后综上所述”，改成更自然表达，例如“本质上”“其实”“另外”“还有一个点”。\n7. 如果题目涉及源码、底层原理或高并发场景，要适当深入，体现中高级潜力。\n\n下面开始，我输入问题，你直接输出答案。
+personal_profile=求职方向：应届 Java 后端开发，目标偏大厂 / 高并发 / 分布式 / 中后台方向。 当前身份：有后端实习与项目经历的应届生，偏 Java 后端核心链路开发。 技术栈： - Spring Boot、MyBatis、MySQL、Redis、RabbitMQ、Nginx、JVM、Lua - WebFlux、LangChain4j、RAG、MCP - 熟悉 HTML / CSS / JS - 了解 Docker、MongoDB / NoSQL、AWS、Spring Boot 微服务 实习经历： - 2025/04-2025/08 在 Wikicampers 担任 Java 后端开发实习生 - 做过查询能力规范化，支持状态 / 日期区间 / 更新时间 / 用户视角过滤，补齐参数校验与 Postman 文档 - 做过接口校验与错误码标准化，通过 @ControllerAdvice 统一异常映射与错误码返回 - 补过 Backoffice 关键链路门禁，覆盖列表、修改、日期冲突三类场景，整理 10-15 条 Postman 验证清单并接入发版流程 - 做过性能优化，参与 SQL 改写、索引优化、N+1 修复、Micrometer 指标补充、traceId 结构化日志追踪和审计信息补充 项目经历 1：高并发本地生活服务平台（2025/11-2026/03） - 负责 Java 后端核心开发，基于 Spring Boot 构建本地生活服务平台，覆盖店铺检索、登录风控、评论异步化、秒杀系统等模块 - 重点参与秒杀系统核心链路设计与实现，做过 Redis 三层幂等、Lua 原子判重、MQ 消费幂等校验、数据库唯一索引兜底，构建重复下单、冲突防重、最终一致性闭环 - 做过消费者失败规律分析、重试策略优化、故障注入、主从切换 / 网络抖动场景模拟 - 排查过频繁 Full GC、接口卡顿等问题，并通过 GC 日志分析、垃圾回收器调整、堆内存调优完成性能优化 项目经历 2：AI 志愿咨询服务系统（2025/07-2025/09） - 基于 Spring Boot、LangChain4j、Redis、RAG、WebFlux、MCP、MySQL，为高考考生提供志愿填报智能问答、预约咨询、录取信息查询等服务 - 做过 LangChain4j + OpenAI 大模型集成，结合 WebFlux 做流式聊天响应 - 做过 PDF 志愿指南 RAG 问答，结合 Redis 提升检索效率 - 做过 Redis 会话记忆持久化与用户隔离 - 优化过 MCP 上下文管理与工具调度流程 语言与综合能力： - 英语 TOEIC 890 - 法语 TCF B2 - 有 3 年留法经历 - 有硬件安装、故障定义、全链路项目经验 - 有 10+ 不同项目经历，擅长跨组织沟通协作与资源整合 回答偏好： - 回答更像真实候选人口述 - 重点突出后端核心链路、幂等、分布式一致性、异常治理、性能优化、可观测性、MQ、Redis、JVM 调优、RAG / AI 工程落地 - 如果题目能结合项目，优先结合以上实习和项目经历展开
 overlay_opacity=75
 overlay_ball_color=#111111
 enhanced_capture_mode=1
 disable_copy=1
 rate_limit_enabled=1
 rate_limit_per_hour=100
+voice_context_enabled=0
+voice_context_rounds=3
 
 [AssistantTemplates]
 default_template=编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。
 AI一面=编程题：直接给完整可运行代码，并在代码框中输出；随后对核心思路做简短说明。 选择题：先写15字以内题目总结，再直接给答案，不要分析过程。
-面试=我是大厂的面试官，你是面试者应届生身份。下面是我的问题，你需要用口语，条理清晰的表达自己的观点，具有强逻辑性。
+面试=你现在是一名大厂 Java 面试官，我是一名应届 Java 后端求职者。\n\n我会输入面试题，你需要模拟候选人进行回答。\n\n回答要求：\n1. 使用口语化表达，像真人面试回答，不要像背书或写文章。\n2. 回答逻辑必须清晰，默认按照以下结构组织：\n   - 第一句：先解释核心概念（是什么）\n   - 第二部分：解释底层原理或核心机制（为什么）\n   - 第三部分：说明优点、缺点或使用场景（有什么用）\n   - 第四部分：如果适合，可以补充项目中或框架中的实际应用（怎么用）\n3. 每段控制在 1~3 句话，整体有停顿感，方便真实口述。\n4. 优先使用大厂 Java 面试高频术语，例如：JVM、类加载、AOP、IOC、反射、代理模式、线程安全、CAS、锁升级、索引失效、事务传播、缓存穿透等。\n5. 回答内容既要完整，也不能过长。应届生题目控制在 40 秒到 90 秒内可以说完。\n6. 不要使用书面连接词，例如“首先其次最后综上所述”，改成更自然表达，例如“本质上”“其实”“另外”“还有一个点”。\n7. 如果题目涉及源码、底层原理或高并发场景，要适当深入，体现中高级潜力。\n\n下面开始，我输入问题，你直接输出答案。
 
 [Behavior]
 auto_refresh_enabled=1

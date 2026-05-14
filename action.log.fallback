@@ -1,0 +1,7 @@
+﻿2026-05-13 17:55:38 | assistant_overlay_protect_rearm | mode=WDA_EXCLUDEFROMCAPTURE reason=pre_show
+2026-05-13 17:55:39 | assistant_overlay_protect_enabled | mode=WDA_EXCLUDEFROMCAPTURE
+2026-05-13 17:55:40 | assistant_voice_service_prewarm_start | force=0
+2026-05-13 17:55:39 | assistant_voice_service_prewarm_start | force=1
+2026-05-13 17:55:41 | assistant_overlay_open | source=manual
+2026-05-13 17:55:41 | assistant_voice_service_prewarm_start | force=0
+2026-05-13 17:55:41 | assistant_overlay_protect_rearm | mode=WDA_EXCLUDEFROMCAPTURE reason=pre_show

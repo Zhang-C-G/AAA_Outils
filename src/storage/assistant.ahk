@@ -4,6 +4,60 @@ GetAssistantDefaultPrompt() {
     return "编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。"
 }
 
+EncodeAssistantIniMultiline(text) {
+    value := "" text
+    value := StrReplace(value, "\", "\\")
+    value := StrReplace(value, "`r`n", "\n")
+    value := StrReplace(value, "`r", "\n")
+    value := StrReplace(value, "`n", "\n")
+    return value
+}
+
+DecodeAssistantIniMultiline(text) {
+    value := "" text
+    value := StrReplace(value, "\\", Chr(1))
+    value := StrReplace(value, "\n", "`n")
+    value := StrReplace(value, Chr(1), "\")
+    return value
+}
+
+ClampAssistantVoiceContextRounds(rounds) {
+    try val := Integer(rounds)
+    catch
+        val := 3
+    if (val < 1) {
+        return 1
+    }
+    if (val > 10) {
+        return 10
+    }
+    return val
+}
+
+GetAssistantPersonalProfile(settings) {
+    try {
+        if settings.Has("personal_profile") {
+            return Trim(settings["personal_profile"])
+        }
+    }
+    return ""
+}
+
+BuildAssistantInstruction(promptText, settings) {
+    prompt := Trim(promptText)
+    if (prompt = "") {
+        prompt := GetAssistantDefaultPrompt()
+    }
+    profile := GetAssistantPersonalProfile(settings)
+    if (profile = "") {
+        return prompt
+    }
+    return "请先理解下面这段提问者背景信息，并在回答时优先结合这些背景；如果当前问题与背景无关，不要生硬套用。`n`n提问者背景：`n"
+        . profile
+        . "`n`n本次回答要求：`n"
+        . prompt
+}
+
 GetAssistantDefaultTemplates() {
     return [Map("name", "default_template", "prompt", GetAssistantDefaultPrompt())]
 }
@@ -164,6 +218,7 @@ GetAssistantDefaultSettings() {
         "voice_model_enabled", 0,
         "model", "doubao-seed-2-0-lite-260215",
         "prompt", GetAssistantDefaultPrompt(),
+        "personal_profile", "",
         "active_template", "default_template",
         "templates", GetAssistantDefaultTemplates(),
         "overlay_opacity", 75,
@@ -171,6 +226,8 @@ GetAssistantDefaultSettings() {
         "enhanced_capture_mode", 0,
         "disable_copy", 1,
         "voice_input_enabled", 0,
+        "voice_context_enabled", 0,
+        "voice_context_rounds", 3,
         "voice_input_device_id", "",
         "rate_limit_enabled", 1,
         "rate_limit_per_hour", 100,
@@ -422,9 +479,12 @@ LoadAssistantSettings() {
                     settings["model"] := value
                 }
             case "prompt":
+                value := DecodeAssistantIniMultiline(value)
                 if (value != "" && !IsAssistantPromptBroken(value)) {
                     settings["prompt"] := value
                 }
+            case "personal_profile":
+                settings["personal_profile"] := DecodeAssistantIniMultiline(value)
             case "active_template":
                 settings["active_template"] := value
             case "overlay_opacity":
@@ -439,6 +499,12 @@ LoadAssistantSettings() {
                 settings["disable_copy"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
             case "voice_input_enabled":
                 settings["voice_input_enabled"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
+            case "voice_context_enabled":
+                settings["voice_context_enabled"] := (value = "1" || StrLower(value) = "true") ? 1 : 0
+            case "voice_context_rounds":
+                if RegExMatch(value, "^\d+$") {
+                    settings["voice_context_rounds"] := ClampAssistantVoiceContextRounds(Integer(value))
+                }
             case "voice_input_device_id":
                 settings["voice_input_device_id"] := value
             case "rate_limit_enabled":
@@ -500,7 +566,7 @@ LoadAssistantSettings() {
         templates := []
         for row in tmplRows {
             name := Trim(row["key"])
-            prompt := Trim(row["value"])
+            prompt := Trim(DecodeAssistantIniMultiline(row["value"]))
             if (name = "") {
                 continue
             }
@@ -521,6 +587,8 @@ LoadAssistantSettings() {
     settings["voice_model"] := GetAssistantVoiceModelId(settings)
     settings["voice_model_enabled"] := settings.Has("voice_model_enabled") ? (settings["voice_model_enabled"] ? 1 : 0) : 0
     settings["voice_input_enabled"] := settings.Has("voice_input_enabled") ? (settings["voice_input_enabled"] ? 1 : 0) : 0
+    settings["voice_context_enabled"] := settings.Has("voice_context_enabled") ? (settings["voice_context_enabled"] ? 1 : 0) : 0
+    settings["voice_context_rounds"] := ClampAssistantVoiceContextRounds(settings.Has("voice_context_rounds") ? settings["voice_context_rounds"] : 3)
     settings["voice_input_device_id"] := settings.Has("voice_input_device_id") ? Trim(settings["voice_input_device_id"]) : ""
     settings["voice_input_provider"] := GetAssistantVoiceInputProvider(settings)
     settings["rate_limit_per_hour"] := ClampAssistantRatePerHour(settings["rate_limit_per_hour"])
@@ -578,6 +646,7 @@ RequestAssistantAnswerFromImageLegacy(imagePath, settings, onProgress := "") {
         prompt := GetAssistantDefaultPrompt()
     }
 
+    prompt := BuildAssistantInstruction(prompt, settings)
     prompt := StrReplace(StrReplace(prompt, "`r", " "), "`n", " ")
 
     script := "$ErrorActionPreference='Stop'`n"
@@ -599,7 +668,7 @@ RequestAssistantAnswerFromImageLegacy(imagePath, settings, onProgress := "") {
         . "  if(`$isResponses){`n"
         . "    `$body=[ordered]@{`n"
         . "      model=`$model;`n"
-        . "      input=@([ordered]@{role='user';content=@([ordered]@{type='input_image';image_url=`$imgUrl},[ordered]@{type='input_text';text=`$prompt})})`n"
+        . "      input=@([ordered]@{role='user';content=@([ordered]@{type='input_text';text=`$prompt},[ordered]@{type='input_image';image_url=`$imgUrl})})`n"
         . "    }`n"
         . "  } else {`n"
         . "    `$body=[ordered]@{`n"
@@ -719,6 +788,7 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
         return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "stream requires responses endpoint")
     }
 
+    prompt := BuildAssistantInstruction(prompt, settings)
     prompt := StrReplace(StrReplace(prompt, "`r", " "), "`n", " ")
 
     script := "$ErrorActionPreference='Stop'`n"
@@ -776,7 +846,7 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
         . "  `$payload=[ordered]@{`n"
         . "    model=`$model;`n"
         . "    stream=`$true;`n"
-        . "    input=@([ordered]@{role='user';content=@([ordered]@{type='input_image';image_url=`$imgUrl},[ordered]@{type='input_text';text=`$prompt})})`n"
+        . "    input=@([ordered]@{role='user';content=@([ordered]@{type='input_text';text=`$prompt},[ordered]@{type='input_image';image_url=`$imgUrl})})`n"
         . "  }`n"
         . "  `$json=`$payload | ConvertTo-Json -Depth 30`n"
         . "  `$req=[System.Net.HttpWebRequest]::Create(`$ep)`n"
@@ -941,6 +1011,7 @@ RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
         return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "assistant text query is empty")
     }
 
+    prompt := BuildAssistantInstruction(prompt, settings)
     prompt := StrReplace(StrReplace(prompt, "`r", " "), "`n", " ")
     query := StrReplace(StrReplace(query, "`r", " "), "`n", " ")
 
@@ -1075,6 +1146,7 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
         return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "stream requires responses endpoint")
     }
 
+    prompt := BuildAssistantInstruction(prompt, settings)
     prompt := StrReplace(StrReplace(prompt, "`r", " "), "`n", " ")
     query := StrReplace(StrReplace(query, "`r", " "), "`n", " ")
 

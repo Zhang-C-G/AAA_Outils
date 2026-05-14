@@ -70,9 +70,11 @@ gAssistantVoiceServiceRetryAfterTick := 0
 gAssistantVoiceServiceLastError := ""
 gAssistantVoiceFinalizing := false
 gAssistantVoiceRestartPending := false
+gAssistantVoiceRestartGraceUntilTick := 0
 gAssistantVoiceSessionStartTick := 0
 gAssistantVoiceReleaseTick := 0
 gAssistantVoiceSessionId := ""
+gAssistantVoiceAnalysisHistory := []
 
 ReadAssistantVoiceStatusSnapshot(statusPath) {
     snap := Map("stage", "", "detail", "", "metrics", Map())
@@ -121,6 +123,75 @@ BuildAssistantVoiceMetricsJson(metrics) {
         }
     }
     return "{" StrJoin(parts, ",") "}"
+}
+
+ClearAssistantVoiceAnalysisHistory() {
+    global gAssistantVoiceAnalysisHistory
+    gAssistantVoiceAnalysisHistory := []
+}
+
+ShouldAssistantVoiceContextBeUsed() {
+    global gAssistantSettings
+    return IsObject(gAssistantSettings)
+        && gAssistantSettings.Has("voice_context_enabled")
+        && gAssistantSettings["voice_context_enabled"] != 0
+}
+
+BuildAssistantVoiceContextQuery(queryText) {
+    global gAssistantSettings, gAssistantVoiceAnalysisHistory
+    query := Trim(queryText)
+    if (query = "") {
+        return ""
+    }
+    if !ShouldAssistantVoiceContextBeUsed() {
+        ClearAssistantVoiceAnalysisHistory()
+        return query
+    }
+    rounds := gAssistantSettings.Has("voice_context_rounds") ? ClampAssistantVoiceContextRounds(gAssistantSettings["voice_context_rounds"]) : 3
+    if !IsObject(gAssistantVoiceAnalysisHistory) || gAssistantVoiceAnalysisHistory.Length = 0 {
+        return query
+    }
+    startIdx := Max(1, gAssistantVoiceAnalysisHistory.Length - rounds + 1)
+    context := "以下是最近几轮 F3 语音自动问答上下文，请结合连续语境回答；如果和当前问题无关，请忽略这些历史。"
+    seq := 1
+    loop gAssistantVoiceAnalysisHistory.Length - startIdx + 1 {
+        item := gAssistantVoiceAnalysisHistory[startIdx + A_Index - 1]
+        userText := item.Has("query") ? Trim(item["query"]) : ""
+        answerText := item.Has("answer") ? Trim(item["answer"]) : ""
+        if (userText = "" && answerText = "") {
+            continue
+        }
+        context .= "`n`n第" seq "轮`n用户：" userText
+        if (answerText != "") {
+            context .= "`n助手：" answerText
+        }
+        seq += 1
+    }
+    if (seq = 1) {
+        return query
+    }
+    return context . "`n`n当前这一轮 F3 语音内容：`n" . query
+}
+
+RememberAssistantVoiceAnalysisRound(queryText, answerText) {
+    global gAssistantSettings, gAssistantVoiceAnalysisHistory
+    if !ShouldAssistantVoiceContextBeUsed() {
+        ClearAssistantVoiceAnalysisHistory()
+        return
+    }
+    query := Trim(queryText)
+    answer := Trim(answerText)
+    if (query = "" || answer = "") {
+        return
+    }
+    if !IsObject(gAssistantVoiceAnalysisHistory) {
+        gAssistantVoiceAnalysisHistory := []
+    }
+    gAssistantVoiceAnalysisHistory.Push(Map("query", query, "answer", answer))
+    keep := gAssistantSettings.Has("voice_context_rounds") ? ClampAssistantVoiceContextRounds(gAssistantSettings["voice_context_rounds"]) : 3
+    while (gAssistantVoiceAnalysisHistory.Length > keep) {
+        gAssistantVoiceAnalysisHistory.RemoveAt(1)
+    }
 }
 
 MergeAssistantVoiceMetrics(baseMetrics, incomingMetrics) {
@@ -179,11 +250,36 @@ IsAssistantVoiceServiceAlive(service) {
         return false
     }
     try {
+        launchTick := service.Has("launch_tick") ? service["launch_tick"] : 0
         pid := service.Has("pid") ? service["pid"] : 0
+        if (!(pid > 0) && service.Has("pid_path") && FileExist(service["pid_path"])) {
+            try {
+                pidText := Trim(FileRead(service["pid_path"], "UTF-8"))
+                if RegExMatch(pidText, "^\d+$") {
+                    pid := Integer(pidText)
+                    service["pid"] := pid
+                }
+            }
+        }
         if !(pid > 0) {
+            if (launchTick > 0 && (A_TickCount - launchTick) < 15000) {
+                stage := ""
+                if service.Has("status_path") && FileExist(service["status_path"]) {
+                    try {
+                        statusText := FileRead(service["status_path"], "UTF-8")
+                        if RegExMatch(statusText, "m)^stage=(.+)$", &m) {
+                            stage := Trim(m[1])
+                        }
+                    }
+                }
+                return (stage != "closed" && stage != "failed")
+            }
             return false
         }
         if !ProcessExist(pid) {
+            if (launchTick > 0 && (A_TickCount - launchTick) < 15000) {
+                return true
+            }
             return false
         }
         return service.Has("command_path") && Trim(service["command_path"]) != ""
@@ -203,9 +299,6 @@ ReadAssistantVoiceServiceState(service) {
         return state
     }
     state["alive"] := IsAssistantVoiceServiceAlive(service)
-    if !state["alive"] {
-        return state
-    }
     statusPath := service.Has("status_path") ? service["status_path"] : ""
     if (statusPath != "" && FileExist(statusPath)) {
         try {
@@ -255,6 +348,14 @@ WaitForAssistantVoiceServiceReady(session, timeoutMs := 2200) {
         Sleep(50)
     }
     return false
+}
+
+CanAssistantVoiceServiceAcceptStart(state) {
+    if !IsObject(state) {
+        return false
+    }
+    stage := state.Has("stage") ? state["stage"] : ""
+    return state["alive"] && (stage = "ready" || stage = "completed")
 }
 
 BuildAssistantVoiceIdleSummary() {
@@ -499,10 +600,14 @@ AssistantVoiceServiceWatchTick(*) {
     if gAssistantVoiceInputActive || gAssistantVoiceInputStarting {
         return
     }
-    if !IsObject(gAssistantVoiceService) || !IsAssistantVoiceServiceAlive(gAssistantVoiceService) {
+    if !IsObject(gAssistantVoiceService) {
         PrimeAssistantVoiceService()
     }
     state := ReadAssistantVoiceServiceState(gAssistantVoiceService)
+    if (!state["alive"] && (state["stage"] = "failed" || state["stage"] = "closed")) {
+        PrimeAssistantVoiceService()
+        state := ReadAssistantVoiceServiceState(gAssistantVoiceService)
+    }
     if (state["stage"] = "failed" && state["error"] != "") {
         gAssistantVoiceServiceLastError := state["error"]
     }
@@ -1034,7 +1139,7 @@ StartAssistantCaptureFlow(showNotice := true) {
 }
 
 StartAssistantVoiceInputHold(showNotice := true) {
-    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceFinalizing, gAssistantVoiceRestartPending, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult, gAssistantVoiceTranscriptLastText, gAssistantVoiceStatusLastStage, gAssistantVoiceStatusLastDetail, gAssistantVoiceMetricLogState, gAssistantVoiceStartTick, gAssistantVoiceService, gAssistantVoiceServiceLastError, gAssistantVoiceSessionStartTick, gAssistantVoiceReleaseTick, gAssistantVoiceSessionId
+    global gAssistantSettings, gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceFinalizing, gAssistantVoiceRestartPending, gAssistantVoiceRestartGraceUntilTick, gAssistantVoiceSession, gAssistantOverlayInputSummary, gAssistantLastResult, gAssistantVoiceTranscriptLastText, gAssistantVoiceStatusLastStage, gAssistantVoiceStatusLastDetail, gAssistantVoiceMetricLogState, gAssistantVoiceStartTick, gAssistantVoiceService, gAssistantVoiceServiceLastError, gAssistantVoiceSessionStartTick, gAssistantVoiceReleaseTick, gAssistantVoiceSessionId
 
     if gAssistantVoiceInputActive || gAssistantVoiceInputStarting {
         return Map("ok", 1, "error", "")
@@ -1076,14 +1181,15 @@ StartAssistantVoiceInputHold(showNotice := true) {
     gAssistantOverlayInputSummary := ""
     providerLabel := GetAssistantVoiceProviderLabel(gAssistantSettings)
     gAssistantVoiceStartTick := A_TickCount
+    restartGraceActive := (A_TickCount < gAssistantVoiceRestartGraceUntilTick)
     session := ""
     provider := GetAssistantVoiceInputProvider(gAssistantSettings)
     preflightError := GetAssistantVoicePreflightError(gAssistantSettings)
     if (preflightError != "") {
         gAssistantVoiceInputStarting := false
         gAssistantVoiceServiceLastError := preflightError
-        SetAssistantOverlayText("需要到API中心补齐讯飞配置")
-        UpdateAssistantOverlayStatus("状态：需要到API中心补齐讯飞配置 | 识别：" providerLabel)
+        SetAssistantOverlayText(preflightError)
+        UpdateAssistantOverlayStatus("状态：讯飞配置缺失 | 识别：" providerLabel)
         WriteLog("assistant_voice_input_start_failed", "error=" preflightError)
         if showNotice {
             MsgBox(preflightError)
@@ -1091,10 +1197,6 @@ StartAssistantVoiceInputHold(showNotice := true) {
         return Map("ok", 0, "error", preflightError)
     }
     if (provider = "xunfei_websocket_asr") {
-        if IsObject(gAssistantVoiceService) && !IsAssistantVoiceServiceAlive(gAssistantVoiceService) {
-            try ShutdownAssistantVoiceService(gAssistantVoiceService)
-            gAssistantVoiceService := ""
-        }
         if !IsObject(gAssistantVoiceService) {
             if !PrimeAssistantVoiceService(true) {
                 session := Map("ok", 0, "error", "voice service prewarm failed")
@@ -1103,14 +1205,16 @@ StartAssistantVoiceInputHold(showNotice := true) {
         if !IsObject(session) {
             session := gAssistantVoiceService
             UpdateAssistantOverlayStatus("状态：正在确认语音待命 | 识别：" providerLabel)
-            if !WaitForAssistantVoiceServiceReady(session, 2200) {
+            state := ReadAssistantVoiceServiceState(session)
+            serviceAcceptsStart := CanAssistantVoiceServiceAcceptStart(state)
+            if (!serviceAcceptsStart && !WaitForAssistantVoiceServiceReady(session, restartGraceActive ? 5000 : 2200)) {
                 try ShutdownAssistantVoiceService(session)
                 gAssistantVoiceService := ""
                 if !PrimeAssistantVoiceService(true) {
                     session := Map("ok", 0, "error", "voice service is not ready")
                 } else {
                     session := gAssistantVoiceService
-                    if !WaitForAssistantVoiceServiceReady(session, 2600) {
+                    if !WaitForAssistantVoiceServiceReady(session, restartGraceActive ? 6500 : 2600) {
                         session := Map("ok", 0, "error", "voice service did not become ready")
                     }
                 }
@@ -1178,6 +1282,7 @@ StartAssistantVoiceInputHold(showNotice := true) {
     gAssistantVoiceSessionStartTick := A_TickCount
     gAssistantVoiceReleaseTick := 0
     gAssistantVoiceSessionId := FormatTime(A_Now, "yyyyMMdd_HHmmss") "_" A_MSec "_" A_TickCount
+    gAssistantVoiceRestartGraceUntilTick := 0
     SetAssistantOverlayText("请开始说话...`n按住 F3 说话，松开后自动结束。`n`n实时转写会显示在这里。")
     UpdateAssistantOverlayStatus("状态：正在准备收音，请开始说话 | 识别：" providerLabel)
     StartAssistantVoiceTranscriptWatch()
@@ -1190,7 +1295,7 @@ StartAssistantVoiceInputHold(showNotice := true) {
 }
 
 StopAssistantVoiceInputHold(showNotice := true) {
-    global gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceFinalizing, gAssistantVoiceRestartPending, gAssistantVoiceSession, gAssistantSettings, gAssistantLastResult, gAssistantOverlayInputSummary, gAssistantVoiceTranscriptLastText, gAssistantVoiceMetricLogState, gAssistantVoiceStatusLastStage, gAssistantVoiceStatusLastDetail, gAssistantVoiceReleaseTick
+    global gAssistantVoiceInputActive, gAssistantVoiceInputStarting, gAssistantVoiceStopPending, gAssistantVoiceFinalizing, gAssistantVoiceRestartPending, gAssistantVoiceRestartGraceUntilTick, gAssistantVoiceSession, gAssistantSettings, gAssistantLastResult, gAssistantOverlayInputSummary, gAssistantVoiceTranscriptLastText, gAssistantVoiceMetricLogState, gAssistantVoiceStatusLastStage, gAssistantVoiceStatusLastDetail, gAssistantVoiceReleaseTick
     if gAssistantVoiceInputStarting && !gAssistantVoiceInputActive {
         gAssistantVoiceStopPending := true
         return Map("ok", 1, "error", "")
@@ -1244,6 +1349,7 @@ StopAssistantVoiceInputHold(showNotice := true) {
         RecordAssistantVoiceSessionSample(providerLabel, transcript, "cancelled_for_restart", "", gAssistantVoiceStatusLastStage, gAssistantVoiceStatusLastDetail)
         gAssistantVoiceFinalizing := false
         gAssistantVoiceRestartPending := false
+        gAssistantVoiceRestartGraceUntilTick := A_TickCount + 4500
         gAssistantOverlayInputSummary := ""
         gAssistantVoiceTranscriptLastText := ""
         SetAssistantOverlayText("已放弃上一轮语音。`n正在切到新一轮，请继续按住 F3 说话。")
@@ -1268,8 +1374,12 @@ StopAssistantVoiceInputHold(showNotice := true) {
     gAssistantOverlayInputSummary := transcript
     gAssistantLastResult := displayText
     SetAssistantOverlayText(displayText)
-    UpdateAssistantOverlayStatus("状态：语音识别完成，已整理出本次内容 | 识别：" providerLabel)
+    UpdateAssistantOverlayStatus("状态：语音识别完成，准备自动分析 | 识别：" providerLabel)
     WriteLog("assistant_voice_input_text", "chars=" StrLen(transcript))
+    analysisRes := StartAssistantTextQueryFlow(transcript, showNotice, "voice_auto_analysis")
+    if IsObject(analysisRes) && analysisRes.Has("ok") && analysisRes["ok"] {
+        return analysisRes
+    }
     return Map("ok", 1, "text", transcript, "error", "")
 }
 
@@ -1383,9 +1493,10 @@ AssistantVoiceTranscriptTick(*) {
     }
 }
 
-StartAssistantTextQueryFlow(queryText, showNotice := true) {
+StartAssistantTextQueryFlow(queryText, showNotice := true, source := "manual_text") {
     global gAssistantSettings, gAssistantLastResult, gAssistantOverlayVisible, gAssistantOverlayInputSummary
     query := Trim(queryText)
+    requestQuery := (source = "voice_auto_analysis") ? BuildAssistantVoiceContextQuery(query) : query
     flowStartTick := A_TickCount
     if (query = "") {
         return Map("ok", 0, "text", "", "error", "assistant text query is empty")
@@ -1418,7 +1529,7 @@ StartAssistantTextQueryFlow(queryText, showNotice := true) {
     progressCb := ""
     try progressCb := Func("OnAssistantThinkingProgress")
     try {
-        res := RequestAssistantAnswerFromText(query, gAssistantSettings, progressCb)
+        res := RequestAssistantAnswerFromText(requestQuery, gAssistantSettings, progressCb)
     } catch as err {
         res := Map("ok", 0, "text", "", "error", err.Message)
     }
@@ -1451,6 +1562,9 @@ StartAssistantTextQueryFlow(queryText, showNotice := true) {
     gAssistantLastResult := displayText
     SetAssistantOverlayText(displayText)
     UpdateAssistantOverlayStatus((res["streamed"] ? "状态：流式回答完成" : "状态：回答完成") "（总耗时：" totalElapsedSec "秒） | 模型：" modelLabel)
+    if (source = "voice_auto_analysis") {
+        RememberAssistantVoiceAnalysisRound(query, res["text"])
+    }
     WriteLog("assistant_text_answer_show", "chars=" StrLen(res["text"]) " streamed=" res["streamed"] " total_elapsed_sec=" totalElapsedSec)
     return res
 }

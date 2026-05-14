@@ -1,6 +1,6 @@
 # 改动计数与 Git 检查点规则
 
-最近同步：`2026-05-13`
+最近同步：`2026-05-14`
 状态：`active`
 
 ## 1. 目的
@@ -30,25 +30,25 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-13-latency-stability-suite`
+- 当前轮次：`2026-05-14-post-checkpoint-next-round`
 - 每 `3` 次改动强制 git：`是`
-- 当前连续改动次数：`2`
-- 下一次强制 git 阈值：`当前已累计 2 次有效改动；再完成 1 次并测试通过后，执行 checkpoint commit + push 到 origin/main`
-- 上一个 git 检查点：`checkpoint: stabilize F3 xunfei service restart flow`
+- 当前连续改动次数：`0`
+- 当前循环进度：`第 0 / 3 次有效改动`
+- 下一次强制 git 阈值：`从当前轮次起，再完成 3 次有效改动并测试通过后，执行下一次 checkpoint commit + push`
+- 上一个 git 检查点：`checkpoint: sync workspace updates and resume autofill analysis`
 - 最近一次已完成推送：
-  - 提交：`73e90ce`
-  - 目标：`origin/main`
-  - 结果：`push 成功`
+  - 提交：`本次 checkpoint 提交后见 git log`
+  - 目标：`当前分支推送到 origin`
+  - 结果：`本次已执行 push`
 - 当前计数说明：
-  - 第 `1` 次：新增 F3 延迟报告脚本与稳定性套件脚本，把启动延迟、讯飞首条文本基准、重启稳定性统一收束成自动化回归
-  - 第 `2` 次：完成语音功能文档收口，统一模块主文档、changelog、AI handoff 与文档总变更记录中的最终口径
-  - 当前状态：本轮正在进行，已累计 `2` 次有效改动
+  - 上一轮已完成 checkpoint，内容涵盖：F 模块简历资料回填、git 状态口径修正、携程投递页分析与教育经历结构优化
+  - 当前状态：已进入新一轮，计数从 `0` 重新开始
 
 ## 5. 维护方式
 
 每次改动后都要同步两件事：
 1. 在 `docs/CHANGE_ACTIVITY_LOG.md` 记录本轮改动内容与测试
-2. 更新本文中的连续改动计数与当前状态
+2. 更新本文中的连续改动计数、循环进度与当前状态
 
 ## 6. git 提交格式建议
 

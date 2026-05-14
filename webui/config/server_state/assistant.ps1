@@ -2,6 +2,55 @@
   return '编程题：直接给编程完整答案，代码写在代码框中，并对核心部分做简短解释。选择题：先写15字以内题目总结，再直接给答案。'
 }
 
+function Get-AssistantPersonalProfileText {
+  param($Settings)
+  return ([string](Get-Prop $Settings 'personal_profile' '')).Trim()
+}
+
+function Encode-AssistantIniMultiline {
+  param([string]$Text)
+
+  $value = [string]$Text
+  $value = $value.Replace('\', '\\')
+  $value = $value.Replace("`r`n", '\n')
+  $value = $value.Replace("`r", '\n')
+  $value = $value.Replace("`n", '\n')
+  return $value
+}
+
+function Decode-AssistantIniMultiline {
+  param([string]$Text)
+
+  $value = [string]$Text
+  $placeholder = [char]1
+  $value = $value.Replace('\\', [string]$placeholder)
+  $value = $value.Replace('\n', "`n")
+  $value = $value.Replace([string]$placeholder, '\')
+  return $value
+}
+
+function Build-AssistantInstruction {
+  param(
+    [string]$Prompt,
+    [string]$PersonalProfile
+  )
+
+  $promptText = ([string]$Prompt).Trim()
+  if ($promptText -eq '') { $promptText = Get-AssistantDefaultPrompt }
+  $profileText = ([string]$PersonalProfile).Trim()
+  if ($profileText -eq '') { return $promptText }
+
+  return @"
+请先理解下面这段提问者背景信息，并在回答时优先结合这些背景；如果当前问题与背景无关，不要生硬套用。
+
+提问者背景：
+$profileText
+
+本次回答要求：
+$promptText
+"@.Trim()
+}
+
 function Get-AssistantVoiceInputScriptPath {
   $moduleRoot = $PSScriptRoot
   if ([string]::IsNullOrWhiteSpace($moduleRoot)) {
@@ -123,6 +172,7 @@ function Get-AssistantDefaults {
     voice_model_enabled = 0
     model = (Resolve-AssistantModel -Requested 'doubao-seed-2-0-lite-260215')
     prompt = $prompt
+    personal_profile = ''
     active_template = 'default_template'
     templates = @([ordered]@{ name = 'default_template'; prompt = $prompt })
     overlay_opacity = 75
@@ -130,6 +180,8 @@ function Get-AssistantDefaults {
     enhanced_capture_mode = 0
     disable_copy = 1
     voice_input_enabled = 0
+    voice_context_enabled = 0
+    voice_context_rounds = 3
     voice_input_device_id = ''
     rate_limit_enabled = 1
     rate_limit_per_hour = 100
@@ -158,6 +210,13 @@ function Clamp-AssistantRatePerHour {
   $v = 100
   [int]::TryParse([string]$Limit, [ref]$v) | Out-Null
   return [Math]::Min(10000, [Math]::Max(1, $v))
+}
+
+function Clamp-AssistantVoiceContextRounds {
+  param($Rounds)
+  $v = 3
+  [int]::TryParse([string]$Rounds, [ref]$v) | Out-Null
+  return [Math]::Min(10, [Math]::Max(1, $v))
 }
 
 function Get-AssistantVoiceModelCatalog {
@@ -417,6 +476,8 @@ function Convert-ToAssistantSettings {
   $settings.enhanced_capture_mode = if ([string](Get-Prop $PayloadAssistant 'enhanced_capture_mode' (Get-Prop $Fallback 'enhanced_capture_mode' 0)) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $PayloadAssistant 'disable_copy' (Get-Prop $Fallback 'disable_copy' 1)) -eq '0') { 0 } else { 1 }
   $settings.voice_input_enabled = if ([string](Get-Prop $PayloadAssistant 'voice_input_enabled' (Get-Prop $Fallback 'voice_input_enabled' 0)) -eq '0') { 0 } else { 1 }
+  $settings.voice_context_enabled = if ([string](Get-Prop $PayloadAssistant 'voice_context_enabled' (Get-Prop $Fallback 'voice_context_enabled' 0)) -eq '0') { 0 } else { 1 }
+  $settings.voice_context_rounds = Clamp-AssistantVoiceContextRounds (Get-Prop $PayloadAssistant 'voice_context_rounds' (Get-Prop $Fallback 'voice_context_rounds' 3))
   $settings.voice_input_device_id = ([string](Get-Prop $PayloadAssistant 'voice_input_device_id' (Get-Prop $Fallback 'voice_input_device_id' ''))).Trim()
   $settings.rate_limit_enabled = if ([string](Get-Prop $PayloadAssistant 'rate_limit_enabled' (Get-Prop $Fallback 'rate_limit_enabled' 1)) -eq '0') { 0 } else { 1 }
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour (Get-Prop $PayloadAssistant 'rate_limit_per_hour' (Get-Prop $Fallback 'rate_limit_per_hour' 100))
@@ -435,6 +496,7 @@ function Convert-ToAssistantSettings {
   }
 
   $settings.prompt = ([string](Get-Prop $PayloadAssistant 'prompt' (Get-Prop $Fallback 'prompt' (Get-AssistantDefaultPrompt)))).Trim()
+  $settings.personal_profile = ([string](Get-Prop $PayloadAssistant 'personal_profile' (Get-Prop $Fallback 'personal_profile' ''))).Trim()
   Ensure-AssistantTemplates $settings
   return $settings
 }
@@ -510,8 +572,11 @@ function Get-AssistantSettings {
       if ($tmp) { $settings.model = (Resolve-AssistantModel -Requested $tmp -Fallback ([string]$settings.model)) }
     }
     if ($sec.Contains('prompt')) {
-      $tmp = ([string]$sec['prompt']).Trim()
+      $tmp = (Decode-AssistantIniMultiline ([string]$sec['prompt'])).Trim()
       if ($tmp -and -not (Test-AssistantPromptBroken $tmp)) { $settings.prompt = $tmp }
+    }
+    if ($sec.Contains('personal_profile')) {
+      $settings.personal_profile = (Decode-AssistantIniMultiline ([string]$sec['personal_profile'])).Trim()
     }
     if ($sec.Contains('active_template')) {
       $tmp = ([string]$sec['active_template']).Trim()
@@ -531,6 +596,12 @@ function Get-AssistantSettings {
     }
     if ($sec.Contains('voice_input_enabled')) {
       $settings.voice_input_enabled = if ([string]$sec['voice_input_enabled'] -eq '0') { 0 } else { 1 }
+    }
+    if ($sec.Contains('voice_context_enabled')) {
+      $settings.voice_context_enabled = if ([string]$sec['voice_context_enabled'] -eq '0') { 0 } else { 1 }
+    }
+    if ($sec.Contains('voice_context_rounds')) {
+      $settings.voice_context_rounds = Clamp-AssistantVoiceContextRounds $sec['voice_context_rounds']
     }
     if ($sec.Contains('voice_input_device_id')) {
       $settings.voice_input_device_id = ([string]$sec['voice_input_device_id']).Trim()
@@ -605,6 +676,8 @@ function Get-AssistantSettings {
   $settings.enhanced_capture_mode = if ([string](Get-Prop $settings 'enhanced_capture_mode' 0) -eq '0') { 0 } else { 1 }
   $settings.disable_copy = if ([string](Get-Prop $settings 'disable_copy' 1) -eq '0') { 0 } else { 1 }
   $settings.voice_input_enabled = if ([string](Get-Prop $settings 'voice_input_enabled' 0) -eq '0') { 0 } else { 1 }
+  $settings.voice_context_enabled = if ([string](Get-Prop $settings 'voice_context_enabled' 0) -eq '0') { 0 } else { 1 }
+  $settings.voice_context_rounds = Clamp-AssistantVoiceContextRounds (Get-Prop $settings 'voice_context_rounds' 3)
   $settings.voice_input_device_id = ([string](Get-Prop $settings 'voice_input_device_id' '')).Trim()
   $settings.rate_limit_per_hour = Clamp-AssistantRatePerHour $settings.rate_limit_per_hour
   return $settings
@@ -729,12 +802,15 @@ function Save-AssistantSettings {
   $ini['Assistant']['voice_model_enabled'] = [string]$settings.voice_model_enabled
   $ini['Assistant']['model'] = [string]$settings.model
   $ini['Assistant']['active_template'] = [string]$settings.active_template
-  $ini['Assistant']['prompt'] = ([string](Get-AssistantPromptByTemplate -Settings $settings) -replace '[\r\n]+', ' ')
+  $ini['Assistant']['prompt'] = (Encode-AssistantIniMultiline ([string](Get-AssistantPromptByTemplate -Settings $settings)))
+  $ini['Assistant']['personal_profile'] = (Encode-AssistantIniMultiline ([string](Get-AssistantPersonalProfileText -Settings $settings)))
   $ini['Assistant']['overlay_opacity'] = [string]$settings.overlay_opacity
   $ini['Assistant']['overlay_ball_color'] = [string]$settings.overlay_ball_color
   $ini['Assistant']['enhanced_capture_mode'] = [string]$settings.enhanced_capture_mode
   $ini['Assistant']['disable_copy'] = [string]$settings.disable_copy
   $ini['Assistant']['voice_input_enabled'] = [string]$settings.voice_input_enabled
+  $ini['Assistant']['voice_context_enabled'] = [string]$settings.voice_context_enabled
+  $ini['Assistant']['voice_context_rounds'] = [string]$settings.voice_context_rounds
   $ini['Assistant']['voice_input_device_id'] = [string]$settings.voice_input_device_id
   $ini['Assistant']['rate_limit_enabled'] = [string]$settings.rate_limit_enabled
   $ini['Assistant']['rate_limit_per_hour'] = [string]$settings.rate_limit_per_hour
@@ -746,7 +822,7 @@ function Save-AssistantSettings {
     if ($name -eq '') { continue }
     $prompt = ([string](Get-Prop $t 'prompt' '')).Trim()
     if ($prompt -eq '' -or (Test-AssistantPromptBroken $prompt)) { $prompt = Get-AssistantDefaultPrompt }
-    $ini['AssistantTemplates'][$name] = ($prompt -replace '[\r\n]+', ' ')
+    $ini['AssistantTemplates'][$name] = (Encode-AssistantIniMultiline $prompt)
   }
 
   Write-Ini $ini

@@ -25,6 +25,24 @@ async function loadProfile() {
   return payload;
 }
 
+function logStrategyDetails(items) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) {
+    log('站点策略：本页未命中专用策略，已只走通用填表。');
+    return;
+  }
+
+  list.forEach((item) => {
+    log(`站点策略：${item.label || item.id}，专用动作命中 ${item.filled || 0} 项`);
+    for (const note of item.notes || []) {
+      log(`  - ${note}`);
+    }
+    for (const action of item.actions || []) {
+      log(`  - action: ${action}`);
+    }
+  });
+}
+
 document.getElementById('loadBtn').onclick = async () => {
   try {
     const payload = await loadProfile();
@@ -32,7 +50,7 @@ document.getElementById('loadBtn').onclick = async () => {
     const itemCount = Object.keys(payload.flat_map || {}).length;
     log(`已读取本地简历：sections=${sectionCount} flat_keys=${itemCount}`);
   } catch (e) {
-    log(`读取失败：${e.message}`);
+    log(`读取失败: ${e.message}`);
   }
 };
 
@@ -48,8 +66,15 @@ document.getElementById('fillBtn').onclick = async () => {
       profile: payload.profile,
       flatMap: payload.flat_map
     });
-    log(`自动填写完成：${response?.filled || 0} 项`);
+    if (!response?.ok) {
+      throw new Error(response?.error || 'resume fill failed');
+    }
+
+    log(`自动填表完成：总命中 ${response.filled || 0} 项`);
+    log(`  - 站点策略命中：${response.strategyFilled || 0} 项`);
+    log(`  - 通用回退命中：${response.genericFilled || 0} 项`);
+    logStrategyDetails(response.matchedStrategies);
   } catch (e) {
-    log(`自动填写失败：${e.message}`);
+    log(`自动填表失败: ${e.message}`);
   }
 };
