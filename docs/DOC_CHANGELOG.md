@@ -89,4 +89,7 @@ Track documentation-only updates.
 - Refined the wording for `新配置项接入` in `docs/USER_DOC_SYSTEM_GUIDE.md`: even when the feature is not named as a module, it should still be built with the same modular, phase-based workflow.
 - Expanded the `新模块` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` to include the stage-one checklist, the criteria for entering stage two, the blockers for stage transition, and the stage-two completion requirements.
 - Reformatted the `新模块` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` from long descriptive lines into shorter grouped checklist branches for stage one and stage two.
+- Added the missing preference-doc requirement back into the stage-one branch of `新模块` in `docs/USER_DOC_SYSTEM_GUIDE.md`, including UI-structure, control-style, and interaction-skeleton checks.
+- Reformatted the `bug 修复` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` into shorter checklist-like branches while preserving the incident workflow and archive rules.
+- Shortened the `新配置项接入` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` and renamed the generic phase gateway to `一旦已判断出阶段` to clarify that it is a shared stage-rule hub rather than a duplicate classifier.
 - Documented the install-guide reliability fix for module 11: extension-path detection now probes multiple repo anchors, folder opening goes through `explorer.exe`, and the Chrome extensions page is opened from the backend instead of relying on frontend `window.open`.
