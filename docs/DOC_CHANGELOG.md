@@ -77,4 +77,7 @@ Track documentation-only updates.
 - Refined `docs/USER_DOC_SYSTEM_GUIDE.md` again by adding a short-name legend for key documents and a command-entry decision tree, so the guide can reference concise doc labels instead of repeating long full names.
 - Localized the `docs/USER_DOC_SYSTEM_GUIDE.md` decision-tree labels from English short names to concise Chinese labels, making the command tree easier to scan for Chinese readers.
 - Simplified `docs/USER_DOC_SYSTEM_GUIDE.md` into a pure flow guide: kept only the top-level decision tree and branch-level decision trees, and removed extra narrative sections and examples.
+- Consolidated the previously separated decision trees in `docs/USER_DOC_SYSTEM_GUIDE.md` into one single master tree, so the user can follow the whole flow in one place.
+- Corrected the master tree flow in `docs/USER_DOC_SYSTEM_GUIDE.md`: `总指挥` is now a single upfront entry step instead of being repeated inside later module/non-module branches.
+- Refined the `docs/USER_DOC_SYSTEM_GUIDE.md` flow again so `总指挥` is only entered for actual execution tasks, clarifying that it governs explicit response rules, status reporting, documentation sync, and checkpoint behavior.
 - Documented the install-guide reliability fix for module 11: extension-path detection now probes multiple repo anchors, folder opening goes through `explorer.exe`, and the Chrome extensions page is opened from the backend instead of relying on frontend `window.open`.

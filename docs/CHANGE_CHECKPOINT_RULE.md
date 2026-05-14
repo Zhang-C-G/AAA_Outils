@@ -30,18 +30,18 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-14-post-checkpoint-next-round-3`
+- 当前轮次：`2026-05-14-post-checkpoint-next-round-4`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`0`
 - 当前循环进度：`第 0 / 3 次有效改动`
 - 下一次强制 git 阈值：`从当前轮次起，再完成 3 次有效改动并测试通过后，执行下一次 checkpoint commit + push`
-- 上一个 git 检查点：`checkpoint: simplify user doc guide into decision trees`
+- 上一个 git 检查点：`checkpoint: refine user doc task-entry tree`
 - 最近一次已完成推送：
   - 提交：`本次 checkpoint 提交后见 git log`
   - 目标：`当前分支推送到 origin`
   - 结果：`本次已执行 push`
 - 当前计数说明：
-  - 上一轮已完成 checkpoint，内容涵盖：用户指南简称表、中文简称替换、纯判断树化重写
+  - 上一轮已完成 checkpoint，内容涵盖：用户指南单树化、入口顺序修正、总指挥仅在实际任务时触发
   - 当前状态：已进入新一轮，计数从 `0` 重新开始
 
 ## 5. 维护方式
