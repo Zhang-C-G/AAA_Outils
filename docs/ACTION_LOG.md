@@ -266,6 +266,9 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-05-14`：继续优化 `docs/USER_DOC_SYSTEM_GUIDE.md` 的可操作性：新增“先用这 5 步”最短使用法，补强“只补文档”规则，并把“老模块新增能力”改成与新模块更一致的树形结构和完成标准。
 - `2026-05-14`：开始按 `docs/USER_DOC_SYSTEM_GUIDE.md` 反向整理上层文档：同步修正 `AI_DEVELOPMENT_PLAYBOOK`、`DOC_CREATION_GUIDE`、`AI_HANDOFF` 的入口顺序、任务类型口径与阶段入口说明，并将用户指导文档与总指引文档固定为同级核心入口。
 - `2026-05-14`：继续按 `docs/USER_DOC_SYSTEM_GUIDE.md` 全面整理二级总览文档：同步修正 `UPDATE_CHECKLIST`、`extension/README`、`文档体系总图`、`DOC_SYSTEM` 的入口顺序、术语与收尾口径，统一到新的总判断树结构。
+- `2026-05-14`：继续清理历史残留口径：同步修正 `COMPONENTS`、`NEW_MODE_CHECKLIST`、`全局私人偏好文档`、`AI_DEVELOPMENT_PLAYBOOK` 与 `USER_DOC_SYSTEM_GUIDE` 中的旧入口顺序和“共享契约”表述，使其继续向新总判断树收口。
+- `2026-05-14`：继续按现有总纲整理模板与规则拆分类文档：同步修正 `文档低耦合与拆分规则`、`模块库总索引`、`STAGE2_CAPABILITY_TEMPLATE`、`MODULE_CHANGELOG_TEMPLATE`，补齐用户指导总纲作为前置判断入口的口径。
+- `2026-05-14`：继续优化总指引文档中的显性回答规则：明确每次回复应采用“短总结 + 关键状态”的写法，目标是帮助用户快速判断该做的步骤是否已做、哪些已完成、哪些未完成，而不是把回答写得过长。
 - `2026-05-14`：修复 F 模块安装弹窗的扩展目录识别与打开动作：目录识别改为多路探测，`打开插件目录` 改为后端调用 `explorer.exe`，`打开扩展页` 改为后端触发 `chrome://extensions/`。
 
 ## 维护约定

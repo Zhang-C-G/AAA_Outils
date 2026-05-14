@@ -9,11 +9,11 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-14-post-checkpoint-next-round-9`
+- 轮次标识：`2026-05-14-post-checkpoint-next-round-10`
 - 当前连续改动次数：`0`
 - 本轮目标：
   - 从新的 checkpoint 之后继续累计后续有效改动
-- 上一个 git 检查点：`checkpoint: align docs to user guide`
+- 上一个 git 检查点：`checkpoint: refine explicit reply rules`
 - 最近一次推送：
   - 提交：`本次 checkpoint 提交后见 git log`
   - 目标：`当前分支推送到 origin`
