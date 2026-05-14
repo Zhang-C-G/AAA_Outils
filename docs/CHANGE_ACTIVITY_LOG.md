@@ -9,11 +9,11 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-14-post-checkpoint-next-round-2`
+- 轮次标识：`2026-05-14-post-checkpoint-next-round-3`
 - 当前连续改动次数：`0`
 - 本轮目标：
   - 从新的 checkpoint 之后继续累计后续有效改动
-- 上一个 git 检查点：`checkpoint: finalize resume education flow and rewrite user doc guide`
+- 上一个 git 检查点：`checkpoint: simplify user doc guide into decision trees`
 - 最近一次推送：
   - 提交：`本次 checkpoint 提交后见 git log`
   - 目标：`当前分支推送到 origin`
@@ -25,8 +25,8 @@
 - 本轮新的累计窗口已在本次 checkpoint 后重置为 `0 / 3`
 - 上一轮已完成并推送，详情请通过：
   - `git log`
-  - `docs/modules/changelog/*.md`
   - `docs/ACTION_LOG.md`
+  - `docs/modules/changelog/*.md`
   进行追溯
 
 ## 4. 是否触发 git
