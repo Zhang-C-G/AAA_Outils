@@ -30,18 +30,18 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-14-post-checkpoint-next-round`
+- 当前轮次：`2026-05-14-post-checkpoint-next-round-2`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`0`
 - 当前循环进度：`第 0 / 3 次有效改动`
 - 下一次强制 git 阈值：`从当前轮次起，再完成 3 次有效改动并测试通过后，执行下一次 checkpoint commit + push`
-- 上一个 git 检查点：`checkpoint: sync workspace updates and resume autofill analysis`
+- 上一个 git 检查点：`checkpoint: finalize resume education flow and rewrite user doc guide`
 - 最近一次已完成推送：
   - 提交：`本次 checkpoint 提交后见 git log`
   - 目标：`当前分支推送到 origin`
   - 结果：`本次已执行 push`
 - 当前计数说明：
-  - 上一轮已完成 checkpoint，内容涵盖：F 模块简历资料回填、git 状态口径修正、携程投递页分析与教育经历结构优化
+  - 上一轮已完成 checkpoint，内容涵盖：F 模块教育经历多条维护、用户文档系统说明新增、用户文档树状案例化重写
   - 当前状态：已进入新一轮，计数从 `0` 重新开始
 
 ## 5. 维护方式

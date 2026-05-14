@@ -126,7 +126,11 @@
   function parseEducationEntries(rowMap) {
     const entries = collectEntryRows(rowMap, 'education_entry_').map((item) => {
       const structured = parseStructuredText(item.value);
-      const range = parseDateRange(mapValue(structured, ['起止日期', '起止时间', '在校时间']) || item.value);
+      const startDate = mapValue(structured, ['入学日期', '开始日期']);
+      const endDate = mapValue(structured, ['毕业日期', '结束日期']);
+      const range = startDate || endDate
+        ? { start: startDate, end: endDate }
+        : parseDateRange(mapValue(structured, ['起止日期', '起止时间', '在校时间']) || item.value);
       return {
         school: mapValue(structured, ['学校名称', '学校', '院校']),
         major: mapValue(structured, ['专业']),

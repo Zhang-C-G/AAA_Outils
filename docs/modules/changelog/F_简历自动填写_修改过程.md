@@ -509,3 +509,24 @@
   - `resume_profile.json` 静态 JSON 解析校验
   - 手工抽查教育区字段：学历、时间、GPA/排名、导师、四段教育经历明细
 - 测试结果：`已通过`
+
+### 2026-05-14 / 教育经历改为可新增删除的多条维护
+- 改动内容：
+  - 将 F 模块教育经历从“单条摘要 + 若干长文本”继续推进为“多条结构化记录”的维护方式
+  - 在编辑器中新增 `新增教育经历` 按钮，并为每条 `education_entry_*` 提供 `删除` 动作
+  - 新增教育经历模板，统一字段口径为：学校、学院、城市、入学日期、毕业日期、学历、专业、GPA、成绩排名、次专业、研究方向、导师、专业主要课程
+  - 调整浏览器扩展侧教育记录解析，优先识别 `入学日期 / 毕业日期`
+- 影响文件：
+  - `webui/config/app-resume.js`
+  - `webui/config/index.html`
+  - `webui/config/styles.css`
+  - `webui/config/server-resume.ps1`
+  - `browser_extension/resume_autofill/site-strategies.js`
+  - `resume_profile.json`
+  - `docs/modules/11_resume_autofill.md`
+  - `docs/modules/changelog/F_简历自动填写_修改过程.md`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-resume.js`
+  - PowerShell 脚本静态解析校验：`webui/config/server-resume.ps1`
+  - `resume_profile.json` 静态 JSON 解析校验
+- 测试结果：`已通过`

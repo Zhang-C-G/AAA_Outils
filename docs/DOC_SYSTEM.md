@@ -38,6 +38,7 @@
 当前核心入口文件：
 
 - `docs/COMPONENTS.md`
+- `docs/USER_DOC_SYSTEM_GUIDE.md`
 - `docs/AI_HANDOFF.md`
 - `docs/UPDATE_CHECKLIST.md`
 - `docs/ACTION_LOG.md`
@@ -212,4 +213,3 @@
 
 1. 逐步把 `docs/modules/07~10` 这类系统说明迁移到更合适的系统层目录
 2. 继续减少根目录入口数量，避免首次阅读时入口过多
-

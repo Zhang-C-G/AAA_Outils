@@ -43,21 +43,35 @@
     [ordered]@{
       id = 'education'
       title = '教育经历'
-      description = '学校、专业、学历、时间、课程与成绩。'
+      description = '多条教育经历，支持按条维护学校、专业、学历、时间、导师与成绩字段。'
       rows = @(
-        [ordered]@{ id='school'; label='学校名称'; value=''; aliases='学校,院校,毕业院校'; type='text' }
+        [ordered]@{ id='college'; label='当前学院'; value=''; aliases='学院,院系,当前学院'; type='text' }
         ,
-        [ordered]@{ id='college'; label='学院'; value=''; aliases='学院,院系'; type='text' }
+        [ordered]@{ id='major'; label='当前专业'; value=''; aliases='专业,当前专业'; type='text' }
         ,
-        [ordered]@{ id='major'; label='专业'; value=''; aliases='专业'; type='text' }
+        [ordered]@{ id='degree'; label='当前学历'; value=''; aliases='学历,当前学历'; type='text' }
         ,
-        [ordered]@{ id='degree'; label='学历'; value=''; aliases='学历'; type='text' }
+        [ordered]@{ id='education_time'; label='当前就读时间'; value=''; aliases='在校时间,起止时间,教育时间,当前教育时间'; type='text' }
         ,
-        [ordered]@{ id='education_time'; label='就读时间'; value=''; aliases='在校时间,起止时间,教育时间'; type='text' }
+        [ordered]@{ id='gpa_rank'; label='当前GPA/排名'; value=''; aliases='GPA,排名,绩点,当前GPA/排名'; type='text' }
         ,
-        [ordered]@{ id='gpa_rank'; label='GPA/排名'; value=''; aliases='GPA,排名,绩点'; type='text' }
+        [ordered]@{ id='education_gpa'; label='当前教育GPA'; value=''; aliases='教育GPA,当前GPA,绩点'; type='text' }
+        ,
+        [ordered]@{ id='education_rank'; label='当前教育排名'; value=''; aliases='教育排名,当前排名,成绩排名'; type='text' }
+        ,
+        [ordered]@{ id='school_city'; label='当前学校城市'; value=''; aliases='学校所在城市,学校城市,当前学校城市'; type='text' }
+        ,
+        [ordered]@{ id='advisor'; label='当前导师'; value=''; aliases='导师,指导老师,advisor,当前导师'; type='text' }
+        ,
+        [ordered]@{ id='second_major'; label='当前次专业'; value=''; aliases='次专业,辅修专业,第二专业,当前次专业'; type='text' }
+        ,
+        [ordered]@{ id='research_direction'; label='当前研究方向'; value=''; aliases='研究方向,科研方向,当前研究方向'; type='text' }
         ,
         [ordered]@{ id='courses'; label='主修课程'; value=''; aliases='主修课程,核心课程'; type='textarea' }
+        ,
+        [ordered]@{ id='major_desc'; label='专业描述'; value=''; aliases='专业描述,专业说明'; type='textarea' }
+        ,
+        [ordered]@{ id='education_entry_01'; label='教育经历01'; value=''; aliases='教育经历01'; type='textarea' }
       )
     }
     ,

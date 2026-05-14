@@ -242,6 +242,9 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-05-14`：补强 git 状态口径：在 `AI_DEVELOPMENT_PLAYBOOK`、`AI_HANDOFF`、`UPDATE_CHECKLIST` 与 `CHANGE_CHECKPOINT_RULE` 中明确 git 状态必须显式说明当前处于本轮 `3` 次改动循环中的第几次。
 - `2026-05-14`：新增 `携程` 投递页截图分析文档，补充简历自动投递在完整日期控件、细粒度教育字段、获奖列表与项目职责最小映射上的站点策略判断。
 - `2026-05-14`：优化 F 模块教育经历结构，补入 `education_gpa / education_rank / second_major / research_direction / advisor`，并统一教育时间与学历口径以适配携程教育块。
+- `2026-05-14`：继续把 F 模块教育经历改成可新增/删除的多条维护，新增教育经历模板，并让扩展侧教育解析优先识别 `入学日期 / 毕业日期`。
+- `2026-05-14`：新增面向用户的文档系统说明 `docs/USER_DOC_SYSTEM_GUIDE.md`，并挂入 `COMPONENTS` 与 `DOC_SYSTEM` 入口，帮助用户理解文档分层、输入/输出与协作链路。
+- `2026-05-14`：重写 `docs/USER_DOC_SYSTEM_GUIDE.md` 为“树状判断 + 分支案例”形式，帮助用户直接判断自己当前场景该走哪条文档路径。
 - `2026-05-14`：修复 F 模块安装弹窗的扩展目录识别与打开动作：目录识别改为多路探测，`打开插件目录` 改为后端调用 `explorer.exe`，`打开扩展页` 改为后端触发 `chrome://extensions/`。
 
 ## 维护约定

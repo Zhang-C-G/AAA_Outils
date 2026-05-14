@@ -1667,6 +1667,38 @@ label span { color: #d2d2d2; font-size: 14px; }
   display: grid;
   gap: 18px;
 }
+.resume-section-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.resume-section-actions.hidden {
+  display: none;
+}
+.resume-section-inline-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.resume-row-action-btn {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  background: #151515;
+  color: #f1f1f1;
+  font-size: 12px;
+  cursor: pointer;
+}
+.resume-row-action-btn:hover {
+  border-color: #f1f1f1;
+}
+.resume-profile-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .resume-main-head {
   display: flex;
   justify-content: flex-start;

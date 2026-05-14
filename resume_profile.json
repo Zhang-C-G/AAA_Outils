@@ -1,6 +1,6 @@
 ﻿{
     "version":  1,
-    "updated_at":  "2026-05-14 13:50:29",
+    "updated_at":  "2026-05-14 14:09:16",
     "sections":  [
                      {
                          "id":  "basic_info",
@@ -88,7 +88,7 @@
                                           "id":  "school_city",
                                           "label":  "学校所在城市",
                                           "value":  "法国尼斯",
-                                          "aliases":  "学校所在城市,学校城市",
+                                          "aliases":  "学校所在城市,学校城市,当前学校城市",
                                           "type":  "text"
                                       },
                                       {
@@ -242,35 +242,35 @@
                                           "id":  "college",
                                           "label":  "学院",
                                           "value":  "计算机与软件工程学院",
-                                          "aliases":  "学院,院系",
+                                          "aliases":  "学院,院系,当前学院",
                                           "type":  "text"
                                       },
                                       {
                                           "id":  "major",
                                           "label":  "专业",
                                           "value":  "软件工程",
-                                          "aliases":  "专业",
+                                          "aliases":  "专业,当前专业",
                                           "type":  "text"
                                       },
                                       {
                                           "id":  "degree",
                                           "label":  "学历",
                                           "value":  "硕士",
-                                          "aliases":  "学历",
+                                          "aliases":  "学历,当前学历",
                                           "type":  "text"
                                       },
                                       {
                                           "id":  "education_time",
                                           "label":  "就读时间",
                                           "value":  "2025-09-01 至 2027-07-01",
-                                          "aliases":  "在校时间,起止时间,教育时间",
+                                          "aliases":  "在校时间,起止时间,教育时间,当前教育时间",
                                           "type":  "text"
                                       },
                                       {
                                           "id":  "gpa_rank",
                                           "label":  "GPA/排名",
                                           "value":  "前10%",
-                                          "aliases":  "GPA,排名,绩点",
+                                          "aliases":  "GPA,排名,绩点,当前GPA/排名",
                                           "type":  "text"
                                       },
                                       {
@@ -284,7 +284,7 @@
                                           "id":  "school_city",
                                           "label":  "学校所在城市",
                                           "value":  "法国尼斯",
-                                          "aliases":  "学校所在城市,学校城市",
+                                          "aliases":  "学校所在城市,学校城市,当前学校城市",
                                           "type":  "text"
                                       },
                                       {
@@ -298,7 +298,7 @@
                                           "id":  "education_entry_01",
                                           "label":  "教育经历01",
                                           "value":  "学校名称：江苏大学\n学院名称：机械学院\n学校所在城市：江苏省镇江市\n学历：本科\n专业：机械设计及其自动化\n起止日期：2020-09-01 至 2023-07-01\nGPA：3.18\n排名：前11%\n专业主要课程：C语言程序设计、数理统计与算法、机械设计、工程力学、Python编程、MATLAB",
-                                          "aliases":  "教育经历01,本科经历1,江苏大学",
+                                          "aliases":  "教育经历01",
                                           "type":  "textarea"
                                       },
                                       {

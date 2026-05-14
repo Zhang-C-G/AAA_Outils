@@ -41,6 +41,7 @@
 - 公用块维护目录：`docs/shared/README.md`
 - 扩展开发规范目录：`docs/extension/README.md`
 - 文档系统总图：`docs/DOC_SYSTEM.md`
+- 用户文档系统说明：`docs/USER_DOC_SYSTEM_GUIDE.md`
 - AI 开发分阶段指南：`docs/extension/AI_DEVELOPMENT_PLAYBOOK.md`
 - 悬浮窗二阶段开发指南：`docs/extension/OVERLAY_STAGE2_GUIDE.md`
 - 决策记录（ADR）：`docs/adr/README.md`

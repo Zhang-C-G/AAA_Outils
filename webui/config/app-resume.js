@@ -352,19 +352,114 @@ function renderResumeValueControl(row, index) {
   return `<input class="resume-profile-value resume-profile-value-singleline" data-k="value" data-row-index="${index}" type="text" value="${escAttr(row?.value || '')}" />`;
 }
 
+function isEducationSection(sectionId) {
+  return String(sectionId || '').trim().toLowerCase() === 'education';
+}
+
+function isEducationEntryRow(row) {
+  return String(row?.id || '').startsWith('education_entry_');
+}
+
+function buildEducationEntryTemplate(index) {
+  return [
+    `学校名称：`,
+    `学院名称：`,
+    `学校所在城市：`,
+    `入学日期：`,
+    `毕业日期：`,
+    `学历：`,
+    `专业：`,
+    `GPA：`,
+    `成绩排名：`,
+    `次专业：`,
+    `研究方向：`,
+    `导师：`,
+    `专业主要课程：`
+  ].join('\n');
+}
+
+function reindexEducationEntryRows(section) {
+  if (!section || !Array.isArray(section.rows)) return;
+  let count = 0;
+  section.rows = section.rows.map((row, index) => {
+    if (!isEducationEntryRow(row)) return normalizeRow(row, index);
+    count += 1;
+    return normalizeRow({
+      ...row,
+      id: `education_entry_${String(count).padStart(2, '0')}`,
+      label: `教育经历${String(count).padStart(2, '0')}`
+    }, index);
+  });
+}
+
+function addEducationEntry() {
+  const section = state.resume.profile.sections.find((item) => item.id === 'education');
+  if (!section) return;
+  const currentCount = section.rows.filter((row) => isEducationEntryRow(row)).length;
+  section.rows.push(normalizeRow({
+    id: `education_entry_${String(currentCount + 1).padStart(2, '0')}`,
+    label: `教育经历${String(currentCount + 1).padStart(2, '0')}`,
+    value: buildEducationEntryTemplate(currentCount + 1),
+    aliases: `教育经历${String(currentCount + 1).padStart(2, '0')}`,
+    type: 'textarea'
+  }, section.rows.length));
+  reindexEducationEntryRows(section);
+  renderResumeEditor();
+  scheduleAutoSave({ notify: true, message: '已新增一条教育经历，正在自动保存...' });
+}
+
+function removeEducationEntry(rowIndex) {
+  const section = state.resume.profile.sections.find((item) => item.id === 'education');
+  if (!section || !section.rows[rowIndex] || !isEducationEntryRow(section.rows[rowIndex])) return;
+  section.rows.splice(rowIndex, 1);
+  reindexEducationEntryRows(section);
+  renderResumeEditor();
+  scheduleAutoSave({ notify: true, message: '已删除一条教育经历，正在自动保存...' });
+}
+
+function renderSectionActions(section) {
+  const host = byId('resumeSectionActions');
+  if (!host) return;
+  if (!section || !isEducationSection(section.id)) {
+    host.classList.add('hidden');
+    host.innerHTML = '';
+    return;
+  }
+  host.classList.remove('hidden');
+  host.innerHTML = `
+    <div class="resume-section-inline-tools">
+      <button id="resumeAddEducationEntryBtn" class="btn ghost" type="button">新增教育经历</button>
+    </div>
+  `;
+  host.querySelector('#resumeAddEducationEntryBtn')?.addEventListener('click', () => {
+    addEducationEntry();
+  });
+}
+
 function renderRows(section) {
   const body = byId('resumeRows');
   body.innerHTML = '';
+  renderSectionActions(section);
 
   for (let index = 0; index < section.rows.length; index += 2) {
     const left = section.rows[index];
     const right = section.rows[index + 1] || null;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="resume-profile-label-cell"><div class="resume-profile-label">${escText(left.label)}</div></td>
+      <td class="resume-profile-label-cell">
+        <div class="resume-profile-label-row">
+          <div class="resume-profile-label">${escText(left.label)}</div>
+          ${isEducationEntryRow(left) ? `<button class="resume-row-action-btn" data-k="delete-education-entry" data-row-index="${index}" type="button">删除</button>` : ''}
+        </div>
+      </td>
       <td class="resume-profile-value-cell">${renderResumeValueControl(left, index)}</td>
       ${right ? `
-      <td class="resume-profile-label-cell"><div class="resume-profile-label">${escText(right.label)}</div></td>
+      <td class="resume-profile-label-cell">
+        <div class="resume-profile-label-row">
+          <div class="resume-profile-label">${escText(right.label)}</div>
+          ${isEducationEntryRow(right) ? `<button class="resume-row-action-btn" data-k="delete-education-entry" data-row-index="${index + 1}" type="button">删除</button>` : ''}
+        </div>
+      </td>
       <td class="resume-profile-value-cell">${renderResumeValueControl(right, index + 1)}</td>
       ` : `
       <td class="resume-profile-label-cell resume-profile-empty-cell"></td>
@@ -379,6 +474,14 @@ function renderRows(section) {
           syncRowFromDom(section.id, rowIndex, tr);
         }
         scheduleAutoSave({ notify: true, message: '简历字段内容已更新，正在自动保存...' });
+      });
+    });
+    tr.querySelectorAll('[data-k="delete-education-entry"]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const rowIndex = Number(el.dataset.rowIndex || -1);
+        if (Number.isInteger(rowIndex) && rowIndex >= 0) {
+          removeEducationEntry(rowIndex);
+        }
       });
     });
 
