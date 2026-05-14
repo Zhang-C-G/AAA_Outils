@@ -86,4 +86,7 @@ Track documentation-only updates.
 - Refined the `bug 修复` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` to incorporate the incident workflow: check existing incident docs first, create `TEMP_*.md` when the threshold is met, and convert to `RESOLVED_*.md` once the fix is confirmed.
 - Simplified the top-level module-task classification in `docs/USER_DOC_SYSTEM_GUIDE.md` by merging `回归修复` into `bug 修复` and folding `新配置项接入` into the `老模块新增能力 -> 补真实闭环` path.
 - Restored `新配置项接入` as its own task type in `docs/USER_DOC_SYSTEM_GUIDE.md`, clarifying that it covers configuration-oriented capabilities outside visible business modules while still following phase-one/phase-two routing and four-layer sync checks.
+- Refined the wording for `新配置项接入` in `docs/USER_DOC_SYSTEM_GUIDE.md`: even when the feature is not named as a module, it should still be built with the same modular, phase-based workflow.
+- Expanded the `新模块` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` to include the stage-one checklist, the criteria for entering stage two, the blockers for stage transition, and the stage-two completion requirements.
+- Reformatted the `新模块` branch in `docs/USER_DOC_SYSTEM_GUIDE.md` from long descriptive lines into shorter grouped checklist branches for stage one and stage two.
 - Documented the install-guide reliability fix for module 11: extension-path detection now probes multiple repo anchors, folder opening goes through `explorer.exe`, and the Chrome extensions page is opened from the backend instead of relying on frontend `window.open`.
