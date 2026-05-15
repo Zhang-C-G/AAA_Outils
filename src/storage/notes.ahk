@@ -83,7 +83,7 @@ LoadNotesMeta() {
         ))
     }
 
-    return SortNotesMeta(notes)
+    return ApplyNoteOrder(SortNotesMeta(notes), GetNotesOrderPath())
 }
 
 LoadNotesDisplayMeta() {
@@ -103,7 +103,7 @@ LoadNotesDisplayMeta() {
         ))
     }
 
-    return SortNotesMeta(notes)
+    return ApplyNoteOrder(SortNotesMeta(notes), GetNotesDisplayOrderPath())
 }
 
 SortNotesMeta(notes) {
@@ -187,4 +187,80 @@ ParseNoteFile(path) {
         idx += 1
     }
     return Map("title", title, "content", StrJoin(contentLines, "`n"))
+}
+
+GetNotesOrderPath() {
+    global gNotesDir
+    return gNotesDir "\\_order.json"
+}
+
+GetNotesDisplayOrderPath() {
+    global gNotesDisplayDir
+    return gNotesDisplayDir "\\_order.json"
+}
+
+ApplyNoteOrder(notes, orderPath) {
+    orderedIds := ReadNoteOrder(orderPath)
+    if (notes.Length <= 1 || orderedIds.Length = 0) {
+        return notes
+    }
+
+    byId := Map()
+    for note in notes {
+        id := Trim(note["id"])
+        if (id != "") {
+            byId[id] := note
+        }
+    }
+
+    ordered := []
+    for id in orderedIds {
+        if byId.Has(id) {
+            ordered.Push(byId[id])
+            byId.Delete(id)
+        }
+    }
+
+    for note in notes {
+        id := Trim(note["id"])
+        if (id != "" && byId.Has(id)) {
+            ordered.Push(note)
+            byId.Delete(id)
+        }
+    }
+    return ordered
+}
+
+ReadNoteOrder(orderPath) {
+    orderedIds := []
+    if (orderPath = "" || !FileExist(orderPath)) {
+        return orderedIds
+    }
+    try raw := Trim(FileRead(orderPath, "UTF-8"))
+    catch {
+        return orderedIds
+    }
+    if (raw = "") {
+        return orderedIds
+    }
+
+    pos := 1
+    while RegExMatch(raw, '"((?:[^"\\]|\\.)*)"', &m, pos) {
+        id := NoteOrderJsonUnescape(m[1])
+        if (id != "") {
+            orderedIds.Push(id)
+        }
+        pos := m.Pos + m.Len
+    }
+    return orderedIds
+}
+
+NoteOrderJsonUnescape(text) {
+    value := StrReplace(text, '\"', '"')
+    value := StrReplace(value, "\\", "\")
+    value := StrReplace(value, "\/", "/")
+    value := StrReplace(value, "\r", "`r")
+    value := StrReplace(value, "\n", "`n")
+    value := StrReplace(value, "\t", "`t")
+    return Trim(value)
 }

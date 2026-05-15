@@ -47,6 +47,20 @@ SaveData() {
     }
     gAssistantSettings["xunfei_api_secret_protected"] := xunfeiSecretProtected
     gAssistantSettings["has_xunfei_api_secret"] := (currentXunfeiSecret != "" || xunfeiSecretProtected != "") ? 1 : 0
+    currentXunfeiAppId := gAssistantSettings.Has("xunfei_app_id") ? Trim(gAssistantSettings["xunfei_app_id"]) : ""
+    if (currentXunfeiAppId = "") {
+        assistantRows := LoadSection(gDataFile, "Assistant")
+        for row in assistantRows {
+            if (row["key"] = "xunfei_app_id") {
+                diskXunfeiAppId := Trim(row["value"])
+                if (diskXunfeiAppId != "") {
+                    currentXunfeiAppId := diskXunfeiAppId
+                    break
+                }
+            }
+        }
+    }
+    gAssistantSettings["xunfei_app_id"] := currentXunfeiAppId
 
     lines := []
     lines.Push("[Categories]")
@@ -83,6 +97,8 @@ SaveData() {
     lines.Push("capture_dir=" gCaptureDir)
     lines.Push("notes_overlay_x=" (gAppSettings.Has("notes_overlay_x") ? gAppSettings["notes_overlay_x"] : ""))
     lines.Push("notes_overlay_y=" (gAppSettings.Has("notes_overlay_y") ? gAppSettings["notes_overlay_y"] : ""))
+    lines.Push("notes_overlay_w=" (gAppSettings.Has("notes_overlay_w") ? gAppSettings["notes_overlay_w"] : ""))
+    lines.Push("notes_overlay_h=" (gAppSettings.Has("notes_overlay_h") ? gAppSettings["notes_overlay_h"] : ""))
 
     lines.Push("")
     lines.Push("[Capture]")

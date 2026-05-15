@@ -9,6 +9,8 @@ InitHotkeyDefs() {
         Map("id", "assistant_capture_now", "label", "截图并问答", "default", "F1", "scope", "global"),
         Map("id", "assistant_voice_input", "label", "按住语音输入", "default", "F3", "scope", "global"),
         Map("id", "notes_display_overlay", "label", "启动笔记显示悬浮窗", "default", "F4", "scope", "global"),
+        Map("id", "notes_overlay_parent_up", "label", "笔记一级目录上移", "default", "!Up", "scope", "notes_overlay"),
+        Map("id", "notes_overlay_parent_down", "label", "笔记一级目录下移", "default", "!Down", "scope", "notes_overlay"),
         Map("id", "notes_overlay_up", "label", "笔记目录上移", "default", "Up", "scope", "notes_overlay"),
         Map("id", "notes_overlay_down", "label", "笔记目录下移", "default", "Down", "scope", "notes_overlay"),
         Map("id", "assistant_overlay_up", "label", "助手悬浮窗上移", "default", "!Up", "scope", "assistant_overlay"),
@@ -130,6 +132,10 @@ GetHotkeyHandler(id) {
             return HotkeyAssistantVoiceInputDown
         case "notes_display_overlay":
             return HotkeyNotesDisplayOverlay
+        case "notes_overlay_parent_up":
+            return HotkeyNotesOverlayParentUp
+        case "notes_overlay_parent_down":
+            return HotkeyNotesOverlayParentDown
         case "notes_overlay_up":
             return HotkeyNotesOverlayUp
         case "notes_overlay_down":
@@ -176,6 +182,14 @@ HotkeyAssistantVoiceInputUp(*) {
 
 HotkeyNotesDisplayOverlay(*) {
     ToggleNotesDisplayOverlay(false)
+}
+
+HotkeyNotesOverlayParentUp(*) {
+    NotesOverlayMoveNoteSelection(-1)
+}
+
+HotkeyNotesOverlayParentDown(*) {
+    NotesOverlayMoveNoteSelection(1)
 }
 
 HotkeyNotesOverlayUp(*) {

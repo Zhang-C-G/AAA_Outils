@@ -27,6 +27,8 @@ EnsureDataFile() {
         . "assistant_capture_now=F1`n"
         . "assistant_voice_input=F3`n"
         . "notes_display_overlay=F4`n"
+        . "notes_overlay_parent_up=!Up`n"
+        . "notes_overlay_parent_down=!Down`n"
         . "notes_overlay_up=Up`n"
         . "notes_overlay_down=Down`n"
         . "assistant_overlay_up=!Up`n"
@@ -236,7 +238,11 @@ LoadAppSettings() {
         "shell_theme_secondary", "#2A2A2A",
         "shell_theme_accent", "#F3F3F3",
         "shortcuts_selected_category", "fields",
-        "capture_dir", A_ScriptDir "\\captures"
+        "capture_dir", A_ScriptDir "\\captures",
+        "notes_overlay_x", "",
+        "notes_overlay_y", "",
+        "notes_overlay_w", "",
+        "notes_overlay_h", ""
     )
     raw := LoadSection(gDataFile, "App")
     for row in raw {
@@ -272,6 +278,14 @@ LoadAppSettings() {
             if (dir != "") {
                 settings["capture_dir"] := dir
             }
+        } else if (row["key"] = "notes_overlay_x") {
+            settings["notes_overlay_x"] := Trim(row["value"])
+        } else if (row["key"] = "notes_overlay_y") {
+            settings["notes_overlay_y"] := Trim(row["value"])
+        } else if (row["key"] = "notes_overlay_w") {
+            settings["notes_overlay_w"] := Trim(row["value"])
+        } else if (row["key"] = "notes_overlay_h") {
+            settings["notes_overlay_h"] := Trim(row["value"])
         }
     }
     return settings
