@@ -1129,6 +1129,7 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
     model := Trim(settings["model"])
     prompt := Trim(GetAssistantPromptByTemplate(settings))
     query := Trim(queryText)
+    provider := GetAssistantModelProviderId(settings)
 
     if (endpoint = "") {
         return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "assistant endpoint is empty")
@@ -1141,9 +1142,6 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
     }
     if (query = "") {
         return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "assistant text query is empty")
-    }
-    if !InStr(StrLower(endpoint), "/responses") {
-        return Map("ok", 0, "text", "", "reasoning", "", "streamed", 0, "error", "stream requires responses endpoint")
     }
 
     prompt := BuildAssistantInstruction(prompt, settings)
@@ -1160,6 +1158,8 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
         . "`$reason='" PsSingleQuote(reasonPath) "'`n"
         . "`$err='" PsSingleQuote(errPath) "'`n"
         . "`$progress='" PsSingleQuote(progressPath) "'`n"
+        . "`$isResponses=" (InStr(StrLower(endpoint), "/responses") ? "$true" : "$false") "`n"
+        . "`$isDeepSeek=" (provider = "deepseek" ? "$true" : "$false") "`n"
         . "function Write-State([string]`$status,[string]`$reasoning,[string]`$answer,[string]`$mode='stream',[int]`$reasoningVisible=0){`n"
         . "  `$enc=[Text.Encoding]::UTF8`n"
         . "  `$reasonB64=[Convert]::ToBase64String(`$enc.GetBytes([string]`$reasoning))`n"
@@ -1175,6 +1175,20 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
         . "}`n"
         . "function Get-DeltaText(`$evt){`n"
         . "  `$text=''`n"
+        . "  if(`$null -ne `$evt.choices -and `$evt.choices.Count -gt 0){`n"
+        . "    `$deltaObj=`$evt.choices[0].delta`n"
+        . "    if(`$null -ne `$deltaObj){`n"
+        . "      if(`$null -ne `$deltaObj.reasoning_content -and -not [string]::IsNullOrWhiteSpace([string]`$deltaObj.reasoning_content)){ return [string]`$deltaObj.reasoning_content }`n"
+        . "      if(`$null -ne `$deltaObj.content){`n"
+        . "        if(`$deltaObj.content -is [string]){ return [string]`$deltaObj.content }`n"
+        . "        elseif(`$deltaObj.content -is [System.Array]){`n"
+        . "          foreach(`$part in `$deltaObj.content){`n"
+        . "            if(`$null -ne `$part.text -and -not [string]::IsNullOrWhiteSpace([string]`$part.text)){ return [string]`$part.text }`n"
+        . "          }`n"
+        . "        }`n"
+        . "      }`n"
+        . "    }`n"
+        . "  }`n"
         . "  if(`$null -ne `$evt.delta){`n"
         . "    if(`$evt.delta -is [string]){ `$text=[string]`$evt.delta }`n"
         . "    elseif(`$null -ne `$evt.delta.text){ `$text=[string]`$evt.delta.text }`n"
@@ -1187,6 +1201,13 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
         . "}`n"
         . "function Get-EventKind(`$evt){`n"
         . "  `$type=''`n"
+        . "  if(`$null -ne `$evt.choices -and `$evt.choices.Count -gt 0){`n"
+        . "    `$deltaObj=`$evt.choices[0].delta`n"
+        . "    if(`$null -ne `$deltaObj){`n"
+        . "      if(`$null -ne `$deltaObj.reasoning_content -and -not [string]::IsNullOrWhiteSpace([string]`$deltaObj.reasoning_content)){ return 'reasoning' }`n"
+        . "      if(`$null -ne `$deltaObj.content){ return 'answer' }`n"
+        . "    }`n"
+        . "  }`n"
         . "  if(`$null -ne `$evt.type){ `$type=[string]`$evt.type }`n"
         . "  if([string]::IsNullOrWhiteSpace(`$type) -or (`$type -notmatch 'delta')){ return '' }`n"
         . "  if(`$type -match 'reasoning'){ return 'reasoning' }`n"
@@ -1199,10 +1220,22 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
         . "  return ''`n"
         . "}`n"
         . "try {`n"
-        . "  `$payload=[ordered]@{`n"
-        . "    model=`$model;`n"
-        . "    stream=`$true;`n"
-        . "    input=@([ordered]@{role='user';content=@([ordered]@{type='input_text';text=`$prompt + '`n`n' + `$query})})`n"
+        . "  if(`$isResponses){`n"
+        . "    `$payload=[ordered]@{`n"
+        . "      model=`$model;`n"
+        . "      stream=`$true;`n"
+        . "      input=@([ordered]@{role='user';content=@([ordered]@{type='input_text';text=`$prompt + '`n`n' + `$query})})`n"
+        . "    }`n"
+        . "  } else {`n"
+        . "    `$payload=[ordered]@{`n"
+        . "      model=`$model;`n"
+        . "      stream=`$true;`n"
+        . "      messages=`$(if(`$isDeepSeek){ @([ordered]@{role='system';content=`$prompt},[ordered]@{role='user';content=`$query}) } else { @([ordered]@{role='user';content=@([ordered]@{type='text';text=`$prompt + '`n`n' + `$query})}) });`n"
+        . "      thinking=`$(if(`$isDeepSeek){ [ordered]@{ type='enabled' } } else { `$null });`n"
+        . "      reasoning_effort=`$(if(`$isDeepSeek){ 'high' } else { `$null });`n"
+        . "      temperature=`$(if(`$isDeepSeek){ `$null } else { 0.2 });`n"
+        . "      max_tokens=700`n"
+        . "    }`n"
         . "  }`n"
         . "  `$json=`$payload | ConvertTo-Json -Depth 30`n"
         . "  `$req=[System.Net.HttpWebRequest]::Create(`$ep)`n"

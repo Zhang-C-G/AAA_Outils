@@ -289,3 +289,12 @@
 3. 只要发生模块级代码改动，收尾前必须同时更新这两类文档。
 4. final 交付说明里必须明确列出本轮已更新的文档清单；如果某份文档没有更新，也要说明原因。
 
+## 2026-05-15 / 语音自动分析输出流式化
+
+- 当前语音输入链路：讯飞 WebSocket 实时转写已稳定，最新问题转到“大模型回答阶段非流式”
+- 已完成修复：
+  - `src/storage/assistant.ahk`：`RequestAssistantAnswerFromTextStream` 不再只支持 `responses`；已补齐 `chat/completions` SSE 解析，兼容 `choices[0].delta.content / reasoning_content`
+  - `src/assistant_overlay.ahk`：悬浮窗文本与状态更新后主动重绘，减少流式回答阶段视觉不刷新
+- 当前验证口径：
+  - 已完成静态检索与 diff 复核
+  - 尚未做一轮新的实机语音问答回归；下一步优先用当前常用模型跑一轮 F3 自动分析，确认回答内容会边生成边显示

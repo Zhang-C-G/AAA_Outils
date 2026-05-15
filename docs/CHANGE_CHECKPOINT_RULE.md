@@ -30,20 +30,18 @@
 
 ## 4. 当前状态
 
-- 当前轮次：`2026-05-15-post-checkpoint-next-round-12`
+- 当前轮次：`2026-05-15-post-checkpoint-next-round-13`
 - 每 `3` 次改动强制 git：`是`
 - 当前连续改动次数：`0`
 - 当前循环进度：`第 0 / 3 次有效改动`
 - 下一次强制 git 阈值：`从当前轮次重新累计；再完成 3 次有效改动并测试通过后，执行下一次 checkpoint commit + push`
-- 上一个 git 检查点：`checkpoint: harden xunfei config state and restore local credentials`
+- 上一个 git 检查点：`checkpoint: stream assistant text output`
 - 最近一次已完成推送：
-  - 提交：`checkpoint: harden xunfei config state and restore local credentials`
+  - 提交：`checkpoint: stream assistant text output`
   - 目标：`origin/main`
   - 结果：`本次已执行 push`
 - 当前计数说明：
-  - 上一轮第 `1` 次：收口 E 模块 F3 自动分析送模口径，并将语音上下文轮次实现修正为“总窗口轮次包含当前轮”
-  - 上一轮第 `2` 次：修复 F3 讯飞凭据回归风险，并修正 API 中心对讯飞配置状态的显示口径
-  - 上一轮第 `3` 次：回填本机讯飞 WebSocket 凭据，恢复 I 模块讯飞 API 已配置状态
+  - 上一轮提前 checkpoint：按用户要求立即保存并上传“语音自动分析输出流式化”改动
   - 当前状态：上一轮已完成 checkpoint，当前轮次计数已清零
 
 ## 5. 维护方式

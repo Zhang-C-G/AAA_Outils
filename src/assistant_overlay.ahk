@@ -1734,6 +1734,7 @@ SetAssistantOverlayText(answerText) {
     gAssistantOverlayLastRenderedText := ""
     gAssistantOverlayLastRenderedHint := ""
     RenderAssistantOverlayText()
+    RefreshAssistantOverlayNow()
 }
 
 UpdateAssistantOverlayStatus(text) {
@@ -1742,6 +1743,17 @@ UpdateAssistantOverlayStatus(text) {
     if IsObject(gAssistantOverlayStatusText) {
         gAssistantOverlayStatusText.Text := text
     }
+    RefreshAssistantOverlayNow()
+}
+
+RefreshAssistantOverlayNow() {
+    global gAssistantOverlayGui
+    if !IsObject(gAssistantOverlayGui) {
+        return
+    }
+    try gAssistantOverlayGui.Redraw()
+    try DllCall("user32\UpdateWindow", "ptr", gAssistantOverlayGui.Hwnd)
+    Sleep(0)
 }
 
 OnAssistantThinkingProgress(stage, elapsedSec := 0) {

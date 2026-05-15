@@ -43,6 +43,28 @@
   - PowerShell 读回校验：确认后端返回 `xunfei_app_id=3e01888e`、`has_xunfei_api_key=1`、`has_xunfei_api_secret=1`
 - 测试结果：`通过`
 
+### 2026-05-15 / 语音自动分析补齐大模型流式输出
+- 改动内容：
+  - 排查确认当前语音自动分析虽然已有流式框架，但文本问答流式主链只对 `responses` 端点生效；当模型走 `chat/completions` 风格端点时，会直接回退到非流式整段返回
+  - 为 `RequestAssistantAnswerFromTextStream` 补齐通用文本流式支持：保留现有 `responses` 流式，同时新增对 `chat/completions` SSE 的增量解析
+  - 新增对 `choices[0].delta.content` 与 `choices[0].delta.reasoning_content` 的识别，兼容 DeepSeek 这类文本流式返回格式
+  - 悬浮窗文本与状态更新后主动触发一次 GUI 重绘，减少“后端已在流式返回，但前端视觉上像没流”的情况
+- 影响文件：
+  - `src/storage/assistant.ahk`
+  - `src/assistant_overlay.ahk`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/ACTION_LOG.md`
+  - `docs/DOC_CHANGELOG.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+  - `docs/AI_HANDOFF.md`
+- 测试：
+  - `git diff -- src/assistant_overlay.ahk src/storage/assistant.ahk`
+  - `rg -n -F "RefreshAssistantOverlayNow(" src/assistant_overlay.ahk`
+  - `rg -n -F "deltaObj" src/storage/assistant.ahk`
+  - `rg -n -F "\`$isDeepSeek" src/storage/assistant.ahk`
+- 测试结果：`通过（静态校对）`
+
 ### 2026-05-15 / F3 自动分析送模口径与上下文窗口轮次收口
 - 改动内容：
   - 明确 F3 自动分析送入模型的内容不是“只有识别文本”，而是“当前语音文本 + 当前 Prompt + 当前个人背景 + 可选历史语音上下文”
