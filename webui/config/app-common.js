@@ -23,6 +23,11 @@
     api_endpoint: 'https://ark.cn-beijing.volces.com/api/v3/responses',
     api_key: '',
     has_api_key: 0,
+    xunfei_app_id: '',
+    xunfei_api_key: '',
+    has_xunfei_api_key: 0,
+    xunfei_api_secret: '',
+    has_xunfei_api_secret: 0,
     voice_model: 'local_windows_default',
     voice_model_enabled: 0,
     voice_model_options: [

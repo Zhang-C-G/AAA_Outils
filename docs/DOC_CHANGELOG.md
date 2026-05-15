@@ -2,6 +2,12 @@
 
 Track documentation-only updates.
 
+## 2026-05-15
+- Clarified the E-module F3 auto-analysis contract: the model input is the current voice transcript plus the active prompt, the current personal profile, and optional recent F3 context history.
+- Reworded the voice-context setting from a vague “memory rounds” concept into a total context-window count that explicitly includes the current round, and synced module docs/changelog/UI wording to that behavior.
+- Documented the F3 xunfei-credential regression hardening: Assistant auto-save now preserves existing xunfei protected secrets, and the API-center status now reflects the real `AppID + API Key + API Secret` trio instead of an unrelated field.
+- Documented the local xunfei credential restoration on May 15, 2026: the machine-specific AppID plus protected API key/secret were restored, and the API-center/assistant backend state now reads them as configured again.
+
 ## 2026-04-21
 - Added ADR/config/dependency/extension/testing/glossary policy docs.
 - Added Shared contracts and governance templates.

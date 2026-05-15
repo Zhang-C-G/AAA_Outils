@@ -10,6 +10,60 @@
 
 ## 2. 修改记录
 
+### 2026-05-15 / F3 讯飞凭据误缺失回归修复
+- 改动内容：
+  - 排查确认当前本地 `config.ini` 中 `xunfei_app_id / xunfei_api_key_protected / xunfei_api_secret_protected` 已为空，因此 F3 当前报“缺少 AppID / API Key / API Secret”并不是单纯前置校验误判
+  - 修正 Assistant Web 保存链的讯飞凭据保留口径：保存 E 模块设置时，前端现在会显式带上 `keep_xunfei_api_key / keep_xunfei_api_secret`，避免已有讯飞保护字段在保存过程中被错误清空
+  - 修正 API 管理中心里“讯飞是否已配置”的判断口径，改为真实检查 `xunfei_app_id + has_xunfei_api_key + has_xunfei_api_secret` 三件套，不再误看其他字段
+  - 明确边界：本次修复的是“后续不再误清空 / 不再误显示”，但已经从当前本地配置中丢失的讯飞凭据不会被代码自动恢复
+- 影响文件：
+  - `webui/config/app-common.js`
+  - `webui/config/app-assistant.js`
+  - `webui/config/app-api-center.js`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/ACTION_LOG.md`
+  - `docs/DOC_CHANGELOG.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - `node --experimental-default-type=module --check webui/config/app-common.js`
+  - `node --experimental-default-type=module --check webui/config/app-assistant.js`
+  - `node --experimental-default-type=module --check webui/config/app-api-center.js`
+  - 代码检索：确认 Assistant 保存链已附带 `keep_xunfei_api_key / keep_xunfei_api_secret`
+  - 代码检索：确认 API 中心已按 `xunfei_app_id + has_xunfei_api_key + has_xunfei_api_secret` 判断讯飞配置状态
+- 测试结果：`通过`
+
+### 2026-05-15 / 本机回填讯飞凭据并恢复已配置状态
+- 改动内容：
+  - 根据用户提供的讯飞 WebSocket `AppID / API Key / API Secret`，重新补齐本机 `config.ini` 中对应凭据
+  - `API Key / API Secret` 继续写入 `xunfei_api_key_protected / xunfei_api_secret_protected`，不改为明文保存
+  - 复核后端读取状态，确认当前本机已回到 `xunfei_app_id=3e01888e`、`has_xunfei_api_key=1`、`has_xunfei_api_secret=1`
+- 测试：
+  - 本地配置核对：确认 `config.ini` 中讯飞三件套已存在
+  - PowerShell 读回校验：确认后端返回 `xunfei_app_id=3e01888e`、`has_xunfei_api_key=1`、`has_xunfei_api_secret=1`
+- 测试结果：`通过`
+
+### 2026-05-15 / F3 自动分析送模口径与上下文窗口轮次收口
+- 改动内容：
+  - 明确 F3 自动分析送入模型的内容不是“只有识别文本”，而是“当前语音文本 + 当前 Prompt + 当前个人背景 + 可选历史语音上下文”
+  - 将原先语义偏模糊的“语音上下文记忆轮次”收口为“语音上下文窗口总轮次（含当前轮）”
+  - 运行时实现同步改为按“总窗口轮次包含当前轮”计算；例如设置为 `3` 时，实际保留 `2` 轮历史，并在本轮请求中与当前语音一起送模
+  - 当窗口总轮次设为 `1` 时，F3 自动分析只带当前轮，不再额外拼接任何历史上下文
+- 影响文件：
+  - `src/assistant_overlay.ahk`
+  - `webui/config/index.html`
+  - `docs/modules/06_assistant_capture_qa.md`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/ACTION_LOG.md`
+  - `docs/DOC_CHANGELOG.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - 代码检索：确认 `voice_context_rounds` 已按“总窗口轮次（含当前轮）”折算为历史保留上限
+  - 代码检索：确认 F3 自动分析仍走统一问答链路，因此会继续携带 Prompt 与个人背景
+  - 文档校对：确认 E 模块主文档、过程文档与 UI 文案对轮次语义的描述一致
+- 测试结果：`通过`
+
 ### 2026-05-13 / 本机补齐讯飞配置并验证预热 ready
 - 改动内容：
   - 已在本机补齐讯飞 WebSocket 识别所需配置，F3 继续保持讯飞链路，不回退到本地默认识别

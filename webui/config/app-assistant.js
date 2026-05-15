@@ -48,6 +48,11 @@ function defaults() {
     api_endpoint: 'https://ark.cn-beijing.volces.com/api/v3/responses',
     api_key: '',
     has_api_key: 0,
+    xunfei_app_id: '',
+    xunfei_api_key: '',
+    has_xunfei_api_key: 0,
+    xunfei_api_secret: '',
+    has_xunfei_api_secret: 0,
     model: 'doubao-seed-2-0-lite-260215',
     model_options: [
       { id: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite (Vision)', enabled: 1 },
@@ -508,6 +513,11 @@ function readAssistantFromUi() {
   state.assistant.personal_profile = String(byId('assistantProfile')?.value || '').trim();
   state.assistant.api_key = '';
   state.assistant.keep_api_key = Number(state.assistant.has_api_key || 0) !== 0 ? 1 : 0;
+  state.assistant.xunfei_app_id = String(state.assistant.xunfei_app_id || '').trim();
+  state.assistant.xunfei_api_key = '';
+  state.assistant.keep_xunfei_api_key = Number(state.assistant.has_xunfei_api_key || 0) !== 0 ? 1 : 0;
+  state.assistant.xunfei_api_secret = '';
+  state.assistant.keep_xunfei_api_secret = Number(state.assistant.has_xunfei_api_secret || 0) !== 0 ? 1 : 0;
   state.assistant.voice_model_api_key = '';
   state.assistant.keep_voice_model_api_key = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? 1 : 0;
 
@@ -527,6 +537,10 @@ export async function saveAssistantSettings(options = {}) {
   state.assistant = { ...state.assistant, ...(payload.settings || {}) };
   state.assistant.api_key = '';
   state.assistant.keep_api_key = 0;
+  state.assistant.xunfei_api_key = '';
+  state.assistant.keep_xunfei_api_key = 0;
+  state.assistant.xunfei_api_secret = '';
+  state.assistant.keep_xunfei_api_secret = 0;
   state.assistant.voice_model_api_key = '';
   state.assistant.keep_voice_model_api_key = 0;
   applyAssistantState({ assistant: state.assistant });

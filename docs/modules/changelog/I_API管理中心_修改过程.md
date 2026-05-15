@@ -10,6 +10,25 @@
 
 ## 2. 修改记录
 
+### 2026-05-15 / 讯飞配置状态恢复
+- 改动内容：
+  - 排查确认 I 模块一直显示“未配置”的直接原因，是本地 `config.ini` 中 `xunfei_app_id / xunfei_api_key_protected / xunfei_api_secret_protected` 之前已被清空
+  - 根据用户提供的讯飞 WebSocket 凭据，重新补齐本机 `xunfei_app_id`
+  - 重新写入本机 `xunfei_api_key_protected / xunfei_api_secret_protected`，继续沿用现有受保护存储格式，不改成明文持久化
+  - 通过后端现有读取链路复核：`xunfei_app_id=3e01888e`、`has_xunfei_api_key=1`、`has_xunfei_api_secret=1`、`voice_model=xunfei_websocket_asr`
+- 影响文件：
+  - `config.ini`
+  - `docs/modules/changelog/I_API管理中心_修改过程.md`
+  - `docs/modules/changelog/E_截图问答_修改过程.md`
+  - `docs/ACTION_LOG.md`
+  - `docs/DOC_CHANGELOG.md`
+  - `docs/CHANGE_ACTIVITY_LOG.md`
+  - `docs/CHANGE_CHECKPOINT_RULE.md`
+- 测试：
+  - 本地配置核对：确认 `config.ini` 中讯飞三件套已存在
+  - PowerShell 读回校验：确认后端返回 `xunfei_app_id=3e01888e`、`has_xunfei_api_key=1`、`has_xunfei_api_secret=1`
+- 测试结果：`通过`
+
 ### 2026-04-26 / 第一阶段建模
 - 改动内容：
   - 新增 `I API管理中心` 模式入口

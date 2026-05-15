@@ -272,6 +272,9 @@ yyyy-MM-dd HH:mm:ss | action_name | detail
 - `2026-05-14`：修正 `docs/extension/AI_DEVELOPMENT_PLAYBOOK.md` 中残留的旧规则口径：补回 `USER_DOC_SYSTEM_GUIDE` 前置入口、移除 `回归修复` 独立分类、将“共享契约”改为“跨模块共用规则”，并把 `git 状态 / checkpoint 状态` 的显性回答要求压缩为去重后的判断式写法。
 - `2026-05-14`：继续简化显性回答规则：移除独立的 `checkpoint 状态` 项，统一并入 `git 状态`，要求由 `git 状态` 一次性说明 commit、push、推送目标与计数状态。
 - `2026-05-14`：修正 git 推送目标口径与执行方式：统一恢复为直接推送 `origin/main`，不再把“当前分支推送到 origin”当成默认目标表述。
+- `2026-05-15`：收口 E 模块 F3 自动分析口径：明确送模内容包含“当前语音文本 + Prompt + 个人背景 + 可选历史上下文”，并将语音上下文轮次改为“总窗口轮次（含当前轮）”语义。
+- `2026-05-15`：修复 E 模块讯飞凭据回归风险：Assistant 保存链补上 `keep_xunfei_*` 保留口径，API 中心改为按 `AppID + API Key + API Secret` 三件套真实显示讯飞配置状态。
+- `2026-05-15`：回填本机讯飞 WebSocket 凭据，恢复 I 模块“讯飞语音识别 API”已配置状态，并确认后端读取链路已重新识别 `AppID + API Key + API Secret` 三件套。
 - `2026-05-14`：修复 F 模块安装弹窗的扩展目录识别与打开动作：目录识别改为多路探测，`打开插件目录` 改为后端调用 `explorer.exe`，`打开扩展页` 改为后端触发 `chrome://extensions/`。
 
 ## 维护约定

@@ -137,6 +137,19 @@ ShouldAssistantVoiceContextBeUsed() {
         && gAssistantSettings["voice_context_enabled"] != 0
 }
 
+GetAssistantVoiceContextWindowRounds() {
+    global gAssistantSettings
+    if IsObject(gAssistantSettings) && gAssistantSettings.Has("voice_context_rounds") {
+        return ClampAssistantVoiceContextRounds(gAssistantSettings["voice_context_rounds"])
+    }
+    return 3
+}
+
+GetAssistantVoiceContextHistoryLimit() {
+    totalRounds := GetAssistantVoiceContextWindowRounds()
+    return Max(0, totalRounds - 1)
+}
+
 BuildAssistantVoiceContextQuery(queryText) {
     global gAssistantSettings, gAssistantVoiceAnalysisHistory
     query := Trim(queryText)
@@ -147,12 +160,14 @@ BuildAssistantVoiceContextQuery(queryText) {
         ClearAssistantVoiceAnalysisHistory()
         return query
     }
-    rounds := gAssistantSettings.Has("voice_context_rounds") ? ClampAssistantVoiceContextRounds(gAssistantSettings["voice_context_rounds"]) : 3
-    if !IsObject(gAssistantVoiceAnalysisHistory) || gAssistantVoiceAnalysisHistory.Length = 0 {
+    totalRounds := GetAssistantVoiceContextWindowRounds()
+    historyLimit := GetAssistantVoiceContextHistoryLimit()
+    if (historyLimit <= 0 || !IsObject(gAssistantVoiceAnalysisHistory) || gAssistantVoiceAnalysisHistory.Length = 0) {
         return query
     }
-    startIdx := Max(1, gAssistantVoiceAnalysisHistory.Length - rounds + 1)
-    context := "以下是最近几轮 F3 语音自动问答上下文，请结合连续语境回答；如果和当前问题无关，请忽略这些历史。"
+    startIdx := Max(1, gAssistantVoiceAnalysisHistory.Length - historyLimit + 1)
+    context := "以下是最近几轮 F3 语音自动问答上下文。请把当前语音内容与这些历史一起理解；如果当前问题与历史无关，请忽略这些历史。"
+        . "`n当前上下文窗口总轮次（含当前轮）：" totalRounds
     seq := 1
     loop gAssistantVoiceAnalysisHistory.Length - startIdx + 1 {
         item := gAssistantVoiceAnalysisHistory[startIdx + A_Index - 1]
@@ -170,11 +185,11 @@ BuildAssistantVoiceContextQuery(queryText) {
     if (seq = 1) {
         return query
     }
-    return context . "`n`n当前这一轮 F3 语音内容：`n" . query
+    return context . "`n`n第" seq "轮（当前）`n用户：" . query
 }
 
 RememberAssistantVoiceAnalysisRound(queryText, answerText) {
-    global gAssistantSettings, gAssistantVoiceAnalysisHistory
+    global gAssistantVoiceAnalysisHistory
     if !ShouldAssistantVoiceContextBeUsed() {
         ClearAssistantVoiceAnalysisHistory()
         return
@@ -188,7 +203,7 @@ RememberAssistantVoiceAnalysisRound(queryText, answerText) {
         gAssistantVoiceAnalysisHistory := []
     }
     gAssistantVoiceAnalysisHistory.Push(Map("query", query, "answer", answer))
-    keep := gAssistantSettings.Has("voice_context_rounds") ? ClampAssistantVoiceContextRounds(gAssistantSettings["voice_context_rounds"]) : 3
+    keep := GetAssistantVoiceContextHistoryLimit()
     while (gAssistantVoiceAnalysisHistory.Length > keep) {
         gAssistantVoiceAnalysisHistory.RemoveAt(1)
     }

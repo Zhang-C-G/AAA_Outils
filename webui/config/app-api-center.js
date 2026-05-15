@@ -56,12 +56,17 @@ function normalizeDoubaoRows(assistantState) {
 function createXunfeiRow(assistantState) {
   const model = trimValue(assistantState.voice_model, 'xunfei_websocket_asr');
   const isActive = Number(assistantState.voice_model_enabled || 0) !== 0;
-  const accessText = getMaskedAccess(assistantState.has_voice_model_api_key);
+  const hasAppId = trimValue(assistantState.xunfei_app_id, '') !== '';
+  const hasKey = Number(assistantState.has_xunfei_api_key || 0) !== 0;
+  const hasSecret = Number(assistantState.has_xunfei_api_secret || 0) !== 0;
+  const accessText = hasAppId && hasKey && hasSecret ? MASKED_KEY : UNCONFIGURED_KEY;
   return {
     id: 'xunfei_voice',
     platform: createPlatformTag('xunfei'),
     name: '讯飞语音识别 API',
-    note: isActive ? `模型 ID：${model} · 当前启用` : `模型 ID：${model}`,
+    note: isActive
+      ? `模型 ID：${model} · 当前启用`
+      : `模型 ID：${model}`,
     access: accessText,
     accessState: accessText === MASKED_KEY ? 'configured' : 'unconfigured',
     used: UNKNOWN_METRIC,

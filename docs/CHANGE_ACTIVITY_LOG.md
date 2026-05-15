@@ -1,6 +1,6 @@
 # 变更流水文档
 
-最近同步：`2026-05-14`
+最近同步：`2026-05-15`
 状态：`active`
 
 ## 1. 文档定位
@@ -9,28 +9,23 @@
 
 ## 2. 当前轮次
 
-- 轮次标识：`2026-05-14-post-checkpoint-next-round-11`
+- 轮次标识：`2026-05-15-post-checkpoint-next-round-12`
 - 当前连续改动次数：`0`
 - 本轮目标：
   - 从新的 checkpoint 之后继续累计后续有效改动
-- 上一个 git 检查点：`checkpoint: push docs sync to main`
+- 上一个 git 检查点：`checkpoint: harden xunfei config state and restore local credentials`
 - 最近一次推送：
-  - 提交：`本次 checkpoint 提交后见 git log`
+  - 提交：`checkpoint: harden xunfei config state and restore local credentials`
   - 目标：`origin/main`
   - 结果：`本次已执行 push`
 - 历史追溯方式：`git log` / 远端提交记录
 
 ## 3. 当前 1-3 次改动窗口
 
-- 本轮新的累计窗口已在本次 checkpoint 后重置为 `0 / 3`
-- 上一轮已完成并推送，详情请通过：
-  - `git log`
-  - `docs/ACTION_LOG.md`
-  - `docs/modules/changelog/*.md`
-  进行追溯
+- 当前轮次尚未开始新的有效改动；上一轮 3 次改动已完成 checkpoint 并交给 git 追溯。
 
 ## 4. 是否触发 git
 
 - 当前累计：`0 / 3`
-- 本次是否触发 checkpoint：`已触发并完成`
-- 下一步要求：从新一轮继续累计后续有效改动
+- 本次是否触发 checkpoint：`已完成`
+- 下一步要求：从新的轮次重新累计；满 `3` 次并测试通过后执行下一次 checkpoint
