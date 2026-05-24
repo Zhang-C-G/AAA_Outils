@@ -384,6 +384,19 @@ function Start-AssistantBenchmarkStreamRun {
     answer_preview = ''
     reasoning = ''
     streamed = $true
+    stream_verdict = 'pending'
+    stream_metrics = @{
+      event_count = 0
+      answer_updates = 0
+      reasoning_updates = 0
+      first_event_ms = 0
+      first_answer_ms = 0
+      first_reasoning_ms = 0
+      last_event_ms = 0
+      max_event_gap_ms = 0
+      verified_streaming = $false
+      answer_streaming_verified = $false
+    }
     perf = [ordered]@{
       read_ms = 0
       base64_ms = 0
@@ -414,6 +427,8 @@ function Write-State {
     [string]`$Reasoning,
     [bool]`$Streamed,
     [hashtable]`$Perf,
+    [hashtable]`$StreamMetrics,
+    [string]`$StreamVerdict = 'pending',
     [string]`$ErrorMessage = ''
   )
 
@@ -440,10 +455,65 @@ function Write-State {
     answer_preview = `$preview
     reasoning = [string]`$Reasoning
     streamed = `$Streamed
+    stream_verdict = `$StreamVerdict
+    stream_metrics = `$StreamMetrics
     perf = `$Perf
     error = `$ErrorMessage
   }
   [IO.File]::WriteAllText(`$statePath, (`$obj | ConvertTo-Json -Depth 20), [Text.Encoding]::UTF8)
+}
+
+function New-StreamMetrics {
+  return @{
+    event_count = 0
+    answer_updates = 0
+    reasoning_updates = 0
+    first_event_ms = 0
+    first_answer_ms = 0
+    first_reasoning_ms = 0
+    last_event_ms = 0
+    max_event_gap_ms = 0
+    verified_streaming = `$false
+    answer_streaming_verified = `$false
+  }
+}
+
+function Update-StreamMetrics {
+  param(
+    [hashtable]`$Metrics,
+    [string]`$Kind,
+    [string]`$Delta,
+    [long]`$ElapsedMs
+  )
+
+  `$nextCount = [int]`$Metrics.event_count + 1
+  if (`$nextCount -eq 1) {
+    `$Metrics.first_event_ms = `$ElapsedMs
+  } elseif ([int]`$Metrics.last_event_ms -gt 0) {
+    `$gap = [Math]::Max(0, `$ElapsedMs - [int]`$Metrics.last_event_ms)
+    if (`$gap -gt [int]`$Metrics.max_event_gap_ms) {
+      `$Metrics.max_event_gap_ms = `$gap
+    }
+  }
+  `$Metrics.event_count = `$nextCount
+  `$Metrics.last_event_ms = `$ElapsedMs
+
+  if (-not [string]::IsNullOrWhiteSpace(`$Delta)) {
+    if (`$Kind -eq 'answer') {
+      `$Metrics.answer_updates = [int]`$Metrics.answer_updates + 1
+      if ([int]`$Metrics.first_answer_ms -le 0) { `$Metrics.first_answer_ms = `$ElapsedMs }
+    } elseif (`$Kind -eq 'reasoning') {
+      `$Metrics.reasoning_updates = [int]`$Metrics.reasoning_updates + 1
+      if ([int]`$Metrics.first_reasoning_ms -le 0) { `$Metrics.first_reasoning_ms = `$ElapsedMs }
+    }
+  }
+
+  if ([int]`$Metrics.event_count -ge 2 -or [int]`$Metrics.answer_updates -ge 2 -or [int]`$Metrics.reasoning_updates -ge 2) {
+    `$Metrics.verified_streaming = `$true
+  }
+  if ([int]`$Metrics.answer_updates -ge 2) {
+    `$Metrics.answer_streaming_verified = `$true
+  }
 }
 
 function Get-DeltaText(`$evt) {
@@ -524,8 +594,9 @@ try {
     image_kb = [math]::Round(`$bytes.Length / 1KB, 2)
     payload_kb = [math]::Round(`$json.Length / 1KB, 2)
   }
+  `$streamMetrics = New-StreamMetrics
 
-  Write-State -Status 'running' -Answer '' -Reasoning '' -Streamed `$true -Perf `$perf
+  Write-State -Status 'running' -Answer '' -Reasoning '' -Streamed `$true -Perf `$perf -StreamMetrics `$streamMetrics -StreamVerdict 'pending'
 
   `$headers = @{ Accept = 'text/event-stream' }
   if (`$apiKey -ne '') { `$headers['Authorization'] = 'Bearer ' + `$apiKey }
@@ -562,6 +633,7 @@ try {
         try { `$evt = `$payloadText | ConvertFrom-Json } catch { continue }
         `$kind = Get-EventKind `$evt
         `$delta = Get-DeltaText `$evt
+        Update-StreamMetrics -Metrics `$streamMetrics -Kind `$kind -Delta `$delta -ElapsedMs `$requestSw.ElapsedMilliseconds
         if (`$kind -eq 'reasoning' -and `$delta) {
           [void]`$reasoningSb.Append(`$delta)
         } elseif (`$kind -eq 'answer' -and `$delta) {
@@ -569,7 +641,8 @@ try {
         }
         `$perf.request_ms = `$requestSw.ElapsedMilliseconds
         `$perf.total_ms = `$swTotal.ElapsedMilliseconds
-        Write-State -Status 'running' -Answer `$answerSb.ToString() -Reasoning `$reasoningSb.ToString() -Streamed `$true -Perf `$perf
+        `$verdict = if (`$streamMetrics.answer_streaming_verified) { 'answer_streaming_verified' } elseif (`$streamMetrics.verified_streaming) { 'reasoning_only_streaming' } elseif ([int]`$streamMetrics.event_count -gt 0) { 'single_chunk_only' } else { 'pending' }
+        Write-State -Status 'running' -Answer `$answerSb.ToString() -Reasoning `$reasoningSb.ToString() -Streamed `$true -Perf `$perf -StreamMetrics `$streamMetrics -StreamVerdict `$verdict
       }
       continue
     }
@@ -590,7 +663,8 @@ try {
   `$perf.request_ms = `$requestSw.ElapsedMilliseconds
   `$perf.parse_ms = `$parseSw.ElapsedMilliseconds
   `$perf.total_ms = `$swTotal.ElapsedMilliseconds
-  Write-State -Status 'done' -Answer `$answerText -Reasoning `$reasoningText -Streamed `$true -Perf `$perf
+  `$finalVerdict = if (`$streamMetrics.answer_streaming_verified) { 'answer_streaming_verified' } elseif (`$streamMetrics.verified_streaming) { 'reasoning_only_streaming' } elseif ([int]`$streamMetrics.event_count -gt 0) { 'single_chunk_only' } else { 'no_stream_events' }
+  Write-State -Status 'done' -Answer `$answerText -Reasoning `$reasoningText -Streamed `$true -Perf `$perf -StreamMetrics `$streamMetrics -StreamVerdict `$finalVerdict
 } catch {
   `$perf = [ordered]@{
     read_ms = 0
@@ -602,7 +676,7 @@ try {
     image_kb = 0
     payload_kb = 0
   }
-  Write-State -Status 'error' -Answer '' -Reasoning '' -Streamed `$true -Perf `$perf -ErrorMessage `$_.Exception.Message
+  Write-State -Status 'error' -Answer '' -Reasoning '' -Streamed `$true -Perf `$perf -StreamMetrics (New-StreamMetrics) -StreamVerdict 'error' -ErrorMessage `$_.Exception.Message
 }
 "@
 

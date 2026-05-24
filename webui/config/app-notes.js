@@ -1,12 +1,28 @@
-﻿import { state, byId, api, toast, setDirty, escapeHtml, confirmDialog } from './app-common.js';
+import { state, byId, api, toast, setDirty, escapeHtml, confirmDialog } from './app-common.js';
 import { parseMarkdown, serializePreviewBodyToMarkdown, slugifyHeading } from './app-markdown.js';
 
 const NOTES_AUTOSAVE_DELAY_MS = 700;
+const NOTE_SELECTION_TEXT_COLORS = [
+  { token: 'sky', label: '蓝字' },
+  { token: 'mint', label: '绿字' },
+  { token: 'amber', label: '橙字' },
+  { token: 'rose', label: '粉字' }
+];
+const NOTE_SELECTION_BG_COLORS = [
+  { token: 'sky-soft', label: '蓝底' },
+  { token: 'mint-soft', label: '绿底' },
+  { token: 'amber-soft', label: '橙底' },
+  { token: 'rose-soft', label: '粉底' }
+];
 let notesAutosaveTimer = 0;
 let notesSaveInFlight = false;
 let notesSaveQueued = false;
 let notesSavePromise = null;
 let notesChangeVersion = 0;
+let noteSwitchGeneration = 0;
+let noteEditorBoundId = '';
+let noteLoadedRevision = { id: '', updatedAt: 0 };
+let noteSwitchChain = Promise.resolve();
 let draggingNoteId = '';
 let notesSidebarCompact = false;
 let notesExtractCollapsed = false;
@@ -20,6 +36,17 @@ let activePreviewHeadingEl = null;
 let notesPreviewEditing = false;
 let editingNoteTitleId = '';
 let notesContentView = 'rendered';
+let notesSelectionToolbarEl = null;
+let notesSelectionToolbarRange = null;
+let notesUnloadFlushDone = false;
+let notesPreviewMutationObserver = null;
+let notesSearchState = {
+  query: '',
+  mode: '',
+  matchIndex: -1,
+  matches: []
+};
+let activePreviewSearchHitEl = null;
 const EXTRACT_SLOTS = [1, 2, 3];
 
 async function createNewNote() {
@@ -92,9 +119,206 @@ function syncNotesContentMode() {
   }
 }
 
+function getScrollProgress(el) {
+  if (!el) return 0;
+  const maxScrollTop = Math.max((el.scrollHeight || 0) - (el.clientHeight || 0), 0);
+  if (maxScrollTop <= 0) return 0;
+  return Math.min(1, Math.max(0, (el.scrollTop || 0) / maxScrollTop));
+}
+
+function restoreScrollProgress(el, progress) {
+  if (!el) return false;
+  const safeProgress = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0;
+  const maxScrollTop = Math.max((el.scrollHeight || 0) - (el.clientHeight || 0), 0);
+  el.scrollTop = maxScrollTop * safeProgress;
+  window.requestAnimationFrame(() => {
+    el.scrollTop = maxScrollTop * safeProgress;
+  });
+  return true;
+}
+
+function normalizeAnchorText(value) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildNormalizedTextMap(text) {
+  const raw = String(text || '');
+  let normalized = '';
+  const rawIndexByNormalizedIndex = [];
+  let prevWasSpace = false;
+
+  for (let i = 0; i < raw.length; i += 1) {
+    const char = raw[i];
+    if (/\s/.test(char)) {
+      if (!normalized || prevWasSpace) {
+        prevWasSpace = true;
+        continue;
+      }
+      normalized += ' ';
+      rawIndexByNormalizedIndex.push(i);
+      prevWasSpace = true;
+      continue;
+    }
+    normalized += char;
+    rawIndexByNormalizedIndex.push(i);
+    prevWasSpace = false;
+  }
+
+  normalized = normalized.trim();
+  const leadingTrim = normalized.length ? String(raw).search(/\S/) : -1;
+  if (leadingTrim > 0 && rawIndexByNormalizedIndex.length) {
+    while (rawIndexByNormalizedIndex.length && rawIndexByNormalizedIndex[0] < leadingTrim) {
+      rawIndexByNormalizedIndex.shift();
+    }
+  }
+
+  return {
+    normalized,
+    rawIndexByNormalizedIndex
+  };
+}
+
+function findCaseInsensitiveMatchRanges(text, query) {
+  const source = String(text || '');
+  const needle = String(query || '').trim();
+  if (!source || !needle) return [];
+
+  const haystack = source.toLocaleLowerCase();
+  const target = needle.toLocaleLowerCase();
+  const matches = [];
+  let fromIndex = 0;
+
+  while (fromIndex <= haystack.length) {
+    const idx = haystack.indexOf(target, fromIndex);
+    if (idx < 0) break;
+    matches.push({
+      start: idx,
+      end: idx + target.length
+    });
+    fromIndex = idx + Math.max(target.length, 1);
+  }
+  return matches;
+}
+
+function getPreviewTextAnchor() {
+  const previewEl = byId('notePreviewBody');
+  if (!previewEl) {
+    return { headingId: '', anchorText: '', progress: 0 };
+  }
+
+  const previewRect = previewEl.getBoundingClientRect();
+  const probeTop = previewRect.top + 16;
+  const blocks = Array.from(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, td, th'));
+  let anchorEl = null;
+
+  for (const node of blocks) {
+    if (!(node instanceof HTMLElement)) continue;
+    const rect = node.getBoundingClientRect();
+    if (rect.bottom <= probeTop) continue;
+    const text = normalizeAnchorText(node.innerText || node.textContent || '');
+    if (!text) continue;
+    anchorEl = node;
+    break;
+  }
+
+  if (!anchorEl) {
+    const headings = Array.from(previewEl.querySelectorAll('[data-heading-id]'));
+    const headingId = headings.length ? String(headings[0].getAttribute('data-heading-id') || '') : '';
+    return {
+      headingId,
+      anchorText: '',
+      progress: getScrollProgress(previewEl)
+    };
+  }
+
+  const nearestHeading = anchorEl.closest('[data-heading-id]');
+  return {
+    headingId: String(nearestHeading?.getAttribute('data-heading-id') || ''),
+    anchorText: normalizeAnchorText(anchorEl.innerText || anchorEl.textContent || '').slice(0, 120),
+    progress: getScrollProgress(previewEl)
+  };
+}
+
+function findSourceIndexByAnchorText(content, anchorText) {
+  const normalizedAnchor = normalizeAnchorText(anchorText);
+  if (!normalizedAnchor) return -1;
+
+  const sourceMap = buildNormalizedTextMap(content);
+  if (!sourceMap.normalized) return -1;
+
+  const candidates = [];
+  const full = normalizedAnchor;
+  if (full.length >= 12) candidates.push(full);
+  if (full.length > 60) candidates.push(full.slice(0, 60));
+  if (full.length > 40) candidates.push(full.slice(0, 40));
+  if (full.length > 24) candidates.push(full.slice(0, 24));
+  if (full.length > 16) candidates.push(full.slice(0, 16));
+
+  for (const snippet of candidates) {
+    const idx = sourceMap.normalized.indexOf(snippet);
+    if (idx >= 0) {
+      return sourceMap.rawIndexByNormalizedIndex[idx] ?? 0;
+    }
+  }
+  return -1;
+}
+
+function capturePreviewPosition() {
+  const previewEl = byId('notePreviewBody');
+  if (!previewEl) {
+    return { headingId: '', anchorText: '', progress: 0 };
+  }
+  return getPreviewTextAnchor();
+}
+
+function syncSourcePositionFromPreview(position = null) {
+  const sourceEl = byId('noteContent');
+  if (!sourceEl) return;
+  const snapshot = position || capturePreviewPosition();
+  const content = String(sourceEl.value || '');
+
+  const anchorIndex = findSourceIndexByAnchorText(content, String(snapshot?.anchorText || ''));
+  if (anchorIndex >= 0) {
+    scrollSourceToIndex(anchorIndex);
+    return;
+  }
+
+  const headingId = String(snapshot?.headingId || '');
+  if (headingId) {
+    const target = notesStructureCache.find((item) => item.id === headingId);
+    if (target) {
+      activeOutlineHeadingId = target.id;
+      syncActiveOutlineHeading();
+      scrollSourceToHeading(target);
+      return;
+    }
+  }
+
+  restoreScrollProgress(sourceEl, Number(snapshot?.progress || 0));
+}
+
 function setNotesContentView(mode) {
-  notesContentView = mode === 'markdown' ? 'markdown' : 'rendered';
+  const nextMode = mode === 'markdown' ? 'markdown' : 'rendered';
+  if (nextMode === notesContentView) {
+    syncNotesContentMode();
+    return;
+  }
+  const prevMode = notesContentView;
+  const previewPosition = prevMode === 'rendered' && nextMode === 'markdown'
+    ? capturePreviewPosition()
+    : null;
+  if (prevMode === 'rendered') {
+    syncRenderedNoteSourceFromPreview();
+  }
+  notesContentView = nextMode;
   syncNotesContentMode();
+  if (prevMode === 'rendered' && nextMode === 'markdown') {
+    syncSourcePositionFromPreview(previewPosition);
+    return;
+  }
 }
 
 function syncActiveOutlineHeading() {
@@ -182,7 +406,11 @@ function countWrappedVisualLines(text, maxWidth, measureCtx) {
 
 function getSourceHeadingScrollTop(sourceEl, heading) {
   if (!sourceEl || !heading) return 0;
+  return getSourceScrollTopForIndex(sourceEl, Number(heading.startIndex || 0));
+}
 
+function getSourceScrollTopForIndex(sourceEl, index) {
+  if (!sourceEl) return 0;
   const computed = window.getComputedStyle(sourceEl);
   const rawLineHeight = Number.parseFloat(computed.lineHeight || '');
   const fontSize = Number.parseFloat(computed.fontSize || '16');
@@ -191,7 +419,7 @@ function getSourceHeadingScrollTop(sourceEl, heading) {
   const paddingLeft = Number.parseFloat(computed.paddingLeft || '0') || 0;
   const paddingRight = Number.parseFloat(computed.paddingRight || '0') || 0;
   const innerWidth = Math.max(sourceEl.clientWidth - paddingLeft - paddingRight, 1);
-  const beforeText = String(sourceEl.value || '').slice(0, Math.max(Number(heading.startIndex || 0), 0));
+  const beforeText = String(sourceEl.value || '').slice(0, Math.max(Number(index || 0), 0));
   const measureCtx = createSourceMeasureContext(sourceEl, computed);
   const visualLinesBefore = Math.max(countWrappedVisualLines(beforeText, innerWidth, measureCtx) - 1, 0);
 
@@ -211,6 +439,249 @@ function scrollSourceToHeading(heading) {
     sourceEl.scrollTop = scrollTop;
   });
   return true;
+}
+
+function scrollSourceToIndex(index) {
+  const sourceEl = byId('noteContent');
+  if (!sourceEl) return false;
+
+  const cursor = Math.max(Number(index || 0), 0);
+  const scrollTop = getSourceScrollTopForIndex(sourceEl, cursor);
+  sourceEl.selectionStart = cursor;
+  sourceEl.selectionEnd = cursor;
+  sourceEl.scrollTop = scrollTop;
+  window.requestAnimationFrame(() => {
+    sourceEl.scrollTop = scrollTop;
+  });
+  return true;
+}
+
+function resetNotesSearchState() {
+  notesSearchState = {
+    query: '',
+    mode: '',
+    matchIndex: -1,
+    matches: []
+  };
+}
+
+function clearPreviewSearchHighlight() {
+  if (activePreviewSearchHitEl) {
+    activePreviewSearchHitEl.classList.remove('notes-search-hit');
+    activePreviewSearchHitEl = null;
+  }
+  window.clearTimeout(clearPreviewSearchHighlight._timer);
+}
+
+function flashPreviewSearchHit(element) {
+  if (!(element instanceof HTMLElement)) return;
+  clearPreviewSearchHighlight();
+  element.classList.add('notes-search-hit');
+  activePreviewSearchHitEl = element;
+  clearPreviewSearchHighlight._timer = window.setTimeout(() => {
+    if (activePreviewSearchHitEl === element) {
+      element.classList.remove('notes-search-hit');
+      activePreviewSearchHitEl = null;
+    }
+  }, 1600);
+}
+
+function getSearchHitBlock(node, previewEl) {
+  if (!node || !previewEl) return null;
+  const anchor = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  if (!(anchor instanceof Element)) return null;
+  return anchor.closest('h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, td, th, .notes-preview-empty');
+}
+
+function collectPreviewTextSegments(previewEl) {
+  if (!previewEl) {
+    return { text: '', segments: [] };
+  }
+
+  const walker = document.createTreeWalker(
+    previewEl,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        if (!node || !String(node.nodeValue || '').trim()) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
+
+  const segments = [];
+  let text = '';
+  let current = walker.nextNode();
+  while (current) {
+    const value = String(current.nodeValue || '');
+    const start = text.length;
+    text += value;
+    segments.push({
+      node: current,
+      start,
+      end: start + value.length
+    });
+    current = walker.nextNode();
+  }
+
+  return { text, segments };
+}
+
+function createPreviewRangeFromOffsets(segments, start, end) {
+  const startSeg = segments.find((segment) => start >= segment.start && start < segment.end);
+  const endSeg = segments.find((segment) => end > segment.start && end <= segment.end);
+  if (!startSeg || !endSeg) return null;
+
+  const range = document.createRange();
+  range.setStart(startSeg.node, Math.max(start - startSeg.start, 0));
+  range.setEnd(endSeg.node, Math.max(end - endSeg.start, 0));
+  return range;
+}
+
+function revealPreviewSearchRange(range, previewEl) {
+  if (!range || !previewEl) return false;
+
+  const rect = range.getBoundingClientRect();
+  const previewRect = previewEl.getBoundingClientRect();
+  const relativeTop = rect.top - previewRect.top + previewEl.scrollTop;
+  const nextTop = Math.max(relativeTop - 24, 0);
+  previewEl.scrollTop = nextTop;
+  window.requestAnimationFrame(() => {
+    previewEl.scrollTop = nextTop;
+  });
+
+  const hitBlock = getSearchHitBlock(range.startContainer, previewEl);
+  if (hitBlock) {
+    flashPreviewSearchHit(hitBlock);
+  }
+  return true;
+}
+
+function getNextSearchMatchIndex(matches, currentIndex, reverse = false) {
+  if (!Array.isArray(matches) || !matches.length) return -1;
+  if (currentIndex < 0 || currentIndex >= matches.length) {
+    return reverse ? matches.length - 1 : 0;
+  }
+  if (reverse) {
+    return currentIndex <= 0 ? matches.length - 1 : currentIndex - 1;
+  }
+  return currentIndex >= matches.length - 1 ? 0 : currentIndex + 1;
+}
+
+function navigateMarkdownSearch(query, reverse = false) {
+  const sourceEl = byId('noteContent');
+  if (!sourceEl) return false;
+
+  const text = String(sourceEl.value || '');
+  const matches = findCaseInsensitiveMatchRanges(text, query);
+  if (!matches.length) {
+    toast(`没有找到“${query}”`);
+    resetNotesSearchState();
+    return false;
+  }
+
+  const shouldReset = notesSearchState.query !== query || notesSearchState.mode !== 'markdown';
+  let nextIndex = -1;
+  if (shouldReset) {
+    const anchor = Number(sourceEl.selectionStart || 0);
+    if (reverse) {
+      nextIndex = matches.findLastIndex
+        ? matches.findLastIndex((match) => match.start < anchor)
+        : (() => {
+            for (let i = matches.length - 1; i >= 0; i -= 1) {
+              if (matches[i].start < anchor) return i;
+            }
+            return -1;
+          })();
+      if (nextIndex < 0) nextIndex = matches.length - 1;
+    } else {
+      nextIndex = matches.findIndex((match) => match.start >= anchor);
+      if (nextIndex < 0) nextIndex = 0;
+    }
+  } else {
+    nextIndex = getNextSearchMatchIndex(matches, notesSearchState.matchIndex, reverse);
+  }
+
+  const match = matches[nextIndex];
+  notesSearchState = {
+    query,
+    mode: 'markdown',
+    matchIndex: nextIndex,
+    matches
+  };
+  sourceEl.selectionStart = match.start;
+  sourceEl.selectionEnd = match.end;
+  scrollSourceToIndex(match.start);
+  return true;
+}
+
+function navigateRenderedSearch(query, reverse = false) {
+  const previewEl = byId('notePreviewBody');
+  if (!previewEl) return false;
+
+  const collected = collectPreviewTextSegments(previewEl);
+  const matches = findCaseInsensitiveMatchRanges(collected.text, query);
+  if (!matches.length) {
+    toast(`没有找到“${query}”`);
+    clearPreviewSearchHighlight();
+    resetNotesSearchState();
+    return false;
+  }
+
+  const shouldReset = notesSearchState.query !== query || notesSearchState.mode !== 'rendered';
+  let nextIndex = -1;
+  if (shouldReset) {
+    const probeTop = (previewEl.scrollTop || 0) + 16;
+    nextIndex = reverse ? matches.length - 1 : 0;
+    for (let i = 0; i < matches.length; i += 1) {
+      const range = createPreviewRangeFromOffsets(collected.segments, matches[i].start, matches[i].end);
+      if (!range) continue;
+      const rect = range.getBoundingClientRect();
+      const previewRect = previewEl.getBoundingClientRect();
+      const top = rect.top - previewRect.top + previewEl.scrollTop;
+      if ((!reverse && top >= probeTop) || (reverse && top >= probeTop)) {
+        nextIndex = reverse ? Math.max(i - 1, 0) : i;
+        break;
+      }
+    }
+  } else {
+    nextIndex = getNextSearchMatchIndex(matches, notesSearchState.matchIndex, reverse);
+  }
+
+  const match = matches[nextIndex];
+  const range = createPreviewRangeFromOffsets(collected.segments, match.start, match.end);
+  if (!range) {
+    toast(`没有找到“${query}”`);
+    resetNotesSearchState();
+    return false;
+  }
+
+  notesSearchState = {
+    query,
+    mode: 'rendered',
+    matchIndex: nextIndex,
+    matches
+  };
+  revealPreviewSearchRange(range, previewEl);
+  return true;
+}
+
+function navigateNoteSearch(reverse = false) {
+  const searchEl = byId('noteContentSearch');
+  const query = String(searchEl?.value || '').trim();
+  if (!query) {
+    toast('先输入要搜索的内容');
+    resetNotesSearchState();
+    clearPreviewSearchHighlight();
+    return false;
+  }
+
+  if (notesContentView === 'markdown') {
+    return navigateMarkdownSearch(query, reverse);
+  }
+  return navigateRenderedSearch(query, reverse);
 }
 
 async function persistNotesSidebarCompact() {
@@ -398,20 +869,684 @@ function renderNoteContentSurface() {
   syncNotesContentMode();
 }
 
+function ensureNotesSelectionToolbar() {
+  if (notesSelectionToolbarEl && document.body.contains(notesSelectionToolbarEl)) {
+    return notesSelectionToolbarEl;
+  }
+
+  const toolbar = document.createElement('div');
+  toolbar.id = 'notesSelectionToolbar';
+  toolbar.className = 'notes-selection-toolbar hidden';
+  toolbar.innerHTML = `
+    <div class="notes-selection-toolbar-section">
+      <span class="notes-selection-toolbar-label">文字</span>
+      <div class="notes-selection-toolbar-swatches">
+        ${NOTE_SELECTION_TEXT_COLORS.map((item) => `
+          <button
+            class="notes-selection-swatch color-${item.token}"
+            type="button"
+            data-selection-action="text-color"
+            data-selection-token="${item.token}"
+            aria-label="${item.label}"
+            title="${item.label}"
+          ></button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="notes-selection-toolbar-divider"></div>
+    <div class="notes-selection-toolbar-section">
+      <span class="notes-selection-toolbar-label">背景</span>
+      <div class="notes-selection-toolbar-swatches">
+        ${NOTE_SELECTION_BG_COLORS.map((item) => `
+          <button
+            class="notes-selection-swatch color-${item.token}"
+            type="button"
+            data-selection-action="background-color"
+            data-selection-token="${item.token}"
+            aria-label="${item.label}"
+            title="${item.label}"
+          ></button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  toolbar.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+  });
+  toolbar.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('[data-selection-action]') : null;
+    if (!button) return;
+    const action = String(button.getAttribute('data-selection-action') || '');
+    const token = String(button.getAttribute('data-selection-token') || '');
+    if (!action || !token) return;
+    applySelectionColor(action, token);
+  });
+
+  document.body.appendChild(toolbar);
+  notesSelectionToolbarEl = toolbar;
+  return toolbar;
+}
+
+function hideNotesSelectionToolbar() {
+  notesSelectionToolbarRange = null;
+  if (!notesSelectionToolbarEl) return;
+  notesSelectionToolbarEl.classList.add('hidden');
+}
+
+function getPreviewSelectionRange() {
+  const previewEl = byId('notePreviewBody');
+  if (!previewEl || notesContentView !== 'rendered') return null;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount < 1 || selection.isCollapsed) return null;
+  const range = selection.getRangeAt(0);
+  const commonNode = range.commonAncestorContainer;
+  if (!previewEl.contains(commonNode)) return null;
+  if (!String(selection.toString() || '').trim()) return null;
+  return range;
+}
+
+function getSelectionStyleAttrName(action) {
+  if (action === 'text-color') return 'data-note-color';
+  if (action === 'background-color') return 'data-note-bg';
+  return '';
+}
+
+function getClosestStyledSpan(node, attrName, root) {
+  let current = node instanceof Element ? node : node?.parentElement || null;
+  while (current && current !== root) {
+    if (current.tagName === 'SPAN' && current.hasAttribute(attrName)) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
+function getClosestTag(node, tagName, root) {
+  let current = node instanceof Element ? node : node?.parentElement || null;
+  const expected = String(tagName || '').toUpperCase();
+  while (current && current !== root) {
+    if (current.tagName === expected) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
+function copyNoteStyleAttributes(source, target, options = {}) {
+  const exclude = new Set(Array.isArray(options.exclude) ? options.exclude : []);
+  ['data-note-color', 'data-note-bg'].forEach((attrName) => {
+    if (exclude.has(attrName)) return;
+    const value = String(source.getAttribute?.(attrName) || '').trim();
+    if (value) {
+      target.setAttribute(attrName, value);
+    }
+  });
+}
+
+function fragmentHasMeaningfulContent(fragment) {
+  if (!fragment) return false;
+  return Array.from(fragment.childNodes || []).some((node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return String(node.textContent || '').length > 0;
+    }
+    return true;
+  });
+}
+
+function stripSelectionStyleFromFragment(fragment, attrName) {
+  if (!fragment || !attrName) return;
+  const styledNodes = fragment.querySelectorAll?.(`span[${attrName}]`) || [];
+  styledNodes.forEach((node) => {
+    node.removeAttribute(attrName);
+    if (!node.hasAttribute('data-note-color') && !node.hasAttribute('data-note-bg')) {
+      const childNodes = Array.from(node.childNodes || []);
+      node.replaceWith(...childNodes);
+    }
+  });
+}
+
+function replaceStyleInsideSingleSpan(range, attrName, token, previewEl) {
+  if (!range || !attrName || !token || !previewEl) return false;
+
+  const startSpan = getClosestStyledSpan(range.startContainer, attrName, previewEl);
+  const endSpan = getClosestStyledSpan(range.endContainer, attrName, previewEl);
+  if (!startSpan || startSpan !== endSpan) return false;
+
+  const containerSpan = startSpan;
+  const beforeRange = document.createRange();
+  beforeRange.selectNodeContents(containerSpan);
+  beforeRange.setEnd(range.startContainer, range.startOffset);
+
+  const selectedRange = range.cloneRange();
+  const afterRange = document.createRange();
+  afterRange.selectNodeContents(containerSpan);
+  afterRange.setStart(range.endContainer, range.endOffset);
+
+  const beforeFragment = beforeRange.cloneContents();
+  const selectedFragment = selectedRange.cloneContents();
+  const afterFragment = afterRange.cloneContents();
+  stripSelectionStyleFromFragment(selectedFragment, attrName);
+
+  const replacement = document.createDocumentFragment();
+
+  if (fragmentHasMeaningfulContent(beforeFragment)) {
+    const beforeSpan = document.createElement('span');
+    copyNoteStyleAttributes(containerSpan, beforeSpan);
+    beforeSpan.appendChild(beforeFragment);
+    replacement.appendChild(beforeSpan);
+  }
+
+  if (fragmentHasMeaningfulContent(selectedFragment)) {
+    const selectedSpan = document.createElement('span');
+    copyNoteStyleAttributes(containerSpan, selectedSpan, { exclude: [attrName] });
+    selectedSpan.setAttribute(attrName, token);
+    selectedSpan.appendChild(selectedFragment);
+    replacement.appendChild(selectedSpan);
+  }
+
+  if (fragmentHasMeaningfulContent(afterFragment)) {
+    const afterSpan = document.createElement('span');
+    copyNoteStyleAttributes(containerSpan, afterSpan);
+    afterSpan.appendChild(afterFragment);
+    replacement.appendChild(afterSpan);
+  }
+
+  containerSpan.replaceWith(replacement);
+  return true;
+}
+
+function isCaretAtListItemStart(range, listItem) {
+  if (!range || !listItem || !range.collapsed) return false;
+  const probe = document.createRange();
+  probe.selectNodeContents(listItem);
+  probe.setEnd(range.startContainer, range.startOffset);
+  return !String(probe.toString() || '').trim();
+}
+
+function unwrapEditableListItem(listItem) {
+  if (!listItem) return false;
+  const parentList = listItem.parentElement;
+  if (!parentList || !/^(UL|OL)$/.test(parentList.tagName)) return false;
+
+  const paragraph = document.createElement('p');
+  const trailingBlocks = [];
+  Array.from(listItem.childNodes || []).forEach((child) => {
+    if (child.nodeType === Node.ELEMENT_NODE && /^(UL|OL)$/.test(child.nodeName.toUpperCase())) {
+      trailingBlocks.push(child);
+      return;
+    }
+    paragraph.appendChild(child);
+  });
+
+  const listTag = parentList.tagName.toLowerCase();
+  const beforeItems = [];
+  const afterItems = [];
+  let seenCurrent = false;
+  Array.from(parentList.children || []).forEach((child) => {
+    if (child === listItem) {
+      seenCurrent = true;
+      return;
+    }
+    if (!seenCurrent) {
+      beforeItems.push(child);
+      return;
+    }
+    afterItems.push(child);
+  });
+
+  const buildListFromItems = (items) => {
+    if (!items.length) return null;
+    const nextList = document.createElement(listTag);
+    items.forEach((item) => nextList.appendChild(item));
+    return nextList;
+  };
+
+  const beforeList = buildListFromItems(beforeItems);
+  const afterList = buildListFromItems(afterItems);
+  const replacement = document.createDocumentFragment();
+  if (beforeList) replacement.appendChild(beforeList);
+  replacement.appendChild(paragraph);
+  trailingBlocks.forEach((block) => replacement.appendChild(block));
+  if (afterList) replacement.appendChild(afterList);
+  parentList.replaceWith(replacement);
+
+  const selection = window.getSelection();
+  if (selection) {
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(paragraph);
+    nextRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+  }
+  return true;
+}
+
+function handlePreviewListMarkerDelete(event, previewEl) {
+  if (!event || (event.key !== 'Backspace' && event.key !== 'Delete')) return false;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount < 1 || !selection.isCollapsed) return false;
+  const range = selection.getRangeAt(0);
+  if (!previewEl.contains(range.startContainer)) return false;
+
+  const listItem = getClosestTag(range.startContainer, 'LI', previewEl);
+  if (!listItem) return false;
+  if (!isCaretAtListItemStart(range, listItem)) return false;
+
+  event.preventDefault();
+  if (!unwrapEditableListItem(listItem)) return false;
+  syncPreviewEditToSource();
+  forceSaveCurrentNoteSilently();
+  return true;
+}
+
+function showNotesSelectionToolbarForRange(range) {
+  const toolbar = ensureNotesSelectionToolbar();
+  const rect = range.getBoundingClientRect();
+  if (!rect || (!rect.width && !rect.height)) {
+    hideNotesSelectionToolbar();
+    return;
+  }
+
+  notesSelectionToolbarRange = range.cloneRange();
+  toolbar.classList.remove('hidden');
+  const toolbarRect = toolbar.getBoundingClientRect();
+  const top = Math.max(rect.top + window.scrollY - toolbarRect.height - 10, window.scrollY + 10);
+  const left = Math.min(
+    Math.max(rect.left + window.scrollX + (rect.width / 2) - (toolbarRect.width / 2), window.scrollX + 10),
+    window.scrollX + window.innerWidth - toolbarRect.width - 10
+  );
+  toolbar.style.top = `${top}px`;
+  toolbar.style.left = `${left}px`;
+}
+
+function refreshNotesSelectionToolbar() {
+  const range = getPreviewSelectionRange();
+  if (!range || notesPreviewEditing === false) {
+    hideNotesSelectionToolbar();
+    return;
+  }
+  showNotesSelectionToolbarForRange(range);
+}
+
+function applySelectionColor(action, token) {
+  const previewEl = byId('notePreviewBody');
+  const selection = window.getSelection();
+  if (!previewEl || !selection || !notesSelectionToolbarRange) return;
+  const attrName = getSelectionStyleAttrName(action);
+  if (!attrName) return;
+
+  selection.removeAllRanges();
+  selection.addRange(notesSelectionToolbarRange);
+  if (selection.isCollapsed) {
+    hideNotesSelectionToolbar();
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  if (replaceStyleInsideSingleSpan(range, attrName, token, previewEl)) {
+    selection.removeAllRanges();
+    syncPreviewEditToSource();
+    forceSaveCurrentNoteSilently();
+    hideNotesSelectionToolbar();
+    return;
+  }
+
+  const previewFragment = range.cloneContents();
+  if (previewFragment.querySelector('h1, h2, h3, h4, h5, h6, p, div, ul, ol, li, blockquote, pre, table, hr')) {
+    toast('当前只支持对单段行内文字着色，请不要跨整块内容一起选。');
+    hideNotesSelectionToolbar();
+    return;
+  }
+
+  const wrapper = document.createElement('span');
+  wrapper.setAttribute(attrName, token);
+  const fragment = range.extractContents();
+  if (!fragment.childNodes.length) {
+    hideNotesSelectionToolbar();
+    return;
+  }
+  stripSelectionStyleFromFragment(fragment, attrName);
+
+  wrapper.appendChild(fragment);
+  range.insertNode(wrapper);
+  selection.removeAllRanges();
+  syncPreviewEditToSource();
+  forceSaveCurrentNoteSilently();
+  hideNotesSelectionToolbar();
+}
+
 function syncPreviewEditToSource() {
   const previewEl = byId('notePreviewBody');
   const sourceEl = byId('noteContent');
   if (!previewEl || !sourceEl) return;
   sourceEl.value = serializePreviewBodyToMarkdown(previewEl);
+  handleCurrentNoteContentChanged();
+}
+
+function syncRenderedNoteSourceFromPreview(options = {}) {
+  if (extractViewActive || notesContentView !== 'rendered') return false;
+  const previewEl = byId('notePreviewBody');
+  const sourceEl = byId('noteContent');
+  if (!previewEl || !sourceEl) return false;
+
+  const nextMarkdown = serializePreviewBodyToMarkdown(previewEl);
+  if (nextMarkdown === String(sourceEl.value || '')) {
+    return false;
+  }
+
+  sourceEl.value = nextMarkdown;
+  if (options.markDirty === false) {
+    syncCurrentNoteContentCount();
+    renderNoteStructure();
+    return true;
+  }
+
+  handleCurrentNoteContentChanged();
+  return true;
+}
+
+function handleCurrentNoteContentChanged() {
   notesChangeVersion += 1;
   state.notes.dirty = true;
   setDirty(true, 'notes');
+  syncCurrentNoteContentCount();
+  syncCurrentNoteSaveIndicator();
   renderNoteStructure();
   if (extractViewActive) {
     queueExtractAggregateSave();
   } else {
     scheduleNotesAutosave();
   }
+}
+
+function syncPreviewEditToSourceForUnload() {
+  if (syncRenderedNoteSourceFromPreview({ markDirty: false })) {
+    notesChangeVersion += 1;
+    state.notes.dirty = true;
+    setDirty(true, 'notes');
+  }
+}
+
+function forceSaveCurrentNoteSilently() {
+  if (!state.notes.currentId || !state.notes.dirty) return;
+  syncCurrentNoteSaveIndicator();
+  void saveCurrentNote({ silent: true }).catch((error) => {
+    toast(`自动保存失败: ${error.message}`);
+  });
+}
+
+function sendJsonOnUnload(path, payload) {
+  const text = JSON.stringify(payload);
+  const blob = new Blob([text], { type: 'application/json; charset=utf-8' });
+  if (navigator.sendBeacon) {
+    const ok = navigator.sendBeacon(path, blob);
+    if (ok) return true;
+  }
+  try {
+    void fetch(path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: text,
+      keepalive: true
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function buildExtractViewPendingSaves() {
+  if (!extractViewActive) return [];
+  const raw = String(byId('noteContent')?.value || '');
+  const sections = parseExtractViewContent(raw);
+  if (sections.length !== extractViewItems.length) return [];
+
+  const saves = [];
+  for (let i = 0; i < extractViewItems.length; i += 1) {
+    const item = extractViewItems[i];
+    const context = extractContextByNoteId.get(String(item.id || ''));
+    if (!context) continue;
+    const segments = parseExtractSegments(sections[i], context.segmentTitles || []);
+    if (segments.length !== context.ranges.length) continue;
+
+    let updatedContent = context.fullContent;
+    for (let j = context.ranges.length - 1; j >= 0; j -= 1) {
+      const range = context.ranges[j];
+      updatedContent = updatedContent.slice(0, range.bodyStart) + segments[j] + updatedContent.slice(range.bodyEnd);
+    }
+
+    saves.push({
+      id: String(context.id || ''),
+      title: String(context.title || 'Untitled'),
+      content: updatedContent
+    });
+  }
+  return saves;
+}
+
+function flushPendingNoteSaveOnUnload() {
+  if (notesUnloadFlushDone) return;
+  if (!state.notes.currentId || !state.notes.dirty) return;
+
+  if (notesContentView === 'rendered') {
+    syncPreviewEditToSourceForUnload();
+  }
+
+  notesUnloadFlushDone = true;
+  cancelNotesAutosave();
+
+  if (extractViewActive) {
+    const saves = buildExtractViewPendingSaves();
+    if (!saves.length) return;
+    saves.forEach((payload) => {
+      if (!payload.id) return;
+      sendJsonOnUnload('/api/notes/save', payload);
+    });
+    return;
+  }
+
+  sendJsonOnUnload('/api/notes/save', {
+    id: String(state.notes.currentId || ''),
+    title: getCurrentNoteTitle(),
+    content: String(byId('noteContent')?.value || '')
+  });
+}
+
+function sanitizeExportFileName(name) {
+  const base = String(name || 'Untitled')
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return base || 'Untitled';
+}
+
+function escapeHtmlText(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildExportPlainText(markdown) {
+  const html = parseMarkdown(markdown).html;
+  const host = document.createElement('div');
+  host.innerHTML = html;
+  return String(host.innerText || host.textContent || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function buildExportHtmlDocument(title, markdown) {
+  const rendered = parseMarkdown(markdown).html || '<p></p>';
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtmlText(title)}</title>
+  <style>
+    :root { color-scheme: light; }
+    @page { size: A4; margin: 16mm 14mm 18mm; }
+    body { margin: 40px auto; max-width: 860px; padding: 0 24px 48px; font: 16px/1.75 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #1f2328; background: #ffffff; }
+    h1, h2, h3, h4, h5, h6 { line-height: 1.35; margin: 1.3em 0 .5em; }
+    p, li { margin: 0 0 .8em; }
+    pre { overflow: auto; padding: 14px 16px; border-radius: 10px; background: #f6f8fa; }
+    code { font-family: "Cascadia Code", Consolas, monospace; }
+    blockquote { margin: 0 0 1em; padding: .2em 1em; border-left: 4px solid #d0d7de; color: #57606a; background: #f6f8fa; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 1em; }
+    th, td { border: 1px solid #d0d7de; padding: 8px 10px; text-align: left; }
+    img { max-width: 100%; }
+    [data-note-color="sky"] { color: #0b73c9; }
+    [data-note-color="mint"] { color: #0b8f5c; }
+    [data-note-color="amber"] { color: #b16a00; }
+    [data-note-color="rose"] { color: #b3366b; }
+    [data-note-bg="sky-soft"] { background: rgba(54, 139, 255, .16); border-radius: 4px; }
+    [data-note-bg="mint-soft"] { background: rgba(36, 168, 102, .30); border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(28, 145, 88, .18); }
+    [data-note-bg="amber-soft"] { background: rgba(255, 177, 66, .20); border-radius: 4px; }
+    [data-note-bg="rose-soft"] { background: rgba(226, 92, 146, .16); border-radius: 4px; }
+  </style>
+</head>
+<body>
+${rendered}
+</body>
+</html>`;
+}
+
+function getCurrentNoteExportPayload(format) {
+  const title = getCurrentNoteTitle();
+  const content = String(byId('noteContent')?.value || '');
+  const noteMeta = (state.notes.list || []).find((note) => String(note.id || '') === String(state.notes.currentId || '')) || {};
+  const htmlDocument = buildExportHtmlDocument(title, content);
+
+  if (format === 'html') {
+    return {
+      extension: 'html',
+      mimeType: 'text/html;charset=utf-8',
+      text: htmlDocument
+    };
+  }
+  if (format === 'pdf') {
+    return {
+      extension: 'pdf',
+      mimeType: 'application/pdf',
+      text: htmlDocument,
+      transport: 'server-pdf'
+    };
+  }
+  if (format === 'txt') {
+    return {
+      extension: 'txt',
+      mimeType: 'text/plain;charset=utf-8',
+      text: buildExportPlainText(content)
+    };
+  }
+  if (format === 'json') {
+    return {
+      extension: 'json',
+      mimeType: 'application/json;charset=utf-8',
+      text: JSON.stringify({
+        id: String(state.notes.currentId || ''),
+        title,
+        content,
+        updated: String(noteMeta.updated || ''),
+        exported_at: new Date().toISOString()
+      }, null, 2)
+    };
+  }
+  return {
+    extension: 'md',
+    mimeType: 'text/markdown;charset=utf-8',
+    text: content
+  };
+}
+
+function triggerTextDownload(filename, mimeType, text) {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function triggerBlobDownload(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportCurrentNotePdf(filename, html) {
+  const res = await fetch('/api/notes/export-pdf', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8'
+    },
+    body: JSON.stringify({
+      title: filename.replace(/\.pdf$/i, ''),
+      html
+    })
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    let error = `HTTP ${res.status}`;
+    if (txt) {
+      try {
+        const payload = JSON.parse(txt);
+        error = payload.error || error;
+      } catch {
+        error = txt || error;
+      }
+    }
+    throw new Error(error);
+  }
+
+  const blob = await res.blob();
+  triggerBlobDownload(filename, blob);
+}
+
+async function exportCurrentNote() {
+  if (!state.notes.currentId) {
+    toast('当前没有可导出的笔记');
+    return;
+  }
+  if (extractViewActive) {
+    toast('提取视图下请先恢复正文，再导出当前笔记。');
+    return;
+  }
+
+  if (notesContentView === 'rendered') {
+    syncRenderedNoteSourceFromPreview();
+  }
+  if (state.notes.dirty) {
+    await saveCurrentNote({ silent: true });
+  }
+
+  const format = String(byId('noteExportFormat')?.value || 'md').trim().toLowerCase();
+  const payload = getCurrentNoteExportPayload(format);
+  const title = sanitizeExportFileName(getCurrentNoteTitle());
+  if (payload.transport === 'server-pdf') {
+    await exportCurrentNotePdf(`${title}.pdf`, payload.text);
+    toast('已导出为 PDF');
+    return;
+  }
+  triggerTextDownload(`${title}.${payload.extension}`, payload.mimeType, payload.text);
+  toast(`已导出为 ${payload.extension.toUpperCase()}`);
 }
 
 async function saveExtractResult(noteId, nextText) {
@@ -433,7 +1568,8 @@ async function saveExtractResult(noteId, nextText) {
     body: JSON.stringify({
       id: context.id,
       title: context.title,
-      content: updatedContent
+      content: updatedContent,
+      save_intent: 'autosave'
     })
   });
   if (!payload.ok) throw new Error(payload.error || 'save extracted note failed');
@@ -660,15 +1796,54 @@ function renderOutlineList(structure) {
     return;
   }
 
-  host.innerHTML = headings
-    .map((heading) => `
-      <button class="notes-outline-item level-${Math.min(heading.level, 6)} ${heading.id === activeOutlineHeadingId ? 'active' : ''}" type="button" data-outline-id="${escapeOutlineText(heading.id)}">
-        <span class="outline-indent depth-${Math.min(Math.max(heading.level - 1, 0), 5)}" aria-hidden="true"></span>
-        <span class="outline-text">${escapeOutlineText(heading.text)}</span>
-        <span class="level-label">H${heading.level}</span>
-      </button>
-    `)
-    .join('');
+  const renderOutlineButton = (heading, extraClass = '') => `
+    <button class="${[
+      'notes-outline-item',
+      `level-${Math.min(heading.level, 6)}`,
+      heading.id === activeOutlineHeadingId ? 'active' : '',
+      extraClass
+    ].filter(Boolean).join(' ')}" type="button" data-outline-id="${escapeOutlineText(heading.id)}">
+      <span class="outline-indent depth-${Math.min(Math.max(heading.level - 1, 0), 5)}" aria-hidden="true"></span>
+      <span class="outline-text">${escapeOutlineText(heading.text)}</span>
+      <span class="level-label">H${heading.level}</span>
+    </button>
+  `;
+
+  let html = '';
+  let index = 0;
+  while (index < headings.length) {
+    const heading = headings[index];
+    if (heading.level !== 1) {
+      html += renderOutlineButton(heading);
+      index += 1;
+      continue;
+    }
+
+    const children = [];
+    let cursor = index + 1;
+    while (cursor < headings.length && headings[cursor].level !== 1) {
+      children.push(headings[cursor]);
+      cursor += 1;
+    }
+
+    if (!children.length) {
+      html += renderOutlineButton(heading, 'notes-outline-item-h1');
+      index = cursor;
+      continue;
+    }
+
+    html += `
+      <div class="notes-outline-group" data-outline-group="${escapeOutlineText(heading.id)}">
+        ${renderOutlineButton(heading, 'notes-outline-item-h1')}
+        <div class="notes-outline-children" aria-hidden="true">
+          ${children.map((child) => renderOutlineButton(child, 'notes-outline-item-child')).join('')}
+        </div>
+      </div>
+    `;
+    index = cursor;
+  }
+
+  host.innerHTML = html;
 }
 
 function renderNoteStructure() {
@@ -686,17 +1861,37 @@ function getCurrentNoteTitle() {
   return String(current?.title || '').trim() || 'Untitled';
 }
 
-function setCurrentNoteTitle(title) {
+function setCurrentNoteTitle(title, noteId = state.notes.currentId) {
   const nextTitle = String(title || '').trim() || 'Untitled';
   const hidden = byId('noteTitle');
   if (hidden) hidden.value = nextTitle;
-  updateCurrentNoteMeta(nextTitle);
+  updateCurrentNoteMeta(nextTitle, noteId);
+}
+
+function beginNotesListTitleEdit(noteId) {
+  const id = String(noteId || '').trim();
+  if (!id) return;
+  editingNoteTitleId = id;
+  renderNotesList();
+  window.requestAnimationFrame(() => {
+    const input = byId('notesList')?.querySelector(`.note-item[data-id="${id}"] .note-item-title-edit`);
+    if (!input) return;
+    input.focus();
+    input.select();
+  });
 }
 
 async function renameNoteTitle(noteId, rawTitle) {
   const id = String(noteId || '').trim();
   if (!id) return;
   const title = String(rawTitle || '').trim() || 'Untitled';
+  const existing = (state.notes.list || []).find((item) => String(item.id || '').trim() === id);
+  if (existing && String(existing.title || '').trim() === title) {
+    if (id === String(state.notes.currentId || '').trim()) {
+      setCurrentNoteTitle(title);
+    }
+    return;
+  }
 
   if (id === String(state.notes.currentId || '').trim()) {
     setCurrentNoteTitle(title);
@@ -715,12 +1910,12 @@ async function renameNoteTitle(noteId, rawTitle) {
     body: JSON.stringify({
       id,
       title,
-      content: note.content || ''
+      content: note.content || '',
+      save_intent: 'autosave'
     })
   });
   if (!savePayload.ok) throw new Error(savePayload.error || 'rename note failed');
 
-  const existing = (state.notes.list || []).find((item) => String(item.id || '').trim() === id);
   if (existing) existing.title = title;
   renderNotesList();
 }
@@ -749,22 +1944,26 @@ function renderNotesList() {
     item.draggable = true;
     item.dataset.id = note.id;
     if (editingNoteTitleId === note.id) {
-      item.innerHTML = `<input class="note-item-title-edit" type="text" value="${escapeHtml(note.title || 'Untitled')}" />`;
+      const input = document.createElement('input');
+      input.className = 'note-item-title-edit';
+      input.type = 'text';
+      input.value = String(note.title || 'Untitled');
+      item.appendChild(input);
     } else {
-      item.innerHTML = `<div class="note-item-title">${escapeHtml(note.title || 'Untitled')}</div>`;
+      const titleEl = document.createElement('div');
+      titleEl.className = 'note-item-title';
+      titleEl.textContent = String(note.title || 'Untitled');
+      titleEl.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        beginNotesListTitleEdit(note.id);
+      });
+      item.appendChild(titleEl);
     }
-    item.onclick = () => selectNote(note.id).catch((e) => toast(`切换失败: ${e.message}`));
-    item.ondblclick = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      editingNoteTitleId = note.id;
-      renderNotesList();
-      const input = listEl.querySelector(`.note-item[data-id="${note.id}"] .note-item-title-edit`);
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    };
+    item.addEventListener('click', () => {
+      if (editingNoteTitleId === note.id) return;
+      void selectNote(note.id);
+    });
     item.addEventListener('dragstart', (event) => {
       draggingNoteId = note.id;
       item.classList.add('dragging');
@@ -803,10 +2002,11 @@ function renderNotesList() {
     if (editingNoteTitleId === note.id) {
       const input = item.querySelector('.note-item-title-edit');
       const finish = async (commit) => {
-        const nextValue = commit ? input.value : (note.title || 'Untitled');
+        const previousTitle = String(note.title || 'Untitled').trim() || 'Untitled';
+        const nextValue = commit ? String(input.value || '').trim() || 'Untitled' : previousTitle;
         editingNoteTitleId = '';
         try {
-          if (commit) {
+          if (commit && nextValue !== previousTitle) {
             await renameNoteTitle(note.id, nextValue);
             toast('笔记标题已更新');
           } else {
@@ -868,8 +2068,18 @@ function cancelNotesAutosave() {
   notesAutosaveTimer = 0;
 }
 
-function updateCurrentNoteMeta(title) {
-  const id = String(state.notes.currentId || '').trim();
+function getNoteTitleById(noteId = state.notes.currentId) {
+  const id = String(noteId || '').trim();
+  if (!id) return 'Untitled';
+  if (id === String(state.notes.currentId || '').trim()) {
+    return getCurrentNoteTitle();
+  }
+  const entry = (state.notes.list || []).find((note) => String(note.id || '').trim() === id);
+  return String(entry?.title || '').trim() || 'Untitled';
+}
+
+function updateCurrentNoteMeta(title, noteId = state.notes.currentId) {
+  const id = String(noteId || '').trim();
   if (!id) return;
   const nextTitle = String(title || '').trim() || 'Untitled';
   const list = Array.isArray(state.notes.list) ? state.notes.list : [];
@@ -883,17 +2093,80 @@ function updateCurrentNoteMeta(title) {
   renderNotesList();
 }
 
-async function loadNoteContent(id) {
+function getCurrentNoteContentCount() {
+  const content = String(byId('noteContent')?.value || '').replace(/\r\n/g, '\n');
+  return content.length;
+}
+
+function syncCurrentNoteContentCount() {
+  const host = byId('noteContentCount');
+  if (!host) return;
+  host.textContent = String(getCurrentNoteContentCount());
+}
+
+function syncCurrentNoteSaveIndicator() {
+  const dot = byId('noteContentSaveDot');
+  if (!dot) return;
+  const pending = !!state.notes.dirty || !!notesSaveInFlight;
+  dot.classList.toggle('pending', pending);
+}
+
+function markNotesSavedForRefreshRestore() {
+  try {
+    sessionStorage.setItem('raccourci.notesLastSavedAt', String(Date.now()));
+    sessionStorage.removeItem('raccourci.notesDraftRestorePending');
+    sessionStorage.removeItem('raccourci.notesDraft');
+    sessionStorage.setItem('raccourci.notesLoadedRevision', JSON.stringify(noteLoadedRevision));
+  } catch {}
+}
+
+function snapshotEditorForNote(noteId) {
+  if (notesContentView === 'rendered') {
+    syncRenderedNoteSourceFromPreview({ markDirty: false });
+  }
+  return {
+    id: String(noteId || '').trim(),
+    title: getNoteTitleById(noteId),
+    content: String(byId('noteContent')?.value || '')
+  };
+}
+
+function captureNoteEditorPayload(noteId = state.notes.currentId) {
+  const id = String(noteId || '').trim();
+  if (!id) return null;
+  if (noteEditorBoundId && id !== noteEditorBoundId) {
+    return null;
+  }
+  return snapshotEditorForNote(id);
+}
+
+async function loadNoteContent(id, expectedGeneration) {
   cancelNotesAutosave();
-  const payload = await api(`/api/notes/get?id=${encodeURIComponent(id)}`);
+  const payload = await api(`/api/notes/get?id=${encodeURIComponent(id)}&_=${Date.now()}`);
+  if (expectedGeneration !== undefined && expectedGeneration !== noteSwitchGeneration) {
+    return;
+  }
   if (!payload.ok) throw new Error(payload.error || 'load note failed');
   const note = payload.note || { id, title: '', content: '' };
   state.notes.currentId = note.id;
-  setCurrentNoteTitle(note.title || '');
+  noteEditorBoundId = note.id;
+  setCurrentNoteTitle(note.title || '', note.id);
   byId('noteContent').value = note.content || '';
   notesChangeVersion = 0;
   state.notes.dirty = false;
   setDirty(false, 'notes');
+  if (notesContentView === 'rendered') {
+    renderNoteContentSurface();
+  }
+  noteLoadedRevision = {
+    id: note.id,
+    updatedAt: Number(note.updatedAt || 0)
+  };
+  try {
+    sessionStorage.setItem('raccourci.notesLoadedRevision', JSON.stringify(noteLoadedRevision));
+  } catch {}
+  syncCurrentNoteContentCount();
+  syncCurrentNoteSaveIndicator();
   renderNotesList();
   renderNoteStructure();
 }
@@ -915,6 +2188,9 @@ export async function loadNotes() {
     notesChangeVersion = 0;
     setCurrentNoteTitle('');
     byId('noteContent').value = '';
+    noteEditorBoundId = '';
+    syncCurrentNoteContentCount();
+    syncCurrentNoteSaveIndicator();
     renderNoteStructure();
   }
 }
@@ -926,12 +2202,15 @@ export function applyNotesDraftState(draft = {}) {
 
   if (id) {
     state.notes.currentId = id;
+    noteEditorBoundId = id;
   }
-  setCurrentNoteTitle(title || getCurrentNoteTitle());
+  setCurrentNoteTitle(title || getCurrentNoteTitle(), id || state.notes.currentId);
   byId('noteContent').value = content;
   notesChangeVersion += 1;
   state.notes.dirty = true;
   setDirty(true, 'notes');
+  syncCurrentNoteContentCount();
+  syncCurrentNoteSaveIndicator();
   renderNotesList();
   renderNoteStructure();
 }
@@ -946,9 +2225,9 @@ function scheduleNotesAutosave() {
   }, NOTES_AUTOSAVE_DELAY_MS);
 }
 
-export async function saveCurrentNote(options = {}) {
+async function saveNotePayload(payload, options = {}) {
   const silent = !!options.silent;
-  const id = state.notes.currentId;
+  const id = String(payload?.id || '').trim();
   if (!id) {
     if (!silent) {
       toast('请先新建笔记');
@@ -956,64 +2235,159 @@ export async function saveCurrentNote(options = {}) {
     return;
   }
 
+  if (noteEditorBoundId && id !== noteEditorBoundId) {
+    return;
+  }
+
   if (notesSaveInFlight) {
     notesSaveQueued = true;
     await notesSavePromise;
-    if (state.notes.dirty) {
-      return saveCurrentNote(options);
+    if (options.retryOnQueue !== false && String(state.notes.currentId || '') === id && state.notes.dirty) {
+      const retryPayload = captureNoteEditorPayload(id);
+      retryPayload.changeVersion = notesChangeVersion;
+      return saveNotePayload(retryPayload, { ...options, retryOnQueue: false });
     }
     return;
   }
 
   cancelNotesAutosave();
   notesSaveInFlight = true;
-  const saveVersion = notesChangeVersion;
-  const title = getCurrentNoteTitle();
-  const content = byId('noteContent').value;
+  syncCurrentNoteSaveIndicator();
+
+  const saveVersion = Number(payload?.changeVersion ?? notesChangeVersion);
+  const title = String(payload?.title ?? 'Untitled').trim() || 'Untitled';
+  const content = String(payload?.content ?? '');
 
   try {
+    const saveIntent = String(options.saveIntent || 'autosave').trim().toLowerCase() || 'autosave';
     notesSavePromise = api('/api/notes/save', {
       method: 'POST',
-      body: JSON.stringify({ id, title, content })
+      body: JSON.stringify({
+        id,
+        title,
+        content,
+        save_intent: saveIntent
+      })
     });
-    const payload = await notesSavePromise;
-    if (!payload.ok) throw new Error(payload.error || 'save note failed');
-    updateCurrentNoteMeta(title);
-    if (saveVersion === notesChangeVersion) {
+    const response = await notesSavePromise;
+    if (!response.ok) throw new Error(response.error || 'save note failed');
+
+    const isCurrentNote = id === String(state.notes.currentId || '');
+    if (isCurrentNote && typeof response.content === 'string' && response.content !== content) {
+      byId('noteContent').value = response.content;
+      if (notesContentView === 'rendered') {
+        renderNoteContentSurface();
+      }
+      renderNoteStructure();
+      syncCurrentNoteContentCount();
+    }
+
+    if (isCurrentNote) {
+      updateCurrentNoteMeta(title);
+    }
+
+    if (saveVersion === notesChangeVersion && isCurrentNote) {
       state.notes.dirty = false;
       setDirty(false, 'notes');
+      markNotesSavedForRefreshRestore();
     }
+
+    syncCurrentNoteSaveIndicator();
     if (!silent) {
       toast('笔记已保存');
     }
   } catch (error) {
-    state.notes.dirty = true;
-    setDirty(true, 'notes');
+    if (id === String(state.notes.currentId || '')) {
+      state.notes.dirty = true;
+      setDirty(true, 'notes');
+      scheduleNotesAutosave();
+    }
     notesSaveQueued = false;
-    scheduleNotesAutosave();
+    syncCurrentNoteSaveIndicator();
     throw error;
   } finally {
     notesSaveInFlight = false;
+    syncCurrentNoteSaveIndicator();
     notesSavePromise = null;
     if (notesSaveQueued) {
       notesSaveQueued = false;
-      scheduleNotesAutosave();
+      if (id === String(state.notes.currentId || '') && state.notes.dirty) {
+        scheduleNotesAutosave();
+      }
     }
   }
 }
 
-export async function selectNote(id) {
-  if (state.notes.currentId === id) return;
+export async function saveCurrentNote(options = {}) {
+  if (!state.notes.currentId) {
+    if (!options.silent) {
+      toast('请先新建笔记');
+    }
+    return;
+  }
+
+  if (notesContentView === 'rendered') {
+    syncRenderedNoteSourceFromPreview();
+  }
+
+  const payload = captureNoteEditorPayload(state.notes.currentId);
+  if (!payload) return;
+  payload.changeVersion = notesChangeVersion;
+  const manual = options.manual === true;
+  return saveNotePayload(payload, {
+    ...options,
+    saveIntent: manual ? 'manual' : (options.saveIntent || 'autosave')
+  });
+}
+
+async function performSelectNote(targetId) {
+  if (state.notes.currentId === targetId) return;
+
+  if (editingNoteTitleId && editingNoteTitleId !== targetId) {
+    editingNoteTitleId = '';
+  }
+
+  const generation = ++noteSwitchGeneration;
+  cancelNotesAutosave();
+
+  const fromId = String(state.notes.currentId || '');
+  let pending = null;
+  if (fromId && fromId !== targetId && state.notes.dirty) {
+    if (!noteEditorBoundId || fromId === noteEditorBoundId) {
+      pending = snapshotEditorForNote(fromId);
+      pending.dirty = true;
+      pending.changeVersion = notesChangeVersion;
+    }
+  }
+
   if (extractViewActive && state.notes.dirty) {
     await saveExtractAggregateView({ silent: true });
-  } else if (state.notes.dirty) {
-    await saveCurrentNote({ silent: true });
+  } else if (pending?.dirty) {
+    await saveNotePayload(pending, {
+      silent: true,
+      saveIntent: 'switch'
+    });
   }
+
+  if (generation !== noteSwitchGeneration) return;
+
   resetExtractViewState();
-  await loadNoteContent(id);
+  await loadNoteContent(targetId, generation);
+}
+
+export async function selectNote(id) {
+  const targetId = String(id || '').trim();
+  if (!targetId) return;
+  noteSwitchChain = noteSwitchChain
+    .then(() => performSelectNote(targetId))
+    .catch((error) => {
+      toast(`切换失败: ${error.message}`);
+    });
+  return noteSwitchChain;
 }
 
 export function initNotesHandlers() {
+  notesUnloadFlushDone = false;
   notesSidebarCompact = Number(state.app?.notes_sidebar_compact || 0) === 1;
   notesExtractCollapsed = Number(state.app?.notes_extract_collapsed || 0) === 1;
   EXTRACT_SLOTS.forEach((slot) => {
@@ -1038,35 +2412,138 @@ export function initNotesHandlers() {
 
   const previewEl = byId('notePreviewBody');
   const sourceEl = byId('noteContent');
+  let previewMutationSyncQueued = false;
+  const queuePreviewMutationSync = () => {
+    if (!notesPreviewEditing || notesContentView !== 'rendered') return;
+    if (previewMutationSyncQueued) return;
+    previewMutationSyncQueued = true;
+    window.requestAnimationFrame(() => {
+      previewMutationSyncQueued = false;
+      syncPreviewEditToSource();
+    });
+  };
+
+  if (notesPreviewMutationObserver) {
+    notesPreviewMutationObserver.disconnect();
+  }
+  notesPreviewMutationObserver = new MutationObserver((mutations) => {
+    const hasRealChange = mutations.some((mutation) => {
+      if (mutation.type === 'characterData') return true;
+      if (mutation.type === 'childList') {
+        return mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0;
+      }
+      return false;
+    });
+    if (hasRealChange) {
+      queuePreviewMutationSync();
+    }
+  });
+  notesPreviewMutationObserver.observe(previewEl, {
+    subtree: true,
+    childList: true,
+    characterData: true
+  });
+
   previewEl.addEventListener('focus', () => {
     notesPreviewEditing = true;
   });
   previewEl.addEventListener('input', () => {
     syncPreviewEditToSource();
   });
+  previewEl.addEventListener('cut', queuePreviewMutationSync);
+  previewEl.addEventListener('paste', queuePreviewMutationSync);
+  previewEl.addEventListener('drop', queuePreviewMutationSync);
+  previewEl.addEventListener('keydown', (event) => {
+    if (handlePreviewListMarkerDelete(event, previewEl)) {
+      hideNotesSelectionToolbar();
+    }
+  });
   previewEl.addEventListener('blur', () => {
     notesPreviewEditing = false;
+    hideNotesSelectionToolbar();
     syncPreviewEditToSource();
+    forceSaveCurrentNoteSilently();
     renderNoteContentSurface();
   });
-  sourceEl.addEventListener('input', () => {
-    notesChangeVersion += 1;
-    state.notes.dirty = true;
-    setDirty(true, 'notes');
-    renderNoteStructure();
-    if (extractViewActive) {
-      queueExtractAggregateSave();
-    } else {
-      scheduleNotesAutosave();
+  previewEl.addEventListener('mouseup', () => {
+    window.requestAnimationFrame(() => {
+      refreshNotesSelectionToolbar();
+    });
+  });
+  previewEl.addEventListener('keyup', () => {
+    window.requestAnimationFrame(() => {
+      refreshNotesSelectionToolbar();
+    });
+  });
+  previewEl.addEventListener('scroll', () => {
+    if (!notesSelectionToolbarRange) return;
+    const range = getPreviewSelectionRange();
+    if (!range) {
+      hideNotesSelectionToolbar();
+      return;
     }
+    showNotesSelectionToolbarForRange(range);
+  });
+  sourceEl.addEventListener('input', () => {
+    handleCurrentNoteContentChanged();
+  });
+  sourceEl.addEventListener('change', handleCurrentNoteContentChanged);
+  sourceEl.addEventListener('cut', () => {
+    window.requestAnimationFrame(handleCurrentNoteContentChanged);
+  });
+  sourceEl.addEventListener('paste', () => {
+    window.requestAnimationFrame(handleCurrentNoteContentChanged);
+  });
+  sourceEl.addEventListener('drop', () => {
+    window.requestAnimationFrame(handleCurrentNoteContentChanged);
   });
 
   byId('notesViewMarkdownBtn').onclick = () => {
     setNotesContentView('markdown');
+    hideNotesSelectionToolbar();
   };
   byId('notesViewRenderedBtn').onclick = () => {
     setNotesContentView('rendered');
   };
+  byId('saveCurrentNoteBtn').onclick = () => {
+    const saver = extractViewActive
+      ? saveExtractAggregateView()
+      : saveCurrentNote({ manual: true });
+    saver.catch((error) => {
+      toast(`保存失败: ${error.message}`);
+    });
+  };
+  byId('exportCurrentNoteBtn').onclick = () => {
+    exportCurrentNote().catch((error) => {
+      toast(`导出失败: ${error.message}`);
+    });
+  };
+  byId('noteContentSearch').addEventListener('input', () => {
+    resetNotesSearchState();
+    clearPreviewSearchHighlight();
+  });
+  byId('noteContentSearch').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    navigateNoteSearch(!!event.shiftKey);
+  });
+
+  document.addEventListener('selectionchange', () => {
+    const active = document.activeElement;
+    if (active === previewEl || previewEl.contains(active)) {
+      window.requestAnimationFrame(() => {
+        refreshNotesSelectionToolbar();
+      });
+      return;
+    }
+    const range = getPreviewSelectionRange();
+    if (!range) {
+      hideNotesSelectionToolbar();
+    }
+  });
+
+  window.addEventListener('pagehide', flushPendingNoteSaveOnUnload);
+  window.addEventListener('beforeunload', flushPendingNoteSaveOnUnload);
 
   byId('copyNoteOutlineBtn').onclick = async () => {
     const structure = parseNoteStructure(byId('noteContent')?.value || '');
@@ -1083,6 +2560,9 @@ export function initNotesHandlers() {
       toast(`目录复制失败: ${error.message}`);
     }
   };
+
+  syncCurrentNoteContentCount();
+  syncCurrentNoteSaveIndicator();
 
   byId('notesOutlineList').addEventListener('click', (event) => {
     const button = event.target instanceof Element ? event.target.closest('.notes-outline-item') : null;

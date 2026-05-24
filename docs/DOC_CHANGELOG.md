@@ -2,12 +2,24 @@
 
 Track documentation-only updates.
 
+## 2026-05-20
+- Archived the latest B-notes workspace refinements into a dedicated stage-two capability doc: added `docs/modules/04D_B模块正文头部与定位联动说明.md` and refreshed the module index plus the main B-notes module doc to point at it.
+- Synced B-notes behavior docs with the live UI: the body-workspace header is now documented as a two-row action band, manual save is recorded as an autosave-compatible auxiliary entry, and rendered-to-Markdown switching now prefers visible-text anchoring.
+- Updated the related private-preference docs so they no longer conflict with implementation: note-workspace layout, directory level-label visibility, and the autosave-vs-save-button exception rule now match the current B-module behavior.
+
+## 2026-05-18
+- Archived and modularized the recent B-notes changes into a clearer document set: refreshed `docs/modules/04_notes.md`, added `docs/modules/04C_B模块最终版本编辑与导出能力说明.md`, and updated `docs/modules/changelog/B_笔记_修改过程.md` with an archive summary.
+- Synced project-level status docs for the new B-notes baseline: `docs/AI_HANDOFF.md`, `docs/modules/README.md`, and `docs/ACTION_LOG.md` now reflect rendered-body direct editing, auto-save hardening, and current-note export support.
+- Updated the related private-preference docs so they match the live B-module behavior: structural-prefix editing, rendered-body auto-save, stable H1 hover expansion rules, and note-workspace export-path expectations are now recorded in the global preference layer.
+
 ## 2026-05-15
 - Clarified the E-module F3 auto-analysis contract: the model input is the current voice transcript plus the active prompt, the current personal profile, and optional recent F3 context history.
 - Reworded the voice-context setting from a vague “memory rounds” concept into a total context-window count that explicitly includes the current round, and synced module docs/changelog/UI wording to that behavior.
 - Documented the F3 xunfei-credential regression hardening: Assistant auto-save now preserves existing xunfei protected secrets, and the API-center status now reflects the real `AppID + API Key + API Secret` trio instead of an unrelated field.
 - Documented the local xunfei credential restoration on May 15, 2026: the machine-specific AppID plus protected API key/secret were restored, and the API-center/assistant backend state now reads them as configured again.
 - Documented the May 15, 2026 streaming-output upgrade for voice auto-analysis: text generation now streams on both `responses` and `chat/completions` style endpoints, and the overlay forces a repaint while chunks arrive.
+- Documented the May 15, 2026 xunfei AppID regression fix: Assistant save flows now preserve `xunfei_app_id` across empty-value saves in both the web pipeline and the local AHK persistence path.
+- Documented the May 15, 2026 stream-monitoring rollout: assistant flows and the benchmark page now expose first-chunk timing, update counts, max inter-chunk gap, and a final verdict showing whether streaming was actually observed.
 
 ## 2026-04-21
 - Added ADR/config/dependency/extension/testing/glossary policy docs.

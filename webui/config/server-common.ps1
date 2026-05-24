@@ -70,6 +70,29 @@ function Send-File {
   $Res.OutputStream.Write($bytes, 0, $bytes.Length)
 }
 
+function Send-Bytes {
+  param(
+    $Res,
+    [byte[]]$Bytes,
+    [string]$Type = 'application/octet-stream',
+    [string]$DownloadName = ''
+  )
+
+  $Res.Headers['Access-Control-Allow-Origin'] = '*'
+  $Res.Headers['Access-Control-Allow-Headers'] = 'Content-Type'
+  $Res.Headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+  $Res.Headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+  $Res.Headers['Pragma'] = 'no-cache'
+  $Res.Headers['Expires'] = '0'
+  if (-not [string]::IsNullOrWhiteSpace($DownloadName)) {
+    $escaped = $DownloadName.Replace('"', '')
+    $Res.Headers['Content-Disposition'] = ('attachment; filename="{0}"' -f $escaped)
+  }
+  $Res.ContentType = $Type
+  $Res.ContentLength64 = $Bytes.Length
+  $Res.OutputStream.Write($Bytes, 0, $Bytes.Length)
+}
+
 function Read-BodyJson {
   param($Req)
   $ms = New-Object IO.MemoryStream

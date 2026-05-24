@@ -1,0 +1,10 @@
+action.log
+assistant_voice_sessions.jsonl
+assistant_rate.ini
+usage.ini
+config.ini.autobak
+captures/latest.png
+captures/cap_*.png
+notes/_snapshots/
+notes/_rag_pdf_extract.txt
+webui/config/note-assets/

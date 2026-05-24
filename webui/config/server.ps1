@@ -1,4 +1,4 @@
-﻿param(
+param(
   [int]$Port,
   [string]$Root,
   [string]$DataFile,
@@ -157,9 +157,27 @@ while ($true) {
       if ([string]::IsNullOrWhiteSpace($id)) {
         Send-Json $res ([ordered]@{ ok=$false; error='missing id' })
       } else {
-        Save-NoteContent -Id $id -Title ([string](Get-Prop $payload 'title' 'Untitled')) -Content ([string](Get-Prop $payload 'content' ''))
-        Write-AppLog 'notes_save' ('id=' + $id)
-        Send-Json $res ([ordered]@{ ok=$true })
+        $saveIntent = ([string](Get-Prop $payload 'save_intent' '')).Trim().ToLowerInvariant()
+        if ($saveIntent -eq '') { $saveIntent = 'autosave' }
+        $saved = Save-NoteContent -Id $id -Title ([string](Get-Prop $payload 'title' 'Untitled')) -Content ([string](Get-Prop $payload 'content' ''))
+        Write-AppLog 'notes_save' ('id=' + $id + ' intent=' + $saveIntent)
+        Send-Json $res ([ordered]@{
+          ok=$true
+          content=$saved.content
+        })
+      }
+    }
+    elseif ($path -eq '/api/notes/export-pdf' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $title = [string](Get-Prop $payload 'title' 'Untitled')
+      $html = [string](Get-Prop $payload 'html' '')
+      if ([string]::IsNullOrWhiteSpace($html)) {
+        Send-Json $res ([ordered]@{ ok=$false; error='missing html' })
+      } else {
+        $safeTitle = ($title -replace '[\\/:*?"<>|]+', '-').Trim()
+        if ([string]::IsNullOrWhiteSpace($safeTitle)) { $safeTitle = 'Untitled' }
+        $bytes = Convert-NoteHtmlToPdfBytes -Html $html -Title $safeTitle
+        Send-Bytes $res $bytes 'application/pdf' ($safeTitle + '.pdf')
       }
     }
     elseif ($path -eq '/api/notes/delete' -and $method -eq 'POST') {

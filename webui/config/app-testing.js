@@ -157,6 +157,18 @@ function benchmarkModeLabel(last) {
   return last?.streamed ? '流式输出' : '整段返回';
 }
 
+function streamVerdictLabel(last) {
+  const value = String(last?.stream_verdict || '').trim();
+  if (value === 'answer_streaming_verified') return '答案已验证流式';
+  if (value === 'reasoning_only_streaming') return '只有推理在流';
+  if (value === 'verified_streaming') return '已验证流式';
+  if (value === 'single_chunk_only') return '只有单次更新';
+  if (value === 'no_stream_events') return '未观察到流式事件';
+  if (value === 'error') return '流式过程出错';
+  if (value === 'pending') return '监测中';
+  return value || '-';
+}
+
 function updateBenchmarkTimerLabel() {
   const el = byId('assistantBenchmarkTimer');
   if (!el) return;
@@ -231,6 +243,8 @@ function applyBenchmarkResult(result, options = {}) {
     started_at: String(result.started_at || '').trim(),
     perf: result.perf || {},
     streamed: !!result.streamed,
+    stream_metrics: result.stream_metrics || {},
+    stream_verdict: String(result.stream_verdict || '').trim(),
     reasoning: String(result.reasoning || '').trim(),
     answer_preview: String(result.answer_preview || '').trim(),
     answer: String(result.answer || '').trim(),
@@ -320,10 +334,14 @@ function renderAssistantBenchmark() {
         <div>模型：${last.model || '-'}</div>
         <div>开始时间：${last.started_at || '-'}</div>
         <div>输出模式：${benchmarkModeLabel(last)}</div>
+        <div>流式判定：${streamVerdictLabel(last)}</div>
         <div>总耗时：${msToSeconds(perf.total_ms)} s</div>
         <div>请求耗时：${msToSeconds(perf.request_ms)} s</div>
         <div>读图：${msToSeconds(perf.read_ms)} s | Base64：${msToSeconds(perf.base64_ms)} s | 组包：${msToSeconds(perf.json_ms)} s | 解析：${msToSeconds(perf.parse_ms)} s</div>
         <div>图片：${Number(perf.image_kb || 0)} KB | 请求体：${Number(perf.payload_kb || 0)} KB</div>
+        <div>首事件：${metricValue(last.stream_metrics || {}, 'first_event_ms')} | 首文本：${metricValue(last.stream_metrics || {}, 'first_answer_ms')} | 首推理：${metricValue(last.stream_metrics || {}, 'first_reasoning_ms')}</div>
+        <div>事件数：${Number(last.stream_metrics?.event_count || 0)} | 文本更新：${Number(last.stream_metrics?.answer_updates || 0)} | 推理更新：${Number(last.stream_metrics?.reasoning_updates || 0)} | 最大停顿：${metricValue(last.stream_metrics || {}, 'max_event_gap_ms')}</div>
+        <div>答案流式：${last.stream_metrics?.answer_streaming_verified ? '是' : '否'}</div>
       `;
     }
   }
@@ -343,7 +361,9 @@ function renderAssistantBenchmark() {
           <div class="assistant-benchmark-history-item">
             <div><strong>${item.started_at || '-'}</strong> | ${item.model || '-'}</div>
             <div>模式 ${benchmarkModeLabel(item)}</div>
+            <div>判定 ${streamVerdictLabel(item)}</div>
             <div>总耗时 ${msToSeconds(perf.total_ms)} s | 请求 ${msToSeconds(perf.request_ms)} s</div>
+            <div>首事件 ${metricValue(item.stream_metrics || {}, 'first_event_ms')} | 首文本 ${metricValue(item.stream_metrics || {}, 'first_answer_ms')} | 更新 ${Number(item.stream_metrics?.answer_updates || 0)} | 答案流式 ${item.stream_metrics?.answer_streaming_verified ? '是' : '否'}</div>
             <div>图 ${Number(perf.image_kb || 0)} KB | 包 ${Number(perf.payload_kb || 0)} KB</div>
           </div>
         `;

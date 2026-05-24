@@ -314,6 +314,11 @@ async function tryRestoreNotesDraft() {
     const raw = sessionStorage.getItem(NOTES_DRAFT_KEY);
     if (!raw) return false;
     const draft = JSON.parse(raw);
+    const lastSavedAt = Number(sessionStorage.getItem('raccourci.notesLastSavedAt') || 0);
+    if (Number.isFinite(lastSavedAt) && lastSavedAt > 0 && Number(draft?.ts || 0) <= lastSavedAt) {
+      sessionStorage.removeItem(NOTES_DRAFT_KEY);
+      return false;
+    }
     const id = String(draft?.id || '').trim();
     if (!id) return false;
 

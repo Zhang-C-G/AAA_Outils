@@ -418,6 +418,33 @@ function Resolve-AssistantVoiceModelProtectedKey {
   return ''
 }
 
+function Resolve-AssistantStickyTextField {
+  param(
+    $PayloadAssistant,
+    $Fallback,
+    [string]$FieldName,
+    [string]$KeepFieldName = '',
+    [string]$ClearFieldName = ''
+  )
+
+  $fallbackValue = ([string](Get-Prop $Fallback $FieldName '')).Trim()
+  $incoming = Get-Prop $PayloadAssistant $FieldName $null
+  $keep = ($KeepFieldName -ne '') -and ([string](Get-Prop $PayloadAssistant $KeepFieldName '0') -eq '1')
+  $clear = ($ClearFieldName -ne '') -and ([string](Get-Prop $PayloadAssistant $ClearFieldName '0') -eq '1')
+
+  if ($clear) { return '' }
+
+  if ($null -ne $incoming) {
+    $value = ([string]$incoming).Trim()
+    if ($value -ne '') { return $value }
+    if ($keep -or $fallbackValue -ne '') { return $fallbackValue }
+    return ''
+  }
+
+  if ($keep -or $fallbackValue -ne '') { return $fallbackValue }
+  return ''
+}
+
 function Convert-ToAssistantSettings {
   param($PayloadAssistant, $Fallback)
 
@@ -438,7 +465,7 @@ function Convert-ToAssistantSettings {
     api_key_protected = Get-Prop $Fallback 'deepseek_api_key_protected' ''
   })
   $settings.has_deepseek_api_key = if ($settings.deepseek_api_key_protected -ne '') { 1 } else { 0 }
-  $settings.xunfei_app_id = ([string](Get-Prop $PayloadAssistant 'xunfei_app_id' (Get-Prop $Fallback 'xunfei_app_id' ''))).Trim()
+  $settings.xunfei_app_id = Resolve-AssistantStickyTextField -PayloadAssistant $PayloadAssistant -Fallback $Fallback -FieldName 'xunfei_app_id' -KeepFieldName 'keep_xunfei_app_id' -ClearFieldName 'clear_xunfei_app_id'
   $settings.xunfei_api_key = ''
   $settings.xunfei_api_key_protected = Resolve-AssistantProtectedKey -PayloadAssistant ([ordered]@{
     api_key = Get-Prop $PayloadAssistant 'xunfei_api_key' $null

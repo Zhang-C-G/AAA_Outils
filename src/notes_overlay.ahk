@@ -3,13 +3,22 @@
 gNotesOverlayGui := ""
 gNotesOverlayVisible := false
 gNotesOverlayPlaced := false
+gNotesOverlayNoteLabel := ""
+gNotesOverlayTocLabel := ""
+gNotesOverlayContentLabel := ""
+gNotesOverlayNoteList := ""
 gNotesOverlayTocList := ""
 gNotesOverlayContentEdit := ""
+gNotesOverlayCurrentNotesMeta := []
+gNotesOverlayCurrentNoteIndex := 0
 gNotesOverlayCurrentNoteId := ""
 gNotesOverlayCurrentTitle := ""
 gNotesOverlayCurrentContent := ""
 gNotesOverlayCurrentToc := []
 gNotesOverlayTocLineMap := []
+gNotesOverlayNoteIdMap := []
+gNotesOverlayLastWidth := 0
+gNotesOverlayLastHeight := 0
 gNotesOverlayAffinityActive := false
 gNotesOverlayLastAppliedAffinity := 0
 gNotesOverlayTempHidden := false
@@ -19,6 +28,12 @@ gNotesOverlayProtectionGuardRunning := false
 gNotesOverlayManualCloseLock := false
 gNotesOverlayAutoRestoreEnabled := false
 gNotesOverlayLastWheelTick := 0
+gNotesOverlayPlacementWatchRunning := false
+gNotesOverlayPlacementDirtyTick := 0
+gNotesOverlayLastObservedX := ""
+gNotesOverlayLastObservedY := ""
+gNotesOverlayLastObservedW := ""
+gNotesOverlayLastObservedH := ""
 
 WriteNotesOverlayStateLog(action, details := "") {
     global gNotesOverlayVisible, gNotesOverlayTempHidden, gNotesOverlayTempRestoreMs
@@ -71,11 +86,16 @@ StartNotesDisplayOverlay(showNotice := true) {
 }
 
 DisposeNotesOverlayGui() {
-    global gNotesOverlayGui, gNotesOverlayTocList, gNotesOverlayContentEdit
+    global gNotesOverlayGui, gNotesOverlayNoteLabel, gNotesOverlayTocLabel, gNotesOverlayContentLabel
+    global gNotesOverlayNoteList, gNotesOverlayTocList, gNotesOverlayContentEdit
     if IsObject(gNotesOverlayGui) {
         try gNotesOverlayGui.Destroy()
     }
     gNotesOverlayGui := ""
+    gNotesOverlayNoteLabel := ""
+    gNotesOverlayTocLabel := ""
+    gNotesOverlayContentLabel := ""
+    gNotesOverlayNoteList := ""
     gNotesOverlayTocList := ""
     gNotesOverlayContentEdit := ""
 }
@@ -89,6 +109,7 @@ HideNotesDisplayOverlay() {
     }
     gNotesOverlayVisible := false
     gNotesOverlayTempHidden := false
+    StopNotesOverlayPlacementWatch()
     StopNotesOverlayProtectionGuard()
     DisableNotesOverlayCaptureProtection("hide")
     DisposeNotesOverlayGui()
@@ -100,70 +121,93 @@ LoadLatestNoteForOverlay() {
     if (notes.Length = 0) {
         return Map("id", "", "title", "Untitled", "content", "")
     }
-    latest := notes[1]
-    return LoadNotesDisplayNote(latest["id"])
+    return LoadPreferredNotesOverlayNote(notes)
 }
 
 ShowNotesDisplayOverlay(note) {
     global gNotesOverlayVisible, gNotesOverlayPlaced, gNotesOverlayManualCloseLock
-    global gNotesOverlayCurrentNoteId, gNotesOverlayCurrentTitle, gNotesOverlayCurrentContent
+    global gNotesOverlayCurrentNotesMeta, gNotesOverlayCurrentNoteId, gNotesOverlayCurrentTitle, gNotesOverlayCurrentContent
 
     gNotesOverlayManualCloseLock := false
     EnsureNotesOverlayGui()
-    parsed := BuildNotesOverlayDocument(note)
-    gNotesOverlayCurrentNoteId := note["id"]
-    gNotesOverlayCurrentTitle := parsed["title"]
-    gNotesOverlayCurrentContent := parsed["display_text"]
-
-    SetNotesOverlayDocument(parsed)
+    notes := LoadNotesDisplayMeta()
+    if (notes.Length = 0) {
+        notes.Push(Map("id", note["id"], "title", note["title"], "updated", ""))
+    }
+    gNotesOverlayCurrentNotesMeta := notes
+    SetNotesOverlayNotesMeta(notes, note["id"])
+    SetNotesOverlayCurrentNote(note)
     showOpts := GetNotesOverlayShowOptions()
 
     NormalizeNotesOverlayWindowStyles()
     EnableNotesOverlayCaptureProtection("pre_show")
 
     if gNotesOverlayVisible {
-        gNotesOverlayGui.Show("NA w700 h500")
+        gNotesOverlayGui.Show("NA w980 h540")
     } else {
         gNotesOverlayGui.Show(showOpts)
         gNotesOverlayPlaced := true
     }
+    try WinGetPos(, , &shownW, &shownH, "ahk_id " gNotesOverlayGui.Hwnd)
+    ApplyNotesOverlayLayout(shownW, shownH)
 
     gNotesOverlayVisible := true
     NormalizeNotesOverlayWindowStyles()
     EnableNotesOverlayCaptureProtection("show")
+    StartNotesOverlayPlacementWatch()
     StartNotesOverlayProtectionGuard()
     WriteNotesOverlayStateLog("notes_overlay_show", "placed=" (gNotesOverlayPlaced ? 1 : 0))
 }
 
 EnsureNotesOverlayGui() {
     global gNotesOverlayGui
-    global gNotesOverlayTocList, gNotesOverlayContentEdit, gAppName, gTheme
+    global gNotesOverlayNoteLabel, gNotesOverlayTocLabel, gNotesOverlayContentLabel
+    global gNotesOverlayNoteList, gNotesOverlayTocList, gNotesOverlayContentEdit, gAppName, gTheme
 
     if IsObject(gNotesOverlayGui) {
         return
     }
 
-    gNotesOverlayGui := Gui("+AlwaysOnTop +ToolWindow", gAppName " - Notes Overlay")
+    gNotesOverlayGui := Gui("+AlwaysOnTop +ToolWindow +Resize +MinSize720x360", gAppName " - Notes Overlay")
     gNotesOverlayGui.BackColor := gTheme["bg_app"]
     gNotesOverlayGui.SetFont("s10", "Microsoft YaHei UI")
 
-    gNotesOverlayTocList := gNotesOverlayGui.AddListBox("x16 y16 w180 h454 AltSubmit")
+    gNotesOverlayNoteLabel := gNotesOverlayGui.AddText("x16 y12 w180 h20 c" gTheme["text_muted"], "一级目录")
+    gNotesOverlayTocLabel := gNotesOverlayGui.AddText("x212 y12 w220 h20 c" gTheme["text_muted"], "二级目录")
+    gNotesOverlayContentLabel := gNotesOverlayGui.AddText("x448 y12 w516 h20 c" gTheme["text_muted"], "正文")
+
+    gNotesOverlayNoteList := gNotesOverlayGui.AddListBox("x16 y36 w180 h488 AltSubmit")
+    gNotesOverlayNoteList.OnEvent("Change", NotesOverlayOnNoteChange)
+
+    gNotesOverlayTocList := gNotesOverlayGui.AddListBox("x212 y36 w220 h488 AltSubmit")
     gNotesOverlayTocList.OnEvent("Change", NotesOverlayOnTocChange)
 
-    gNotesOverlayContentEdit := gNotesOverlayGui.AddEdit("x208 y16 w476 h454 +Multi ReadOnly -VScroll c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
+    gNotesOverlayContentEdit := gNotesOverlayGui.AddEdit("x448 y36 w516 h488 +Multi ReadOnly -VScroll c" gTheme["text_on_light"] " Background" gTheme["bg_header"], "")
     gNotesOverlayContentEdit.SetFont("s10", "Consolas")
 
     OnMessage(0x20A, NotesOverlayOnMouseWheel) ; WM_MOUSEWHEEL
     gNotesOverlayGui.OnEvent("Close", OnNotesOverlayClose)
+    gNotesOverlayGui.OnEvent("Size", NotesOverlayOnSize)
 }
 
 GetNotesOverlayShowOptions() {
     global gAppSettings, gNotesOverlayPlaced
 
-    width := 700
-    height := 500
+    defaultWidth := 980
+    defaultHeight := 540
+    width := defaultWidth
+    height := defaultHeight
     hasSavedX := gAppSettings.Has("notes_overlay_x") && gAppSettings["notes_overlay_x"] != ""
     hasSavedY := gAppSettings.Has("notes_overlay_y") && gAppSettings["notes_overlay_y"] != ""
+    hasSavedW := gAppSettings.Has("notes_overlay_w") && gAppSettings["notes_overlay_w"] != ""
+    hasSavedH := gAppSettings.Has("notes_overlay_h") && gAppSettings["notes_overlay_h"] != ""
+
+    if hasSavedW {
+        width := Max(720, Integer(gAppSettings["notes_overlay_w"]))
+    }
+    if hasSavedH {
+        height := Max(360, Integer(gAppSettings["notes_overlay_h"]))
+    }
 
     if (hasSavedX && hasSavedY) {
         x := Integer(gAppSettings["notes_overlay_x"])
@@ -174,13 +218,14 @@ GetNotesOverlayShowOptions() {
         return "NA x" x " y" y " w" width " h" height
     }
 
-    x := Max(0, A_ScreenWidth - 730)
+    x := Max(0, A_ScreenWidth - 1010)
     y := 80
     return "NA x" x " y" y " w" width " h" height
 }
 
 SaveNotesOverlayWindowPlacement(forceSave := false) {
-    global gNotesOverlayGui, gAppSettings, gNotesOverlayPlaced
+    global gNotesOverlayGui, gAppSettings, gNotesOverlayPlaced, gNotesOverlayLastWidth, gNotesOverlayLastHeight
+    global gNotesOverlayLastObservedX, gNotesOverlayLastObservedY, gNotesOverlayLastObservedW, gNotesOverlayLastObservedH
     if !IsObject(gNotesOverlayGui) {
         return false
     }
@@ -196,18 +241,69 @@ SaveNotesOverlayWindowPlacement(forceSave := false) {
 
     nextX := Integer(x)
     nextY := Integer(y)
+    nextW := Max(720, Integer(w))
+    nextH := Max(360, Integer(h))
     prevX := gAppSettings.Has("notes_overlay_x") ? gAppSettings["notes_overlay_x"] : ""
     prevY := gAppSettings.Has("notes_overlay_y") ? gAppSettings["notes_overlay_y"] : ""
+    prevW := gAppSettings.Has("notes_overlay_w") ? gAppSettings["notes_overlay_w"] : ""
+    prevH := gAppSettings.Has("notes_overlay_h") ? gAppSettings["notes_overlay_h"] : ""
 
     gAppSettings["notes_overlay_x"] := nextX
     gAppSettings["notes_overlay_y"] := nextY
+    gAppSettings["notes_overlay_w"] := nextW
+    gAppSettings["notes_overlay_h"] := nextH
+    gNotesOverlayLastWidth := nextW
+    gNotesOverlayLastHeight := nextH
     gNotesOverlayPlaced := true
+    gNotesOverlayLastObservedX := nextX
+    gNotesOverlayLastObservedY := nextY
+    gNotesOverlayLastObservedW := nextW
+    gNotesOverlayLastObservedH := nextH
 
-    if forceSave || (prevX != nextX || prevY != nextY) {
+    if forceSave || (prevX != nextX || prevY != nextY || prevW != nextW || prevH != nextH) {
         SaveData()
-        WriteNotesOverlayStateLog("notes_overlay_position_saved", "x=" nextX " y=" nextY)
+        WriteNotesOverlayStateLog("notes_overlay_position_saved", "x=" nextX " y=" nextY " w=" nextW " h=" nextH)
     }
     return true
+}
+
+ApplyNotesOverlayLayout(width, height) {
+    global gNotesOverlayGui, gNotesOverlayNoteLabel, gNotesOverlayTocLabel, gNotesOverlayContentLabel
+    global gNotesOverlayNoteList, gNotesOverlayTocList, gNotesOverlayContentEdit
+    if !IsObject(gNotesOverlayGui) {
+        return
+    }
+
+    width := Max(720, Integer(width))
+    height := Max(360, Integer(height))
+    margin := 16
+    gap := 16
+    labelTop := 12
+    listTop := 36
+    bottomMargin := 16
+    usableHeight := Max(120, height - listTop - bottomMargin)
+    noteWidth := Max(150, Min(240, Round(width * 0.18)))
+    tocWidth := Max(180, Min(300, Round(width * 0.22)))
+    contentX := margin + noteWidth + gap + tocWidth + gap
+    contentWidth := Max(220, width - contentX - margin)
+
+    try gNotesOverlayNoteLabel.Move(margin, labelTop, noteWidth, 20)
+    try gNotesOverlayTocLabel.Move(margin + noteWidth + gap, labelTop, tocWidth, 20)
+    try gNotesOverlayContentLabel.Move(contentX, labelTop, contentWidth, 20)
+    try gNotesOverlayNoteList.Move(margin, listTop, noteWidth, usableHeight)
+    try gNotesOverlayTocList.Move(margin + noteWidth + gap, listTop, tocWidth, usableHeight)
+    try gNotesOverlayContentEdit.Move(contentX, listTop, contentWidth, usableHeight)
+}
+
+NotesOverlayOnSize(guiObj, minMax, width, height) {
+    global gNotesOverlayLastWidth, gNotesOverlayLastHeight
+    if (minMax = -1) {
+        return
+    }
+    gNotesOverlayLastWidth := width
+    gNotesOverlayLastHeight := height
+    ApplyNotesOverlayLayout(width, height)
+    MarkNotesOverlayPlacementDirty()
 }
 
 BuildNotesOverlayDocument(note) {
@@ -319,6 +415,78 @@ SetNotesOverlayDocument(parsed) {
     }
 }
 
+SetNotesOverlayCurrentNote(note) {
+    global gNotesOverlayCurrentNoteId, gNotesOverlayCurrentTitle, gNotesOverlayCurrentContent
+    parsed := BuildNotesOverlayDocument(note)
+    gNotesOverlayCurrentNoteId := note["id"]
+    gNotesOverlayCurrentTitle := parsed["title"]
+    gNotesOverlayCurrentContent := parsed["display_text"]
+    SetNotesOverlayDocument(parsed)
+}
+
+SetNotesOverlayNotesMeta(notes, selectedId := "") {
+    global gNotesOverlayNoteList, gNotesOverlayCurrentNotesMeta, gNotesOverlayCurrentNoteIndex, gNotesOverlayNoteIdMap
+    gNotesOverlayCurrentNotesMeta := notes
+    gNotesOverlayCurrentNoteIndex := 0
+    gNotesOverlayNoteIdMap := []
+    if !IsObject(gNotesOverlayNoteList) {
+        return
+    }
+
+    gNotesOverlayNoteList.Delete()
+    if (notes.Length = 0) {
+        gNotesOverlayNoteList.Add(["(No note)"])
+        gNotesOverlayNoteIdMap.Push("")
+        gNotesOverlayCurrentNoteIndex := 1
+        gNotesOverlayNoteList.Choose(1)
+        return
+    }
+
+    labels := []
+    idx := 1
+    chosen := 1
+    for item in notes {
+        id := item["id"]
+        labels.Push(item["title"])
+        gNotesOverlayNoteIdMap.Push(id)
+        if (selectedId != "" && id = selectedId) {
+            chosen := idx
+        }
+        idx += 1
+    }
+    gNotesOverlayNoteList.Add(labels)
+    gNotesOverlayCurrentNoteIndex := chosen
+    gNotesOverlayNoteList.Choose(chosen)
+}
+
+LoadPreferredNotesOverlayNote(notes := "") {
+    global gNotesOverlayCurrentNoteId, gAppSettings
+    list := IsObject(notes) ? notes : LoadNotesDisplayMeta()
+    if (list.Length = 0) {
+        return Map("id", "", "title", "Untitled", "content", "")
+    }
+
+    preferredIds := []
+    if (Trim(gNotesOverlayCurrentNoteId) != "") {
+        preferredIds.Push(Trim(gNotesOverlayCurrentNoteId))
+    }
+    if (IsObject(gAppSettings) && gAppSettings.Has("notes_display_current_id")) {
+        savedId := Trim(gAppSettings["notes_display_current_id"])
+        if (savedId != "") {
+            preferredIds.Push(savedId)
+        }
+    }
+
+    for preferredId in preferredIds {
+        for item in list {
+            if (item["id"] = preferredId) {
+                return LoadNotesDisplayNote(preferredId)
+            }
+        }
+    }
+    return LoadNotesDisplayNote(list[1]["id"])
+}
+
 NotesOverlayOnTocChange(ctrl, *) {
     global gNotesOverlayTocLineMap, gNotesOverlayContentEdit
     if !IsObject(gNotesOverlayContentEdit) {
@@ -330,6 +498,20 @@ NotesOverlayOnTocChange(ctrl, *) {
     }
     targetLine := Max(1, Integer(gNotesOverlayTocLineMap[index]))
     ScrollNotesOverlayContentToLine(targetLine)
+}
+
+NotesOverlayOnNoteChange(ctrl, *) {
+    global gNotesOverlayNoteIdMap
+    index := ctrl.Value
+    if !(index >= 1 && index <= gNotesOverlayNoteIdMap.Length) {
+        return
+    }
+    noteId := Trim(gNotesOverlayNoteIdMap[index])
+    if (noteId = "") {
+        return
+    }
+    note := LoadNotesDisplayNote(noteId)
+    SetNotesOverlayCurrentNote(note)
 }
 
 NotesOverlayMoveSelection(delta) {
@@ -358,6 +540,31 @@ NotesOverlayMoveSelection(delta) {
     NotesOverlaySelectTocIndex(nextIndex)
 }
 
+NotesOverlayMoveNoteSelection(delta) {
+    global gNotesOverlayNoteList, gNotesOverlayNoteIdMap
+    if !IsObject(gNotesOverlayNoteList) {
+        return
+    }
+
+    count := gNotesOverlayNoteIdMap.Length
+    if (count <= 0) {
+        return
+    }
+
+    currentIndex := Integer(gNotesOverlayNoteList.Value)
+    if !(currentIndex >= 1 && currentIndex <= count) {
+        currentIndex := 1
+    }
+
+    nextIndex := currentIndex + Integer(delta)
+    if (nextIndex < 1) {
+        nextIndex := 1
+    } else if (nextIndex > count) {
+        nextIndex := count
+    }
+    NotesOverlaySelectNoteIndex(nextIndex)
+}
+
 NotesOverlaySelectTocIndex(index) {
     global gNotesOverlayTocList, gNotesOverlayTocLineMap
     if !IsObject(gNotesOverlayTocList) {
@@ -370,6 +577,25 @@ NotesOverlaySelectTocIndex(index) {
     gNotesOverlayTocList.Choose(index)
     targetLine := Max(1, Integer(gNotesOverlayTocLineMap[index]))
     ScrollNotesOverlayContentToLine(targetLine)
+}
+
+NotesOverlaySelectNoteIndex(index) {
+    global gNotesOverlayNoteList, gNotesOverlayNoteIdMap, gNotesOverlayCurrentNoteIndex
+    if !IsObject(gNotesOverlayNoteList) {
+        return
+    }
+    if !(index >= 1 && index <= gNotesOverlayNoteIdMap.Length) {
+        return
+    }
+
+    gNotesOverlayCurrentNoteIndex := index
+    gNotesOverlayNoteList.Choose(index)
+    noteId := Trim(gNotesOverlayNoteIdMap[index])
+    if (noteId = "") {
+        return
+    }
+    note := LoadNotesDisplayNote(noteId)
+    SetNotesOverlayCurrentNote(note)
 }
 
 ScrollNotesOverlayContentToLine(targetLine) {
@@ -605,6 +831,70 @@ OnNotesOverlayClose(*) {
     gNotesOverlayManualCloseLock := true
     HideNotesDisplayOverlay()
     WriteNotesOverlayStateLog("notes_overlay_close", "source=close_event")
+}
+
+StartNotesOverlayPlacementWatch() {
+    global gNotesOverlayPlacementWatchRunning
+    if gNotesOverlayPlacementWatchRunning {
+        return
+    }
+    gNotesOverlayPlacementWatchRunning := true
+    MarkNotesOverlayPlacementDirty()
+    SetTimer(NotesOverlayPlacementWatchTick, 250)
+}
+
+StopNotesOverlayPlacementWatch() {
+    global gNotesOverlayPlacementWatchRunning, gNotesOverlayPlacementDirtyTick
+    if !gNotesOverlayPlacementWatchRunning {
+        gNotesOverlayPlacementDirtyTick := 0
+        return
+    }
+    gNotesOverlayPlacementWatchRunning := false
+    gNotesOverlayPlacementDirtyTick := 0
+    SetTimer(NotesOverlayPlacementWatchTick, 0)
+}
+
+MarkNotesOverlayPlacementDirty() {
+    global gNotesOverlayPlacementDirtyTick
+    gNotesOverlayPlacementDirtyTick := A_TickCount
+}
+
+NotesOverlayPlacementWatchTick(*) {
+    global gNotesOverlayGui, gNotesOverlayVisible, gNotesOverlayPlacementWatchRunning, gNotesOverlayPlacementDirtyTick
+    global gNotesOverlayLastObservedX, gNotesOverlayLastObservedY, gNotesOverlayLastObservedW, gNotesOverlayLastObservedH
+
+    if !gNotesOverlayPlacementWatchRunning || !gNotesOverlayVisible || !IsObject(gNotesOverlayGui) {
+        return
+    }
+
+    try WinGetPos(&x, &y, &w, &h, "ahk_id " gNotesOverlayGui.Hwnd)
+    catch {
+        return
+    }
+
+    if (w <= 0 || h <= 0) {
+        return
+    }
+
+    x := Integer(x)
+    y := Integer(y)
+    w := Max(720, Integer(w))
+    h := Max(360, Integer(h))
+    changed := (gNotesOverlayLastObservedX != x || gNotesOverlayLastObservedY != y || gNotesOverlayLastObservedW != w || gNotesOverlayLastObservedH != h)
+
+    if changed {
+        gNotesOverlayLastObservedX := x
+        gNotesOverlayLastObservedY := y
+        gNotesOverlayLastObservedW := w
+        gNotesOverlayLastObservedH := h
+        MarkNotesOverlayPlacementDirty()
+        return
+    }
+
+    if (gNotesOverlayPlacementDirtyTick > 0 && (A_TickCount - gNotesOverlayPlacementDirtyTick) >= 450) {
+        SaveNotesOverlayWindowPlacement()
+        gNotesOverlayPlacementDirtyTick := 0
+    }
 }
 
 StartNotesOverlayProtectionGuard() {

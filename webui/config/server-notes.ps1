@@ -3,6 +3,11 @@ function Get-NotePath {
   return (Join-Path $NotesDir ($Id + '.md'))
 }
 
+function Get-NoteAssetDir {
+  param([string]$Id)
+  return (Join-Path (Join-Path $Root 'note-assets') $Id)
+}
+
 function Get-NotesOrderPath {
   return (Join-Path $NotesDir '_order.json')
 }
@@ -253,11 +258,155 @@ function Reorder-NotesDisplay {
 }
 
 function Save-NoteContent {
-  param([string]$Id, [string]$Title, [string]$Content)
+  param(
+    [string]$Id,
+    [string]$Title,
+    [string]$Content
+  )
   Ensure-Dir $NotesDir
+  $normalizedContent = Convert-EmbeddedNoteImagesToFiles -Id $Id -Content $Content
   $title = $Title.Trim(); if ($title -eq '') { $title = 'Untitled' }
-  $text = "Title: $title`nUpdated: $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))`n`n$Content"
-  [IO.File]::WriteAllText((Get-NotePath $Id), $text, [Text.Encoding]::UTF8)
+  $text = "Title: $title`nUpdated: $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))`n`n$normalizedContent"
+  $path = Get-NotePath $Id
+  [IO.File]::WriteAllText($path, $text, [Text.Encoding]::UTF8)
+  return [ordered]@{
+    content = $normalizedContent
+  }
+}
+
+function Get-ImageExtensionFromMimeType {
+  param([string]$MimeType)
+  $safeMimeType = [string]$MimeType
+  switch ($safeMimeType.ToLowerInvariant()) {
+    'image/png' { return 'png' }
+    'image/jpeg' { return 'jpg' }
+    'image/jpg' { return 'jpg' }
+    'image/gif' { return 'gif' }
+    'image/webp' { return 'webp' }
+    'image/svg+xml' { return 'svg' }
+    default { return 'bin' }
+  }
+}
+
+function Convert-EmbeddedNoteImagesToFiles {
+  param(
+    [string]$Id,
+    [string]$Content
+  )
+
+  $text = [string]$Content
+  if ([string]::IsNullOrWhiteSpace($text)) {
+    return $text
+  }
+
+  $assetDir = Get-NoteAssetDir $Id
+  Ensure-Dir (Join-Path $Root 'note-assets')
+  Ensure-Dir $assetDir
+
+  $pattern = '!\[(?<alt>[^\]]*)\]\((?<src>data:image/(?<subtype>[a-z0-9.+-]+);base64,(?<data>[A-Za-z0-9+/=]+))\)'
+  $rewritten = [System.Text.RegularExpressions.Regex]::Replace(
+    $text,
+    $pattern,
+    {
+      param($match)
+      $alt = [string]$match.Groups['alt'].Value
+      $mimeType = 'image/' + [string]$match.Groups['subtype'].Value
+      $base64 = [string]$match.Groups['data'].Value
+      if ([string]::IsNullOrWhiteSpace($base64)) {
+        return $match.Value
+      }
+
+      try {
+        $bytes = [Convert]::FromBase64String($base64)
+      } catch {
+        return $match.Value
+      }
+
+      $sha = [System.Security.Cryptography.SHA256]::Create()
+      try {
+        $hashBytes = $sha.ComputeHash($bytes)
+      } finally {
+        $sha.Dispose()
+      }
+      $hash = ([System.BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
+      $ext = Get-ImageExtensionFromMimeType $mimeType
+      $fileName = "$hash.$ext"
+      $filePath = Join-Path $assetDir $fileName
+      if (!(Test-Path -LiteralPath $filePath)) {
+        [IO.File]::WriteAllBytes($filePath, $bytes)
+      }
+
+      $relativePath = "/note-assets/$Id/$fileName"
+      return "![${alt}]($relativePath)"
+    },
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
+
+  return $rewritten
+}
+
+function Resolve-PdfBrowserPath {
+  $candidates = @(
+    'C:\Program Files\Google\Chrome\Application\chrome.exe',
+    'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+    'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
+    'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+  )
+
+  foreach ($path in $candidates) {
+    if (Test-Path -LiteralPath $path) {
+      return $path
+    }
+  }
+
+  throw '当前机器未找到可用的 Chrome / Edge，无法生成 PDF'
+}
+
+function Convert-NoteHtmlToPdfBytes {
+  param(
+    [string]$Html,
+    [string]$Title = 'Untitled'
+  )
+
+  $browserPath = Resolve-PdfBrowserPath
+  $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('notes_pdf_' + [guid]::NewGuid().ToString('N'))
+  $htmlPath = Join-Path $tempRoot 'note.html'
+  $pdfPath = Join-Path $tempRoot 'note.pdf'
+
+  New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+  try {
+    [IO.File]::WriteAllText($htmlPath, $Html, [Text.Encoding]::UTF8)
+    $htmlUri = [System.Uri]::new($htmlPath).AbsoluteUri
+
+    $argSets = @(
+      @('--headless=new', '--disable-gpu', '--no-pdf-header-footer', ('--print-to-pdf=' + $pdfPath), $htmlUri),
+      @('--headless', '--disable-gpu', '--no-pdf-header-footer', ('--print-to-pdf=' + $pdfPath), $htmlUri)
+    )
+
+    $generated = $false
+    foreach ($args in $argSets) {
+      if (Test-Path -LiteralPath $pdfPath) {
+        Remove-Item -LiteralPath $pdfPath -Force -ErrorAction SilentlyContinue
+      }
+      $proc = Start-Process -FilePath $browserPath -ArgumentList $args -WindowStyle Hidden -PassThru -Wait
+      if ($proc.ExitCode -eq 0 -and (Test-Path -LiteralPath $pdfPath)) {
+        $generated = $true
+        break
+      }
+    }
+
+    if (-not $generated) {
+      throw '浏览器 PDF 生成失败'
+    }
+
+    Write-AppLog 'notes_export_pdf' ('title=' + $Title)
+    return [IO.File]::ReadAllBytes($pdfPath)
+  }
+  finally {
+    if (Test-Path -LiteralPath $tempRoot) {
+      Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
 }
 
 function Save-NotesDisplayContent {
@@ -288,12 +437,27 @@ function Create-NotesDisplayNote {
   return $id
 }
 
+function Get-NoteFileUpdatedAt {
+  param([string]$Path)
+  if (!(Test-Path -LiteralPath $Path)) { return 0 }
+  try {
+    return [DateTimeOffset](Get-Item -LiteralPath $Path).LastWriteTimeUtc
+  } catch {
+    return 0
+  }
+}
+
 function Load-Note {
   param([string]$Id)
   $path = Get-NotePath $Id
-  if (!(Test-Path $path)) { return [ordered]@{ id=$Id; title='Untitled'; content='' } }
+  if (!(Test-Path $path)) { return [ordered]@{ id=$Id; title='Untitled'; content=''; updatedAt=0 } }
   $parsed = Parse-NoteFile $path
-  return [ordered]@{ id=$Id; title=$parsed.title; content=$parsed.content }
+  return [ordered]@{
+    id=$Id
+    title=$parsed.title
+    content=$parsed.content
+    updatedAt=(Get-NoteFileUpdatedAt $path).ToUnixTimeMilliseconds()
+  }
 }
 
 function Load-NotesDisplayNote {
