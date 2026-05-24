@@ -10,6 +10,22 @@
 
 ## 2. 修改记录
 
+### 2026-05-24 / 引入 notes display session 深模块，收口 C 工作区会话状态
+- 改动内容：
+  - 参照 B 模块的深模块化路径，为 C 模块新增 `webui/config/app-notes-display-session.js`
+  - 新模块开始承接 `notes display` 的 load / save / select / autosave / dirty 会话状态
+  - `app-notes-display.js` 开始退回到工作区 UI、DOM 渲染与目录联动角色，避免继续同时承担状态机实现
+  - 本轮同步修复了 C 模块里一批会阻断语法与维护的损坏文案，作为继续 deepening 的前置清障
+- 影响文件：
+  - `webui/config/app-notes-display.js`
+  - `webui/config/app-notes-display-session.js`
+  - `docs/modules/12_notes_display.md`
+  - `docs/architecture/DEPENDENCY_MAP.md`
+- 测试：
+  - `node --check --experimental-default-type=module webui/config/app-notes-display-session.js`
+  - `node --check --experimental-default-type=module webui/config/app-notes-display.js`
+- 测试结果：`通过`
+
 ### 2026-05-15 / F4 悬浮窗位置与尺寸持久化加固
 - 改动内容：
   - 为 `src/notes_overlay.ahk` 新增窗口位置监听与延迟保存机制

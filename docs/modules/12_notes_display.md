@@ -26,6 +26,8 @@
 - `src/hotkeys.ahk`
 - `webui/config/index.html`
 - `webui/config/app-main.js`
+- `webui/config/app-notes-display.js`
+- `webui/config/app-notes-display-session.js`
 - `webui/config/app-common.js`
 - `webui/config/server-common.ps1`
 
