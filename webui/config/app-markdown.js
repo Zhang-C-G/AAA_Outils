@@ -7,6 +7,16 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 const URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+const ALLOWED_NOTE_COLOR_TOKENS = new Set([
+  'sky',
+  'mint',
+  'amber',
+  'rose',
+  'sky-soft',
+  'mint-soft',
+  'amber-soft',
+  'rose-soft'
+]);
 
 function isSafeUrl(raw, tagName) {
   const value = String(raw || '').trim();
@@ -53,8 +63,11 @@ function sanitizeNode(node) {
     const isHeadingAttr = /^H[1-6]$/.test(tag) && (name === 'id' || name === 'data-heading-id');
     const isCodeClass = tag === 'CODE' && name === 'class' && /^language-[\w-]+$/.test(value);
     const isCellAlign = (tag === 'TH' || tag === 'TD') && name === 'align';
+    const isNoteColorAttr = tag === 'SPAN'
+      && (name === 'data-note-color' || name === 'data-note-bg')
+      && ALLOWED_NOTE_COLOR_TOKENS.has(String(value || '').trim().toLowerCase());
 
-    if (isHeadingAttr || isCodeClass || isCellAlign) {
+    if (isHeadingAttr || isCodeClass || isCellAlign || isNoteColorAttr) {
       return;
     }
 
@@ -187,6 +200,22 @@ export function collectInlineMarkdown(node) {
     const alt = String(node.getAttribute('alt') || '');
     const src = String(node.getAttribute('src') || '').trim();
     return src ? `![${alt}](${src})` : '';
+  }
+  if (tag === 'SPAN') {
+    const inner = Array.from(node.childNodes || []).map((child) => collectInlineMarkdown(child)).join('');
+    const noteColor = String(node.getAttribute('data-note-color') || '').trim().toLowerCase();
+    const noteBg = String(node.getAttribute('data-note-bg') || '').trim().toLowerCase();
+    const attrs = [];
+    if (ALLOWED_NOTE_COLOR_TOKENS.has(noteColor)) {
+      attrs.push(`data-note-color="${noteColor}"`);
+    }
+    if (ALLOWED_NOTE_COLOR_TOKENS.has(noteBg)) {
+      attrs.push(`data-note-bg="${noteBg}"`);
+    }
+    if (!attrs.length) {
+      return inner;
+    }
+    return `<span ${attrs.join(' ')}>${inner}</span>`;
   }
 
   return Array.from(node.childNodes || []).map((child) => collectInlineMarkdown(child)).join('');

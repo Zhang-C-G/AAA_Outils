@@ -52,6 +52,9 @@ gAssistantOverlayAffinityRepairCooldownUntilTick := 0
 gAssistantOverlayCaptureRiskLastSeenTick := 0
 gAssistantOverlayEnhancedProtectGapSinceTick := 0
 gAssistantThinkingHasStreamData := false
+gAssistantThinkingUiUpdateCount := 0
+gAssistantThinkingFirstUiUpdateMs := 0
+gAssistantOverlayAutoScrollStreaming := false
 gAssistantOverlayInputSummary := ""
 gAssistantVoiceInputActive := false
 gAssistantVoiceInputStarting := false
@@ -1122,6 +1125,9 @@ StartAssistantCaptureFlow(showNotice := true) {
     if !res.Has("streamed") {
         res["streamed"] := 0
     }
+    if !res.Has("stream_metrics") {
+        res["stream_metrics"] := Map()
+    }
     StopAssistantThinkingTicker()
     res["path"] := path
     if !res["ok"] {
@@ -1149,7 +1155,10 @@ StartAssistantCaptureFlow(showNotice := true) {
         ShowAssistantOverlay(displayText)
     }
     UpdateAssistantOverlayStatus((res["streamed"] ? "状态：流式回答完成" : "状态：回答完成") "（总耗时：" totalElapsedSec "秒） | 模型：" modelLabel)
-    WriteLog("assistant_answer_show", "chars=" StrLen(res["text"]) " streamed=" res["streamed"] " total_elapsed_sec=" totalElapsedSec)
+    WriteLog("assistant_answer_show", "chars=" StrLen(res["text"]) " streamed=" res["streamed"] " total_elapsed_sec=" totalElapsedSec " " FormatAssistantStreamMetricsLog(res["stream_metrics"]))
+    if IsObject(res["stream_metrics"]) && (!res["stream_metrics"].Has("answer_streaming_verified") || !res["stream_metrics"]["answer_streaming_verified"]) {
+        WriteLog("assistant_stream_health_warning", "scene=image_answer " FormatAssistantStreamMetricsLog(res["stream_metrics"]))
+    }
     return res
 }
 
@@ -1558,6 +1567,9 @@ StartAssistantTextQueryFlow(queryText, showNotice := true, source := "manual_tex
     if !res.Has("streamed") {
         res["streamed"] := 0
     }
+    if !res.Has("stream_metrics") {
+        res["stream_metrics"] := Map()
+    }
     StopAssistantThinkingTicker()
 
     if !res["ok"] {
@@ -1580,7 +1592,10 @@ StartAssistantTextQueryFlow(queryText, showNotice := true, source := "manual_tex
     if (source = "voice_auto_analysis") {
         RememberAssistantVoiceAnalysisRound(query, res["text"])
     }
-    WriteLog("assistant_text_answer_show", "chars=" StrLen(res["text"]) " streamed=" res["streamed"] " total_elapsed_sec=" totalElapsedSec)
+    WriteLog("assistant_text_answer_show", "chars=" StrLen(res["text"]) " streamed=" res["streamed"] " total_elapsed_sec=" totalElapsedSec " " FormatAssistantStreamMetricsLog(res["stream_metrics"]))
+    if IsObject(res["stream_metrics"]) && (!res["stream_metrics"].Has("answer_streaming_verified") || !res["stream_metrics"]["answer_streaming_verified"]) {
+        WriteLog("assistant_stream_health_warning", "scene=text_answer " FormatAssistantStreamMetricsLog(res["stream_metrics"]))
+    }
     return res
 }
 
@@ -1724,7 +1739,7 @@ ShowAssistantOverlay(answerText) {
 
 SetAssistantOverlayText(answerText) {
     global gAssistantOverlayText, gAssistantOverlayFullText, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
-    global gAssistantOverlayLastRenderedText, gAssistantOverlayLastRenderedHint
+    global gAssistantOverlayLastRenderedText, gAssistantOverlayLastRenderedHint, gAssistantOverlayAutoScrollStreaming
     if !IsObject(gAssistantOverlayText) {
         return
     }
@@ -1734,6 +1749,9 @@ SetAssistantOverlayText(answerText) {
     gAssistantOverlayLastRenderedText := ""
     gAssistantOverlayLastRenderedHint := ""
     RenderAssistantOverlayText()
+    if !gAssistantOverlayAutoScrollStreaming {
+        AssistantOverlayScrollToTop()
+    }
     RefreshAssistantOverlayNow()
 }
 
@@ -1753,11 +1771,13 @@ RefreshAssistantOverlayNow() {
     }
     try gAssistantOverlayGui.Redraw()
     try DllCall("user32\UpdateWindow", "ptr", gAssistantOverlayGui.Hwnd)
-    Sleep(0)
+    Sleep(-1)
 }
 
 OnAssistantThinkingProgress(stage, elapsedSec := 0) {
     global gAssistantThinkingActive, gAssistantThinkingStartTick, gAssistantThinkingHasStreamData
+    global gAssistantThinkingUiUpdateCount, gAssistantThinkingFirstUiUpdateMs
+    global gAssistantOverlayAutoScrollStreaming
     modelLabel := GetAssistantCurrentModelLabel()
     if (stage = "thinking") {
         if (gAssistantThinkingActive && gAssistantThinkingStartTick > 0) {
@@ -1772,17 +1792,27 @@ OnAssistantThinkingProgress(stage, elapsedSec := 0) {
     } else if (stage = "stream_snapshot") {
         snapshot := IsObject(elapsedSec) ? elapsedSec : Map()
         answer := snapshot.Has("answer") ? snapshot["answer"] : ""
+        reasoning := snapshot.Has("reasoning") ? snapshot["reasoning"] : ""
         gAssistantThinkingHasStreamData := true
-        SetAssistantOverlayText(BuildAssistantOverlayDisplayText(answer, true))
+        gAssistantOverlayAutoScrollStreaming := true
+        gAssistantThinkingUiUpdateCount += 1
+        if (gAssistantThinkingFirstUiUpdateMs <= 0 && gAssistantThinkingStartTick > 0) {
+            gAssistantThinkingFirstUiUpdateMs := Max(0, A_TickCount - gAssistantThinkingStartTick)
+            WriteLog("assistant_overlay_stream_first_ui", "elapsed_ms=" gAssistantThinkingFirstUiUpdateMs " answer_chars=" StrLen(answer) " reasoning_chars=" StrLen(reasoning))
+        } else if (Mod(gAssistantThinkingUiUpdateCount, 25) = 0) {
+            WriteLog("assistant_overlay_stream_ui_progress", "updates=" gAssistantThinkingUiUpdateCount " answer_chars=" StrLen(answer) " reasoning_chars=" StrLen(reasoning))
+        }
+        SetAssistantOverlayText(BuildAssistantOverlayDisplayText(answer, true, reasoning))
         UpdateAssistantOverlayStatus("状态：正在流式输出 | 模型：" modelLabel)
     } else if (stage = "request_done") {
         UpdateAssistantOverlayStatus(gAssistantThinkingHasStreamData ? "状态：流式输出完成，正在整理答案... | 模型：" modelLabel : "状态：回答生成完成，正在整理答案... | 模型：" modelLabel)
     }
 }
 
-BuildAssistantOverlayDisplayText(answerText, isStreaming := false) {
+BuildAssistantOverlayDisplayText(answerText, isStreaming := false, reasoningText := "") {
     global gAssistantOverlayInputSummary
     answer := Trim(answerText)
+    reasoning := Trim(reasoningText)
     inputSummary := Trim(gAssistantOverlayInputSummary)
     parts := []
 
@@ -1795,6 +1825,9 @@ BuildAssistantOverlayDisplayText(answerText, isStreaming := false) {
 
     if (answer != "") {
         parts.Push(answer)
+    } else if (isStreaming && reasoning != "") {
+        parts.Push("思考中：")
+        parts.Push(reasoning)
     } else if isStreaming {
         parts.Push("正在生成回答...")
     }
@@ -2224,20 +2257,26 @@ StopAssistantOverlayCaptureGuard() {
 
 StartAssistantThinkingTicker() {
     global gAssistantThinkingActive, gAssistantThinkingStartTick, gAssistantThinkingHasStreamData
+    global gAssistantThinkingUiUpdateCount, gAssistantThinkingFirstUiUpdateMs
+    global gAssistantOverlayAutoScrollStreaming
     gAssistantThinkingStartTick := A_TickCount
     gAssistantThinkingActive := true
     gAssistantThinkingHasStreamData := false
+    gAssistantThinkingUiUpdateCount := 0
+    gAssistantThinkingFirstUiUpdateMs := 0
+    gAssistantOverlayAutoScrollStreaming := false
     SetTimer(AssistantThinkingTick, 1000)
     AssistantThinkingTick()
 }
 
 StopAssistantThinkingTicker() {
-    global gAssistantThinkingActive
+    global gAssistantThinkingActive, gAssistantOverlayAutoScrollStreaming
     if !gAssistantThinkingActive {
         return
     }
     SetTimer(AssistantThinkingTick, 0)
     gAssistantThinkingActive := false
+    gAssistantOverlayAutoScrollStreaming := false
 }
 
 AssistantThinkingTick(*) {
@@ -2384,6 +2423,15 @@ AssistantOverlayScrollToTop() {
     SendMessage(0x0115, 6, 0, , "ahk_id " gAssistantOverlayText.Hwnd)
 }
 
+AssistantOverlayScrollToBottom() {
+    global gAssistantOverlayText
+    if !IsObject(gAssistantOverlayText) {
+        return
+    }
+    ; WM_VSCROLL + SB_BOTTOM
+    SendMessage(0x0115, 7, 0, , "ahk_id " gAssistantOverlayText.Hwnd)
+}
+
 UpdateAssistantOverlayTextHint() {
     global gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayLastRenderedHint
     if !IsObject(gAssistantOverlayTextHint) || !IsObject(gAssistantOverlayText) {
@@ -2408,7 +2456,7 @@ UpdateAssistantOverlayTextHint() {
 
 RenderAssistantOverlayText() {
     global gAssistantOverlayText, gAssistantOverlayTextHint, gAssistantOverlayRenderedLines, gAssistantOverlayScrollOffset
-    global gAssistantOverlayFullText
+    global gAssistantOverlayFullText, gAssistantOverlayAutoScrollStreaming
     global gAssistantOverlayLastRenderedText, gAssistantOverlayLastRenderedHint
     if !IsObject(gAssistantOverlayText) {
         return
@@ -2419,7 +2467,11 @@ RenderAssistantOverlayText() {
         gAssistantOverlayText.Value := renderedText
         gAssistantOverlayLastRenderedText := renderedText
     }
-    AssistantOverlayScrollToTop()
+    if gAssistantOverlayAutoScrollStreaming {
+        AssistantOverlayScrollToBottom()
+    } else {
+        AssistantOverlayScrollToTop()
+    }
     UpdateAssistantOverlayTextHint()
 }
 

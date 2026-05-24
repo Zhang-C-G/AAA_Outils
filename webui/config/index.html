@@ -123,10 +123,33 @@
               <input id="noteTitle" type="hidden" />
               <div class="notes-content-block">
                 <div class="notes-content-head">
-                  <strong>正文部分</strong>
-                  <div class="notes-content-view-switch" role="tablist" aria-label="正文视图切换">
-                    <button id="notesViewMarkdownBtn" class="notes-content-view-btn" type="button" aria-pressed="false">Markdown</button>
-                    <button id="notesViewRenderedBtn" class="notes-content-view-btn active" type="button" aria-pressed="true">最终版本</button>
+                  <div class="notes-content-head-actions">
+                    <div class="notes-content-head-row notes-content-head-row-top">
+                      <span class="notes-content-status" aria-label="正文保存状态">
+                        <span id="noteContentSaveDot" class="notes-content-save-dot" aria-hidden="true"></span>
+                        <span id="noteContentCount" class="notes-content-count" aria-label="正文内容字数">0</span>
+                      </span>
+                      <div class="notes-content-top-controls">
+                        <input id="noteContentSearch" class="notes-content-search" type="search" placeholder="搜索" aria-label="搜索正文内容" />
+                        <button id="saveCurrentNoteBtn" class="notes-content-view-btn" type="button">保存</button>
+                      </div>
+                    </div>
+                    <div class="notes-content-head-row notes-content-head-row-bottom">
+                      <div class="notes-export-controls">
+                        <select id="noteExportFormat" aria-label="当前笔记导出格式">
+                          <option value="md">Markdown</option>
+                          <option value="html">HTML</option>
+                          <option value="pdf">PDF</option>
+                          <option value="txt">TXT</option>
+                          <option value="json">JSON</option>
+                        </select>
+                        <button id="exportCurrentNoteBtn" class="notes-content-view-btn active" type="button">导出当前笔记</button>
+                      </div>
+                      <div class="notes-content-view-switch" role="tablist" aria-label="正文视图切换">
+                        <button id="notesViewMarkdownBtn" class="notes-content-view-btn" type="button" aria-pressed="false">Markdown</button>
+                        <button id="notesViewRenderedBtn" class="notes-content-view-btn active" type="button" aria-pressed="true">最终版本</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <textarea id="noteContent" class="notes-source-textarea" aria-hidden="true"></textarea>

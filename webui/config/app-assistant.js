@@ -514,6 +514,7 @@ function readAssistantFromUi() {
   state.assistant.api_key = '';
   state.assistant.keep_api_key = Number(state.assistant.has_api_key || 0) !== 0 ? 1 : 0;
   state.assistant.xunfei_app_id = String(state.assistant.xunfei_app_id || '').trim();
+  state.assistant.keep_xunfei_app_id = state.assistant.xunfei_app_id !== '' ? 1 : 0;
   state.assistant.xunfei_api_key = '';
   state.assistant.keep_xunfei_api_key = Number(state.assistant.has_xunfei_api_key || 0) !== 0 ? 1 : 0;
   state.assistant.xunfei_api_secret = '';
@@ -537,6 +538,7 @@ export async function saveAssistantSettings(options = {}) {
   state.assistant = { ...state.assistant, ...(payload.settings || {}) };
   state.assistant.api_key = '';
   state.assistant.keep_api_key = 0;
+  state.assistant.keep_xunfei_app_id = 0;
   state.assistant.xunfei_api_key = '';
   state.assistant.keep_xunfei_api_key = 0;
   state.assistant.xunfei_api_secret = '';

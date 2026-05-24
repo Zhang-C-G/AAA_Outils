@@ -65,6 +65,47 @@
   - `rg -n -F "\`$isDeepSeek" src/storage/assistant.ahk`
 - 测试结果：`通过（静态校对）`
 
+### 2026-05-15 / 修复讯飞 AppID 再次被空值回写
+- 改动内容：
+  - 确认本次异常不是单纯 UI 显示误判，而是 `config.ini` 中 `xunfei_app_id` 再次被写成空值
+  - 为 Web 保存链新增 `Resolve-AssistantStickyTextField`，让 `xunfei_app_id` 也具备和密钥同级的“保留式保存”能力，避免前端带空值时覆盖掉已有 AppID
+  - 前端 Assistant 保存时增加 `keep_xunfei_app_id` 口径，明确告诉后端保留现有 AppID
+  - AHK `SaveData()` 增加磁盘回补保护：若运行态 `xunfei_app_id` 为空，但磁盘已有值，则优先保留磁盘中的 AppID
+  - 本机 `config.ini` 已补回 `xunfei_app_id=3e01888e`
+- 影响文件：
+  - `webui/config/server_state/assistant.ps1`
+  - `webui/config/app-assistant.js`
+  - `src/storage/data_save.ahk`
+  - `config.ini`
+- 测试：
+  - PowerShell 读回校验：确认当前后端返回 `appId=3e01888e`、`hasKey=1`、`hasSecret=1`
+  - 空值保存模拟：`Convert-ToAssistantSettings` 在 `xunfei_app_id='' + keep_xunfei_app_id=1` 情况下仍解析为 `3e01888e`
+- 测试结果：`通过`
+
+### 2026-05-15 / 建立大模型流式输出监测机制
+- 改动内容：
+  - 为 AHK 图片问答流与文本问答流新增统一 `stream_metrics` 指标，覆盖：
+    - `snapshot_count`
+    - `answer_updates`
+    - `reasoning_updates`
+    - `first_snapshot_ms`
+    - `first_answer_ms`
+    - `first_reasoning_ms`
+    - `max_snapshot_gap_ms`
+    - `verified_streaming`
+  - 悬浮窗完成输出时写入更细的流式日志；若本次回答未达到“已验证流式”条件，会额外记录 `assistant_stream_health_warning`
+  - Testing 页的 Assistant benchmark stream 状态增加 `stream_verdict + stream_metrics`，页面直接显示首事件时间、首文本时间、更新次数、最大停顿和最终判定
+- 影响文件：
+  - `src/storage/assistant.ahk`
+  - `src/assistant_overlay.ahk`
+  - `webui/config/server-assistant.ps1`
+  - `webui/config/app-testing.js`
+- 测试：
+  - PowerShell 加载校验：确认 `server-assistant.ps1` 能正常加载
+  - Benchmark 启动校验：`Start-AssistantBenchmarkStreamRun` 返回 `stream_verdict=pending` 且 `stream_metrics.event_count=0`
+  - 运行态状态读取：`Get-AssistantBenchmarkStreamState` 能读出 `status / stream_verdict / stream_metrics`
+- 测试结果：`通过（静态 + 启动态校验）`
+
 ### 2026-05-15 / F3 自动分析送模口径与上下文窗口轮次收口
 - 改动内容：
   - 明确 F3 自动分析送入模型的内容不是“只有识别文本”，而是“当前语音文本 + 当前 Prompt + 当前个人背景 + 可选历史语音上下文”

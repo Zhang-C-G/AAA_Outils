@@ -812,7 +812,7 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
         . "    'reasoning_b64=' + `$reasonB64,`n"
         . "    'answer_b64=' + `$answerB64`n"
         . "  )`n"
-        . "  [IO.File]::WriteAllLines(`$progress, `$lines, `$enc)`n"
+        . "  [IO.File]::WriteAllText(`$progress, [string]::Join([Environment]::NewLine, `$lines), `$enc)`n"
         . "}`n"
         . "function Get-DeltaText(`$evt){`n"
         . "  `$text=''`n"
@@ -915,6 +915,7 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
     lastAnswer := ""
     lastReasoning := ""
     streamSeen := false
+    streamMetrics := InitAssistantStreamMetrics()
     if (pid > 0) {
         loop {
             if FileExist(progressPath) {
@@ -927,12 +928,14 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
                     snapshot := ParseAssistantStreamSnapshot(progressRaw)
                     lastAnswer := snapshot["answer"]
                     lastReasoning := snapshot["reasoning"]
+                    UpdateAssistantStreamMetrics(streamMetrics, snapshot, startTick)
                     if (lastAnswer != "" || lastReasoning != "") {
                         streamSeen := true
                     }
                     if IsObject(onProgress) {
                         onProgress.Call("stream_snapshot", snapshot)
                     }
+                    Sleep(-1)
                 }
             }
             if !ProcessExist(pid) {
@@ -942,6 +945,7 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
                 elapsed := Floor((A_TickCount - startTick) / 1000)
                 onProgress.Call("thinking", elapsed)
             }
+            Sleep(-1)
             Sleep(120)
         }
     } else {
@@ -957,12 +961,14 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
             snapshot := ParseAssistantStreamSnapshot(progressRaw)
             lastAnswer := snapshot["answer"]
             lastReasoning := snapshot["reasoning"]
+            UpdateAssistantStreamMetrics(streamMetrics, snapshot, startTick)
             if (lastAnswer != "" || lastReasoning != "") {
                 streamSeen := true
             }
             if IsObject(onProgress) {
                 onProgress.Call("stream_snapshot", snapshot)
             }
+            Sleep(-1)
         }
     }
 
@@ -970,19 +976,20 @@ RequestAssistantAnswerFromImageStream(imagePath, settings, onProgress := "") {
         onProgress.Call("request_done", Floor((A_TickCount - startTick) / 1000))
     }
 
+    txt := FileExist(outPath) ? Trim(FileRead(outPath, "UTF-8")) : Trim(lastAnswer)
+    reasoning := FileExist(reasonPath) ? Trim(FileRead(reasonPath, "UTF-8")) : Trim(lastReasoning)
+    FinalizeAssistantStreamMetrics(streamMetrics, txt, reasoning)
+
     if FileExist(errPath) {
         err := Trim(FileRead(errPath, "UTF-8"))
         if (err != "") {
-            return Map("ok", 0, "text", "", "reasoning", "", "streamed", streamSeen ? 1 : 0, "error", err)
+            return Map("ok", 0, "text", "", "reasoning", "", "streamed", streamSeen ? 1 : 0, "stream_metrics", streamMetrics, "error", err)
         }
     }
-
-    txt := FileExist(outPath) ? Trim(FileRead(outPath, "UTF-8")) : Trim(lastAnswer)
-    reasoning := FileExist(reasonPath) ? Trim(FileRead(reasonPath, "UTF-8")) : Trim(lastReasoning)
     if (txt = "") {
-        return Map("ok", 0, "text", "", "reasoning", reasoning, "streamed", streamSeen ? 1 : 0, "error", "assistant stream empty output")
+        return Map("ok", 0, "text", "", "reasoning", reasoning, "streamed", streamSeen ? 1 : 0, "stream_metrics", streamMetrics, "error", "assistant stream empty output")
     }
-    return Map("ok", 1, "text", txt, "reasoning", reasoning, "streamed", 1, "error", "")
+    return Map("ok", 1, "text", txt, "reasoning", reasoning, "streamed", 1, "stream_metrics", streamMetrics, "error", "")
 }
 
 RequestAssistantAnswerFromTextLegacy(queryText, settings, onProgress := "") {
@@ -1171,7 +1178,7 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
         . "    'reasoning_b64=' + `$reasonB64,`n"
         . "    'answer_b64=' + `$answerB64`n"
         . "  )`n"
-        . "  [IO.File]::WriteAllLines(`$progress, `$lines, `$enc)`n"
+        . "  [IO.File]::WriteAllText(`$progress, [string]::Join([Environment]::NewLine, `$lines), `$enc)`n"
         . "}`n"
         . "function Get-DeltaText(`$evt){`n"
         . "  `$text=''`n"
@@ -1304,6 +1311,7 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
     lastAnswer := ""
     lastReasoning := ""
     streamSeen := false
+    streamMetrics := InitAssistantStreamMetrics()
     if (pid > 0) {
         loop {
             if FileExist(progressPath) {
@@ -1316,12 +1324,14 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
                     snapshot := ParseAssistantStreamSnapshot(progressRaw)
                     lastAnswer := snapshot["answer"]
                     lastReasoning := snapshot["reasoning"]
+                    UpdateAssistantStreamMetrics(streamMetrics, snapshot, startTick)
                     if (lastAnswer != "" || lastReasoning != "") {
                         streamSeen := true
                     }
                     if IsObject(onProgress) {
                         onProgress.Call("stream_snapshot", snapshot)
                     }
+                    Sleep(-1)
                 }
             }
             if !ProcessExist(pid) {
@@ -1331,6 +1341,7 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
                 elapsed := Floor((A_TickCount - startTick) / 1000)
                 onProgress.Call("thinking", elapsed)
             }
+            Sleep(-1)
             Sleep(120)
         }
     } else {
@@ -1346,12 +1357,14 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
             snapshot := ParseAssistantStreamSnapshot(progressRaw)
             lastAnswer := snapshot["answer"]
             lastReasoning := snapshot["reasoning"]
+            UpdateAssistantStreamMetrics(streamMetrics, snapshot, startTick)
             if (lastAnswer != "" || lastReasoning != "") {
                 streamSeen := true
             }
             if IsObject(onProgress) {
                 onProgress.Call("stream_snapshot", snapshot)
             }
+            Sleep(-1)
         }
     }
 
@@ -1359,19 +1372,20 @@ RequestAssistantAnswerFromTextStream(queryText, settings, onProgress := "") {
         onProgress.Call("request_done", Floor((A_TickCount - startTick) / 1000))
     }
 
+    txt := FileExist(outPath) ? Trim(FileRead(outPath, "UTF-8")) : Trim(lastAnswer)
+    reasoning := FileExist(reasonPath) ? Trim(FileRead(reasonPath, "UTF-8")) : Trim(lastReasoning)
+    FinalizeAssistantStreamMetrics(streamMetrics, txt, reasoning)
+
     if FileExist(errPath) {
         err := Trim(FileRead(errPath, "UTF-8"))
         if (err != "") {
-            return Map("ok", 0, "text", "", "reasoning", "", "streamed", streamSeen ? 1 : 0, "error", err)
+            return Map("ok", 0, "text", "", "reasoning", "", "streamed", streamSeen ? 1 : 0, "stream_metrics", streamMetrics, "error", err)
         }
     }
-
-    txt := FileExist(outPath) ? Trim(FileRead(outPath, "UTF-8")) : Trim(lastAnswer)
-    reasoning := FileExist(reasonPath) ? Trim(FileRead(reasonPath, "UTF-8")) : Trim(lastReasoning)
     if (txt = "") {
-        return Map("ok", 0, "text", "", "reasoning", reasoning, "streamed", streamSeen ? 1 : 0, "error", "assistant text stream empty output")
+        return Map("ok", 0, "text", "", "reasoning", reasoning, "streamed", streamSeen ? 1 : 0, "stream_metrics", streamMetrics, "error", "assistant text stream empty output")
     }
-    return Map("ok", 1, "text", txt, "reasoning", reasoning, "streamed", 1, "error", "")
+    return Map("ok", 1, "text", txt, "reasoning", reasoning, "streamed", 1, "stream_metrics", streamMetrics, "error", "")
 }
 
 ParseAssistantStreamSnapshot(rawText) {
@@ -1403,6 +1417,103 @@ ParseAssistantStreamSnapshot(rawText) {
         }
     }
     return snapshot
+}
+
+InitAssistantStreamMetrics() {
+    return Map(
+        "snapshot_count", 0,
+        "answer_updates", 0,
+        "reasoning_updates", 0,
+        "first_snapshot_ms", 0,
+        "first_answer_ms", 0,
+        "first_reasoning_ms", 0,
+        "last_snapshot_ms", 0,
+        "max_snapshot_gap_ms", 0,
+        "verified_streaming", 0,
+        "answer_streaming_verified", 0,
+        "final_answer_chars", 0,
+        "final_reasoning_chars", 0
+    )
+}
+
+UpdateAssistantStreamMetrics(metrics, snapshot, startTick) {
+    if !IsObject(metrics) || !IsObject(snapshot) {
+        return
+    }
+    elapsedMs := Max(0, A_TickCount - startTick)
+    snapshotCount := metrics["snapshot_count"] + 1
+    if (snapshotCount = 1) {
+        metrics["first_snapshot_ms"] := elapsedMs
+    } else {
+        lastMs := metrics["last_snapshot_ms"]
+        if (lastMs > 0) {
+            gapMs := Max(0, elapsedMs - lastMs)
+            if (gapMs > metrics["max_snapshot_gap_ms"]) {
+                metrics["max_snapshot_gap_ms"] := gapMs
+            }
+        }
+    }
+    metrics["snapshot_count"] := snapshotCount
+    metrics["last_snapshot_ms"] := elapsedMs
+
+    answer := snapshot.Has("answer") ? snapshot["answer"] : ""
+    reasoning := snapshot.Has("reasoning") ? snapshot["reasoning"] : ""
+    prevAnswerLen := metrics.Has("prev_answer_len") ? metrics["prev_answer_len"] : 0
+    prevReasoningLen := metrics.Has("prev_reasoning_len") ? metrics["prev_reasoning_len"] : 0
+    answerLen := StrLen(answer)
+    reasoningLen := StrLen(reasoning)
+    if (answer != "") {
+        if (answerLen != prevAnswerLen) {
+            metrics["answer_updates"] := metrics["answer_updates"] + 1
+        }
+        if (metrics["first_answer_ms"] <= 0) {
+            metrics["first_answer_ms"] := elapsedMs
+        }
+    }
+    if (reasoning != "") {
+        if (reasoningLen != prevReasoningLen) {
+            metrics["reasoning_updates"] := metrics["reasoning_updates"] + 1
+        }
+        if (metrics["first_reasoning_ms"] <= 0) {
+            metrics["first_reasoning_ms"] := elapsedMs
+        }
+    }
+    metrics["prev_answer_len"] := answerLen
+    metrics["prev_reasoning_len"] := reasoningLen
+    metrics["verified_streaming"] := (metrics["snapshot_count"] >= 2 || metrics["answer_updates"] >= 2 || metrics["reasoning_updates"] >= 2) ? 1 : 0
+    metrics["answer_streaming_verified"] := (metrics["answer_updates"] >= 2) ? 1 : 0
+}
+
+FinalizeAssistantStreamMetrics(metrics, answerText, reasoningText) {
+    if !IsObject(metrics) {
+        return Map()
+    }
+    answer := Trim(answerText)
+    reasoning := Trim(reasoningText)
+    metrics["final_answer_chars"] := StrLen(answer)
+    metrics["final_reasoning_chars"] := StrLen(reasoning)
+    if ((answer != "" || reasoning != "") && metrics["snapshot_count"] > 0) {
+        metrics["verified_streaming"] := (metrics["verified_streaming"] || metrics["answer_updates"] > 0 || metrics["reasoning_updates"] > 0) ? 1 : 0
+    }
+    metrics["answer_streaming_verified"] := (metrics["answer_streaming_verified"] || metrics["answer_updates"] >= 2) ? 1 : 0
+    return metrics
+}
+
+FormatAssistantStreamMetricsLog(metrics) {
+    if !IsObject(metrics) {
+        return "stream_metrics=none"
+    }
+    return "stream_verified=" metrics["verified_streaming"]
+        . " answer_stream_verified=" metrics["answer_streaming_verified"]
+        . " snapshot_count=" metrics["snapshot_count"]
+        . " answer_updates=" metrics["answer_updates"]
+        . " reasoning_updates=" metrics["reasoning_updates"]
+        . " first_snapshot_ms=" metrics["first_snapshot_ms"]
+        . " first_answer_ms=" metrics["first_answer_ms"]
+        . " first_reasoning_ms=" metrics["first_reasoning_ms"]
+        . " max_snapshot_gap_ms=" metrics["max_snapshot_gap_ms"]
+        . " final_answer_chars=" metrics["final_answer_chars"]
+        . " final_reasoning_chars=" metrics["final_reasoning_chars"]
 }
 
 StartAssistantVoiceRecognitionSession(settings) {

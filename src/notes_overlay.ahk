@@ -28,6 +28,12 @@ gNotesOverlayProtectionGuardRunning := false
 gNotesOverlayManualCloseLock := false
 gNotesOverlayAutoRestoreEnabled := false
 gNotesOverlayLastWheelTick := 0
+gNotesOverlayPlacementWatchRunning := false
+gNotesOverlayPlacementDirtyTick := 0
+gNotesOverlayLastObservedX := ""
+gNotesOverlayLastObservedY := ""
+gNotesOverlayLastObservedW := ""
+gNotesOverlayLastObservedH := ""
 
 WriteNotesOverlayStateLog(action, details := "") {
     global gNotesOverlayVisible, gNotesOverlayTempHidden, gNotesOverlayTempRestoreMs
@@ -103,6 +109,7 @@ HideNotesDisplayOverlay() {
     }
     gNotesOverlayVisible := false
     gNotesOverlayTempHidden := false
+    StopNotesOverlayPlacementWatch()
     StopNotesOverlayProtectionGuard()
     DisableNotesOverlayCaptureProtection("hide")
     DisposeNotesOverlayGui()
@@ -147,6 +154,7 @@ ShowNotesDisplayOverlay(note) {
     gNotesOverlayVisible := true
     NormalizeNotesOverlayWindowStyles()
     EnableNotesOverlayCaptureProtection("show")
+    StartNotesOverlayPlacementWatch()
     StartNotesOverlayProtectionGuard()
     WriteNotesOverlayStateLog("notes_overlay_show", "placed=" (gNotesOverlayPlaced ? 1 : 0))
 }
@@ -217,6 +225,7 @@ GetNotesOverlayShowOptions() {
 
 SaveNotesOverlayWindowPlacement(forceSave := false) {
     global gNotesOverlayGui, gAppSettings, gNotesOverlayPlaced, gNotesOverlayLastWidth, gNotesOverlayLastHeight
+    global gNotesOverlayLastObservedX, gNotesOverlayLastObservedY, gNotesOverlayLastObservedW, gNotesOverlayLastObservedH
     if !IsObject(gNotesOverlayGui) {
         return false
     }
@@ -246,6 +255,10 @@ SaveNotesOverlayWindowPlacement(forceSave := false) {
     gNotesOverlayLastWidth := nextW
     gNotesOverlayLastHeight := nextH
     gNotesOverlayPlaced := true
+    gNotesOverlayLastObservedX := nextX
+    gNotesOverlayLastObservedY := nextY
+    gNotesOverlayLastObservedW := nextW
+    gNotesOverlayLastObservedH := nextH
 
     if forceSave || (prevX != nextX || prevY != nextY || prevW != nextW || prevH != nextH) {
         SaveData()
@@ -290,6 +303,7 @@ NotesOverlayOnSize(guiObj, minMax, width, height) {
     gNotesOverlayLastWidth := width
     gNotesOverlayLastHeight := height
     ApplyNotesOverlayLayout(width, height)
+    MarkNotesOverlayPlacementDirty()
 }
 
 BuildNotesOverlayDocument(note) {
@@ -817,6 +831,70 @@ OnNotesOverlayClose(*) {
     gNotesOverlayManualCloseLock := true
     HideNotesDisplayOverlay()
     WriteNotesOverlayStateLog("notes_overlay_close", "source=close_event")
+}
+
+StartNotesOverlayPlacementWatch() {
+    global gNotesOverlayPlacementWatchRunning
+    if gNotesOverlayPlacementWatchRunning {
+        return
+    }
+    gNotesOverlayPlacementWatchRunning := true
+    MarkNotesOverlayPlacementDirty()
+    SetTimer(NotesOverlayPlacementWatchTick, 250)
+}
+
+StopNotesOverlayPlacementWatch() {
+    global gNotesOverlayPlacementWatchRunning, gNotesOverlayPlacementDirtyTick
+    if !gNotesOverlayPlacementWatchRunning {
+        gNotesOverlayPlacementDirtyTick := 0
+        return
+    }
+    gNotesOverlayPlacementWatchRunning := false
+    gNotesOverlayPlacementDirtyTick := 0
+    SetTimer(NotesOverlayPlacementWatchTick, 0)
+}
+
+MarkNotesOverlayPlacementDirty() {
+    global gNotesOverlayPlacementDirtyTick
+    gNotesOverlayPlacementDirtyTick := A_TickCount
+}
+
+NotesOverlayPlacementWatchTick(*) {
+    global gNotesOverlayGui, gNotesOverlayVisible, gNotesOverlayPlacementWatchRunning, gNotesOverlayPlacementDirtyTick
+    global gNotesOverlayLastObservedX, gNotesOverlayLastObservedY, gNotesOverlayLastObservedW, gNotesOverlayLastObservedH
+
+    if !gNotesOverlayPlacementWatchRunning || !gNotesOverlayVisible || !IsObject(gNotesOverlayGui) {
+        return
+    }
+
+    try WinGetPos(&x, &y, &w, &h, "ahk_id " gNotesOverlayGui.Hwnd)
+    catch {
+        return
+    }
+
+    if (w <= 0 || h <= 0) {
+        return
+    }
+
+    x := Integer(x)
+    y := Integer(y)
+    w := Max(720, Integer(w))
+    h := Max(360, Integer(h))
+    changed := (gNotesOverlayLastObservedX != x || gNotesOverlayLastObservedY != y || gNotesOverlayLastObservedW != w || gNotesOverlayLastObservedH != h)
+
+    if changed {
+        gNotesOverlayLastObservedX := x
+        gNotesOverlayLastObservedY := y
+        gNotesOverlayLastObservedW := w
+        gNotesOverlayLastObservedH := h
+        MarkNotesOverlayPlacementDirty()
+        return
+    }
+
+    if (gNotesOverlayPlacementDirtyTick > 0 && (A_TickCount - gNotesOverlayPlacementDirtyTick) >= 450) {
+        SaveNotesOverlayWindowPlacement()
+        gNotesOverlayPlacementDirtyTick := 0
+    }
 }
 
 StartNotesOverlayProtectionGuard() {
