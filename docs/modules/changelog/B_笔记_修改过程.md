@@ -27,6 +27,8 @@
   - 新模块先承接笔记会话状态、保存队列、编辑器绑定、已加载版本戳、切换串行链
   - `app-notes.js` 开始退回到工作区 UI 与 DOM orchestration 角色，避免继续同时承担工作区展示和状态机实现
   - 本轮同时修复了 `app-notes.js` 中一批会阻断语法与维护的损坏文案，作为继续 deepening 的前置清障
+  - 当前主运行路径已经完成切换：`saveCurrentNote`、`selectNote`、`loadNotes`、`loadNoteContent`、`applyNotesDraftState` 全部改为通过 `app-note-session.js` 工作
+  - 旧的工作区内会话状态残留已从 `app-notes.js` 清理，Notes workspace module 现已更明确地只保留 DOM orchestration 与工作区交互
 - 影响文件：
   - `webui/config/app-note-session.js`
   - `webui/config/app-notes.js`

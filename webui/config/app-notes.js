@@ -2204,99 +2204,6 @@ function scheduleNotesAutosave() {
   }, NOTES_AUTOSAVE_DELAY_MS);
 }
 
-async function saveNotePayload(payload, options = {}) {
-  const silent = !!options.silent;
-  const id = String(payload?.id || '').trim();
-  if (!id) {
-    if (!silent) {
-      toast('请先新建笔记');
-    }
-    return;
-  }
-
-  if (noteEditorBoundId && id !== noteEditorBoundId) {
-    return;
-  }
-
-  if (notesSaveInFlight) {
-    notesSaveQueued = true;
-    await notesSavePromise;
-    if (options.retryOnQueue !== false && String(state.notes.currentId || '') === id && state.notes.dirty) {
-      const retryPayload = captureNoteEditorPayload(id);
-      retryPayload.changeVersion = notesChangeVersion;
-      return saveNotePayload(retryPayload, { ...options, retryOnQueue: false });
-    }
-    return;
-  }
-
-  cancelNotesAutosave();
-  notesSaveInFlight = true;
-  syncCurrentNoteSaveIndicator();
-
-  const saveVersion = Number(payload?.changeVersion ?? notesChangeVersion);
-  const title = String(payload?.title ?? 'Untitled').trim() || 'Untitled';
-  const content = String(payload?.content ?? '');
-
-  try {
-    const saveIntent = String(options.saveIntent || 'autosave').trim().toLowerCase() || 'autosave';
-    notesSavePromise = api('/api/notes/save', {
-      method: 'POST',
-      body: JSON.stringify({
-        id,
-        title,
-        content,
-        save_intent: saveIntent
-      })
-    });
-    const response = await notesSavePromise;
-    if (!response.ok) throw new Error(response.error || 'save note failed');
-
-    const isCurrentNote = id === String(state.notes.currentId || '');
-    if (isCurrentNote && typeof response.content === 'string' && response.content !== content) {
-      byId('noteContent').value = response.content;
-      if (notesContentView === 'rendered') {
-        renderNoteContentSurface();
-      }
-      renderNoteStructure();
-      syncCurrentNoteContentCount();
-    }
-
-    if (isCurrentNote) {
-      updateCurrentNoteMeta(title);
-    }
-
-    if (saveVersion === notesChangeVersion && isCurrentNote) {
-      state.notes.dirty = false;
-      setDirty(false, 'notes');
-      markNotesSavedForRefreshRestore();
-    }
-
-    syncCurrentNoteSaveIndicator();
-    if (!silent) {
-      toast('笔记已保存');
-    }
-  } catch (error) {
-    if (id === String(state.notes.currentId || '')) {
-      state.notes.dirty = true;
-      setDirty(true, 'notes');
-      scheduleNotesAutosave();
-    }
-    notesSaveQueued = false;
-    syncCurrentNoteSaveIndicator();
-    throw error;
-  } finally {
-    notesSaveInFlight = false;
-    syncCurrentNoteSaveIndicator();
-    notesSavePromise = null;
-    if (notesSaveQueued) {
-      notesSaveQueued = false;
-      if (id === String(state.notes.currentId || '') && state.notes.dirty) {
-        scheduleNotesAutosave();
-      }
-    }
-  }
-}
-
 async function saveNotePayloadRefactored(payload, options = {}) {
   return saveSessionPayload(payload, {
     ...options,
@@ -2344,41 +2251,6 @@ export async function saveCurrentNote(options = {}) {
     ...options,
     saveIntent: manual ? 'manual' : (options.saveIntent || 'autosave')
   });
-}
-
-async function performSelectNote(targetId) {
-  if (state.notes.currentId === targetId) return;
-
-  if (editingNoteTitleId && editingNoteTitleId !== targetId) {
-    editingNoteTitleId = '';
-  }
-
-  const generation = ++noteSwitchGeneration;
-  cancelNotesAutosave();
-
-  const fromId = String(state.notes.currentId || '');
-  let pending = null;
-  if (fromId && fromId !== targetId && state.notes.dirty) {
-    if (!noteEditorBoundId || fromId === noteEditorBoundId) {
-      pending = snapshotEditorForNote(fromId);
-      pending.dirty = true;
-      pending.changeVersion = notesChangeVersion;
-    }
-  }
-
-  if (extractViewActive && state.notes.dirty) {
-    await saveExtractAggregateView({ silent: true });
-  } else if (pending?.dirty) {
-    await saveNotePayload(pending, {
-      silent: true,
-      saveIntent: 'switch'
-    });
-  }
-
-  if (generation !== noteSwitchGeneration) return;
-
-  resetExtractViewState();
-  await loadNoteContent(targetId, generation);
 }
 
 export async function selectNote(id) {
@@ -2628,7 +2500,7 @@ export function initNotesHandlers() {
     if (!payload.ok) throw new Error(payload.error || 'delete note failed');
 
     cancelNotesAutosave();
-    notesChangeVersion = 0;
+    resetNoteSessionChangeVersion();
     state.notes.currentId = '';
     state.notes.dirty = false;
     setDirty(false, 'notes');
