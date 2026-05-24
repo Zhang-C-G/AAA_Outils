@@ -21,6 +21,23 @@
 
 ## 2. 修改记录
 
+### 2026-05-24 / 引入 note session 深模块，收口 B 笔记会话状态
+- 改动内容：
+  - 基于 `improve-codebase-architecture` 的架构检测结果，开始把 B 笔记工作区中的“保存 / 切换 / restore / 版本戳 / unload flush”从 `app-notes.js` 抽离为独立的 `app-note-session.js`
+  - 新模块先承接笔记会话状态、保存队列、编辑器绑定、已加载版本戳、切换串行链
+  - `app-notes.js` 开始退回到工作区 UI 与 DOM orchestration 角色，避免继续同时承担工作区展示和状态机实现
+  - 本轮同时修复了 `app-notes.js` 中一批会阻断语法与维护的损坏文案，作为继续 deepening 的前置清障
+- 影响文件：
+  - `webui/config/app-note-session.js`
+  - `webui/config/app-notes.js`
+  - `CONTEXT.md`
+  - `docs/architecture/SKILL_ORCHESTRATION.md`
+  - `docs/architecture/DEPENDENCY_MAP.md`
+- 测试：
+  - `node --check --experimental-default-type=module webui/config/app-note-session.js`
+  - `node --check --experimental-default-type=module webui/config/app-notes.js`
+- 测试结果：`通过`
+
 ### 2026-05-24 / 切换笔记串行化、防串写与已加载版本戳
 - 改动内容：
   - `selectNote` 改为串行链式切换，避免用户连续点击多条笔记时并发执行多个切换流程

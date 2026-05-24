@@ -1,28 +1,38 @@
-import { state, byId, api, toast, setDirty, escapeHtml, confirmDialog } from './app-common.js';
+﻿import { state, byId, api, toast, setDirty, escapeHtml, confirmDialog } from './app-common.js';
 import { parseMarkdown, serializePreviewBodyToMarkdown, slugifyHeading } from './app-markdown.js';
+import {
+  getNoteSessionState,
+  getNoteSessionChangeVersion,
+  bumpNoteSessionChangeVersion,
+  resetNoteSessionChangeVersion,
+  bindNoteSessionEditor,
+  clearNoteSessionEditorBinding,
+  resetNoteSessionUnloadState,
+  isNoteSessionUnloadFlushed,
+  markNoteSessionUnloadFlushed,
+  markNoteSessionDirty,
+  captureNoteEditorPayload as captureSessionPayload,
+  saveNotePayload as saveSessionPayload,
+  loadNoteContent as loadSessionNoteContent,
+  loadNotesList,
+  applyNotesDraftState as applySessionDraftState,
+  selectNote as selectSessionNote
+} from './app-note-session.js';
 
 const NOTES_AUTOSAVE_DELAY_MS = 700;
 const NOTE_SELECTION_TEXT_COLORS = [
-  { token: 'sky', label: '蓝字' },
-  { token: 'mint', label: '绿字' },
-  { token: 'amber', label: '橙字' },
-  { token: 'rose', label: '粉字' }
+  { token: 'sky', label: '钃濆瓧' },
+  { token: 'mint', label: '缁垮瓧' },
+  { token: 'amber', label: '姗欏瓧' },
+  { token: 'rose', label: '绮夊瓧' }
 ];
 const NOTE_SELECTION_BG_COLORS = [
-  { token: 'sky-soft', label: '蓝底' },
-  { token: 'mint-soft', label: '绿底' },
-  { token: 'amber-soft', label: '橙底' },
-  { token: 'rose-soft', label: '粉底' }
+  { token: 'sky-soft', label: '钃濆簳' },
+  { token: 'mint-soft', label: '缁垮簳' },
+  { token: 'amber-soft', label: '姗欏簳' },
+  { token: 'rose-soft', label: '绮夊簳' }
 ];
 let notesAutosaveTimer = 0;
-let notesSaveInFlight = false;
-let notesSaveQueued = false;
-let notesSavePromise = null;
-let notesChangeVersion = 0;
-let noteSwitchGeneration = 0;
-let noteEditorBoundId = '';
-let noteLoadedRevision = { id: '', updatedAt: 0 };
-let noteSwitchChain = Promise.resolve();
 let draggingNoteId = '';
 let notesSidebarCompact = false;
 let notesExtractCollapsed = false;
@@ -38,7 +48,6 @@ let editingNoteTitleId = '';
 let notesContentView = 'rendered';
 let notesSelectionToolbarEl = null;
 let notesSelectionToolbarRange = null;
-let notesUnloadFlushDone = false;
 let notesPreviewMutationObserver = null;
 let notesSearchState = {
   query: '',
@@ -81,7 +90,7 @@ function syncNotesSidebar() {
   const toggleBtn = byId('toggleNotesSidebarBtn');
   if (!layout || !toggleBtn) return;
   layout.classList.toggle('sidebar-compact', notesSidebarCompact);
-  toggleBtn.textContent = notesSidebarCompact ? '展开列表' : '收起列表';
+  toggleBtn.textContent = notesSidebarCompact ? '灞曞紑鍒楄〃' : '鏀惰捣鍒楄〃';
   toggleBtn.setAttribute('aria-expanded', notesSidebarCompact ? 'false' : 'true');
 }
 
@@ -90,7 +99,7 @@ function syncNotesExtractTool() {
   const btn = byId('toggleNotesExtractBtn');
   if (!tool || !btn) return;
   tool.classList.toggle('collapsed', notesExtractCollapsed);
-  btn.textContent = notesExtractCollapsed ? '显示提取' : '隐藏提取';
+  btn.textContent = notesExtractCollapsed ? '鏄剧ず鎻愬彇' : '闅愯棌鎻愬彇';
   btn.setAttribute('aria-expanded', notesExtractCollapsed ? 'false' : 'true');
 }
 
@@ -843,13 +852,13 @@ function buildExtractViewContent(items) {
       const blocks = (item.ranges || [])
         .map((range, index) => `### ${getExtractSegmentTitle(range.headingTitle, index)}\n${String(range.text || '').trim()}`)
         .join('\n\n');
-      return `## 笔记：${item.title || 'Untitled'}\n${blocks}`;
+      return `## 绗旇锛?{item.title || 'Untitled'}\n${blocks}`;
     })
     .join('\n\n');
 }
 
 function getExtractSegmentTitle(title, index = 0) {
-  return String(title || '').trim() || `片段 ${index + 1}`;
+  return String(title || '').trim() || `鐗囨 ${index + 1}`;
 }
 
 function setExtractStatus(message) {
@@ -865,7 +874,7 @@ function renderNoteContentSurface() {
   if (!previewEl || !sourceEl) return;
   if (notesPreviewEditing) return;
   const html = parseMarkdown(sourceEl.value || '').html;
-  previewEl.innerHTML = html.trim() ? html : '<div class="notes-preview-empty">当前还没有正文内容。可以先输入或导入 Markdown，系统会转成正常笔记正文显示。</div>';
+  previewEl.innerHTML = html.trim() ? html : '<div class="notes-preview-empty">褰撳墠杩樻病鏈夋鏂囧唴瀹广€傚彲浠ュ厛杈撳叆鎴栧鍏?Markdown锛岀郴缁熶細杞垚姝ｅ父绗旇姝ｆ枃鏄剧ず銆?/div>';
   syncNotesContentMode();
 }
 
@@ -879,7 +888,7 @@ function ensureNotesSelectionToolbar() {
   toolbar.className = 'notes-selection-toolbar hidden';
   toolbar.innerHTML = `
     <div class="notes-selection-toolbar-section">
-      <span class="notes-selection-toolbar-label">文字</span>
+      <span class="notes-selection-toolbar-label">鏂囧瓧</span>
       <div class="notes-selection-toolbar-swatches">
         ${NOTE_SELECTION_TEXT_COLORS.map((item) => `
           <button
@@ -895,7 +904,7 @@ function ensureNotesSelectionToolbar() {
     </div>
     <div class="notes-selection-toolbar-divider"></div>
     <div class="notes-selection-toolbar-section">
-      <span class="notes-selection-toolbar-label">背景</span>
+      <span class="notes-selection-toolbar-label">鑳屾櫙</span>
       <div class="notes-selection-toolbar-swatches">
         ${NOTE_SELECTION_BG_COLORS.map((item) => `
           <button
@@ -1249,9 +1258,8 @@ function syncRenderedNoteSourceFromPreview(options = {}) {
 }
 
 function handleCurrentNoteContentChanged() {
-  notesChangeVersion += 1;
-  state.notes.dirty = true;
-  setDirty(true, 'notes');
+  bumpNoteSessionChangeVersion();
+  markNoteSessionDirty();
   syncCurrentNoteContentCount();
   syncCurrentNoteSaveIndicator();
   renderNoteStructure();
@@ -1264,9 +1272,8 @@ function handleCurrentNoteContentChanged() {
 
 function syncPreviewEditToSourceForUnload() {
   if (syncRenderedNoteSourceFromPreview({ markDirty: false })) {
-    notesChangeVersion += 1;
-    state.notes.dirty = true;
-    setDirty(true, 'notes');
+    bumpNoteSessionChangeVersion();
+    markNoteSessionDirty();
   }
 }
 
@@ -1274,7 +1281,7 @@ function forceSaveCurrentNoteSilently() {
   if (!state.notes.currentId || !state.notes.dirty) return;
   syncCurrentNoteSaveIndicator();
   void saveCurrentNote({ silent: true }).catch((error) => {
-    toast(`自动保存失败: ${error.message}`);
+    toast(`鑷姩淇濆瓨澶辫触: ${error.message}`);
   });
 }
 
@@ -1330,14 +1337,14 @@ function buildExtractViewPendingSaves() {
 }
 
 function flushPendingNoteSaveOnUnload() {
-  if (notesUnloadFlushDone) return;
+  if (isNoteSessionUnloadFlushed()) return;
   if (!state.notes.currentId || !state.notes.dirty) return;
 
   if (notesContentView === 'rendered') {
     syncPreviewEditToSourceForUnload();
   }
 
-  notesUnloadFlushDone = true;
+  markNoteSessionUnloadFlushed();
   cancelNotesAutosave();
 
   if (extractViewActive) {
@@ -1542,11 +1549,11 @@ async function exportCurrentNote() {
   const title = sanitizeExportFileName(getCurrentNoteTitle());
   if (payload.transport === 'server-pdf') {
     await exportCurrentNotePdf(`${title}.pdf`, payload.text);
-    toast('已导出为 PDF');
+    toast('宸插鍑轰负 PDF');
     return;
   }
   triggerTextDownload(`${title}.${payload.extension}`, payload.mimeType, payload.text);
-  toast(`已导出为 ${payload.extension.toUpperCase()}`);
+  toast(`宸插鍑轰负 ${payload.extension.toUpperCase()}`);
 }
 
 async function saveExtractResult(noteId, nextText) {
@@ -1554,7 +1561,7 @@ async function saveExtractResult(noteId, nextText) {
   if (!context) return;
   const segments = parseExtractSegments(nextText, context.segmentTitles || []);
   if (segments.length !== context.ranges.length) {
-    throw new Error(`笔记“${context.title}”的提取片段数量已变化，当前为 ${context.ranges.length} 段，请不要删除片段标题`);
+    throw new Error(`笔记“${context.title}”的提取片段数量已变化，当前应为 ${context.ranges.length} 段，请不要删除片段标题。`);
   }
 
   let updatedContent = context.fullContent;
@@ -1665,7 +1672,7 @@ async function saveExtractAggregateView(options = {}) {
   if (!extractViewActive) return;
   const sections = parseExtractViewContent(byId('noteContent')?.value || '');
   if (sections.length !== extractViewItems.length) {
-    throw new Error('提取视图分段已被改坏，请不要删除“## 笔记：...”分隔标题');
+    throw new Error('提取视图分段已被破坏，请不要删除“# 笔记：...”分隔标题。');
   }
 
   for (let i = 0; i < extractViewItems.length; i += 1) {
@@ -1687,7 +1694,7 @@ function queueExtractAggregateSave() {
   const timer = window.setTimeout(() => {
     extractSaveTimers.delete(key);
     saveExtractAggregateView({ silent: true }).catch((error) => {
-      toast(`提取内容保存失败: ${error.message}`);
+      toast(`鎻愬彇鍐呭淇濆瓨澶辫触: ${error.message}`);
     });
   }, 500);
   extractSaveTimers.set(key, timer);
@@ -1702,7 +1709,7 @@ async function exitExtractView(options = {}) {
       if (!allowDiscardOnFailure) {
         throw error;
       }
-      toast(`提取内容保存失败，已直接恢复正文: ${error.message}`);
+      toast(`鎻愬彇鍐呭淇濆瓨澶辫触锛屽凡鐩存帴鎭㈠姝ｆ枃: ${error.message}`);
       state.notes.dirty = false;
       setDirty(false, 'notes');
     }
@@ -1780,7 +1787,7 @@ async function runNotesExtraction(slot = 1) {
   state.notes.dirty = false;
   setDirty(false, 'notes');
   const totalSegments = items.reduce((sum, item) => sum + (item.ranges?.length || 0), 0);
-  setExtractStatus(`已提取 ${items.length} 条笔记、共 ${totalSegments} 个片段，现已进入主内容框集中编辑。`);
+  setExtractStatus(`已提取 ${items.length} 条笔记，共 ${totalSegments} 个片段，现已进入主内容框集中编辑。`);
 }
 
 function renderOutlineList(structure) {
@@ -1792,7 +1799,7 @@ function renderOutlineList(structure) {
     activeOutlineHeadingId = '';
   }
   if (!headings.length) {
-    host.innerHTML = '<div class="notes-outline-empty">把一大段 Markdown 贴进右侧后，这里会自动列出目录结构。</div>';
+    host.innerHTML = '<div class="notes-outline-empty">鎶婁竴澶ф Markdown 璐磋繘鍙充晶鍚庯紝杩欓噷浼氳嚜鍔ㄥ垪鍑虹洰褰曠粨鏋勩€?/div>';
     return;
   }
 
@@ -1895,9 +1902,8 @@ async function renameNoteTitle(noteId, rawTitle) {
 
   if (id === String(state.notes.currentId || '').trim()) {
     setCurrentNoteTitle(title);
-    notesChangeVersion += 1;
-    state.notes.dirty = true;
-    setDirty(true, 'notes');
+    bumpNoteSessionChangeVersion();
+    markNoteSessionDirty();
     await saveCurrentNote({ silent: true });
     return;
   }
@@ -1996,7 +2002,7 @@ function renderNotesList() {
       const [moving] = state.notes.list.splice(from, 1);
       state.notes.list.splice(to, 0, moving);
       renderNotesList();
-      void persistNotesOrder().catch((e) => toast(`笔记排序保存失败: ${e.message}`));
+      void persistNotesOrder().catch((e) => toast(`绗旇鎺掑簭淇濆瓨澶辫触: ${e.message}`));
     });
 
     if (editingNoteTitleId === note.id) {
@@ -2013,7 +2019,7 @@ function renderNotesList() {
             renderNotesList();
           }
         } catch (error) {
-          toast(`标题修改失败: ${error.message}`);
+          toast(`鏍囬淇敼澶辫触: ${error.message}`);
           renderNotesList();
         }
       };
@@ -2038,14 +2044,14 @@ function renderNotesList() {
 
   const createWrap = document.createElement('div');
   createWrap.className = 'notes-list-create-wrap';
-  createWrap.innerHTML = '<button id="newNoteBtnInline" class="notes-create-btn" type="button" aria-label="新建笔记">+</button>';
+  createWrap.innerHTML = '<button id="newNoteBtnInline" class="notes-create-btn" type="button" aria-label="鏂板缓绗旇">+</button>';
   listEl.appendChild(createWrap);
 
   const inlineCreateBtn = createWrap.querySelector('#newNoteBtnInline');
   if (inlineCreateBtn) {
     inlineCreateBtn.onclick = () => {
       createNewNote().catch((error) => {
-        toast(`新建失败: ${error.message}`);
+        toast(`鏂板缓澶辫触: ${error.message}`);
       });
     };
   }
@@ -2107,17 +2113,8 @@ function syncCurrentNoteContentCount() {
 function syncCurrentNoteSaveIndicator() {
   const dot = byId('noteContentSaveDot');
   if (!dot) return;
-  const pending = !!state.notes.dirty || !!notesSaveInFlight;
+  const pending = !!state.notes.dirty || !!getNoteSessionState().saveInFlight;
   dot.classList.toggle('pending', pending);
-}
-
-function markNotesSavedForRefreshRestore() {
-  try {
-    sessionStorage.setItem('raccourci.notesLastSavedAt', String(Date.now()));
-    sessionStorage.removeItem('raccourci.notesDraftRestorePending');
-    sessionStorage.removeItem('raccourci.notesDraft');
-    sessionStorage.setItem('raccourci.notesLoadedRevision', JSON.stringify(noteLoadedRevision));
-  } catch {}
 }
 
 function snapshotEditorForNote(noteId) {
@@ -2132,87 +2129,69 @@ function snapshotEditorForNote(noteId) {
 }
 
 function captureNoteEditorPayload(noteId = state.notes.currentId) {
-  const id = String(noteId || '').trim();
-  if (!id) return null;
-  if (noteEditorBoundId && id !== noteEditorBoundId) {
-    return null;
-  }
-  return snapshotEditorForNote(id);
+  return captureSessionPayload(noteId, {
+    getTitleById: getNoteTitleById,
+    syncRenderedToSource: syncRenderedNoteSourceFromPreview
+  });
 }
 
 async function loadNoteContent(id, expectedGeneration) {
-  cancelNotesAutosave();
-  const payload = await api(`/api/notes/get?id=${encodeURIComponent(id)}&_=${Date.now()}`);
-  if (expectedGeneration !== undefined && expectedGeneration !== noteSwitchGeneration) {
-    return;
-  }
-  if (!payload.ok) throw new Error(payload.error || 'load note failed');
-  const note = payload.note || { id, title: '', content: '' };
-  state.notes.currentId = note.id;
-  noteEditorBoundId = note.id;
-  setCurrentNoteTitle(note.title || '', note.id);
-  byId('noteContent').value = note.content || '';
-  notesChangeVersion = 0;
-  state.notes.dirty = false;
-  setDirty(false, 'notes');
-  if (notesContentView === 'rendered') {
-    renderNoteContentSurface();
-  }
-  noteLoadedRevision = {
-    id: note.id,
-    updatedAt: Number(note.updatedAt || 0)
-  };
-  try {
-    sessionStorage.setItem('raccourci.notesLoadedRevision', JSON.stringify(noteLoadedRevision));
-  } catch {}
-  syncCurrentNoteContentCount();
-  syncCurrentNoteSaveIndicator();
-  renderNotesList();
-  renderNoteStructure();
+  return loadSessionNoteContent(id, {
+    expectedGeneration,
+    cancelAutosave: cancelNotesAutosave,
+    applyLoadedNote(note) {
+      setCurrentNoteTitle(note.title || '', note.id);
+      byId('noteContent').value = note.content || '';
+      if (notesContentView === 'rendered') {
+        renderNoteContentSurface();
+      }
+      syncCurrentNoteContentCount();
+      syncCurrentNoteSaveIndicator();
+      renderNotesList();
+      renderNoteStructure();
+    }
+  });
 }
 
 export async function loadNotes() {
-  const payload = await api('/api/notes/list');
-  if (!payload.ok) throw new Error(payload.error || 'load notes failed');
-  state.notes.list = payload.notes || [];
-
-  if (!state.notes.currentId || !state.notes.list.find((n) => n.id === state.notes.currentId)) {
-    state.notes.currentId = state.notes.list[0]?.id || '';
-  }
-
-  renderNotesList();
-  if (state.notes.currentId) {
-    await loadNoteContent(state.notes.currentId);
-  } else {
-    cancelNotesAutosave();
-    notesChangeVersion = 0;
-    setCurrentNoteTitle('');
-    byId('noteContent').value = '';
-    noteEditorBoundId = '';
-    syncCurrentNoteContentCount();
-    syncCurrentNoteSaveIndicator();
-    renderNoteStructure();
-  }
+  return loadNotesList({
+    cancelAutosave: cancelNotesAutosave,
+    onListLoaded() {
+      renderNotesList();
+    },
+    applyLoadedNote(note) {
+      setCurrentNoteTitle(note.title || '', note.id);
+      byId('noteContent').value = note.content || '';
+      if (notesContentView === 'rendered') {
+        renderNoteContentSurface();
+      }
+      syncCurrentNoteContentCount();
+      syncCurrentNoteSaveIndicator();
+      renderNotesList();
+      renderNoteStructure();
+    },
+    onEmptyList() {
+      setCurrentNoteTitle('');
+      byId('noteContent').value = '';
+      clearNoteSessionEditorBinding();
+      syncCurrentNoteContentCount();
+      syncCurrentNoteSaveIndicator();
+      renderNoteStructure();
+    }
+  });
 }
 
 export function applyNotesDraftState(draft = {}) {
-  const id = String(draft?.id || '').trim();
-  const title = String(draft?.title || '').trim();
-  const content = String(draft?.content || '');
-
-  if (id) {
-    state.notes.currentId = id;
-    noteEditorBoundId = id;
-  }
-  setCurrentNoteTitle(title || getCurrentNoteTitle(), id || state.notes.currentId);
-  byId('noteContent').value = content;
-  notesChangeVersion += 1;
-  state.notes.dirty = true;
-  setDirty(true, 'notes');
-  syncCurrentNoteContentCount();
-  syncCurrentNoteSaveIndicator();
-  renderNotesList();
-  renderNoteStructure();
+  applySessionDraftState(draft, {
+    applyDraft({ id, title, content }) {
+      setCurrentNoteTitle(title || getCurrentNoteTitle(), id || state.notes.currentId);
+      byId('noteContent').value = content;
+      syncCurrentNoteContentCount();
+      syncCurrentNoteSaveIndicator();
+      renderNotesList();
+      renderNoteStructure();
+    }
+  });
 }
 
 function scheduleNotesAutosave() {
@@ -2220,7 +2199,7 @@ function scheduleNotesAutosave() {
   notesAutosaveTimer = window.setTimeout(() => {
     notesAutosaveTimer = 0;
     void saveCurrentNote({ silent: true }).catch((error) => {
-      toast(`自动保存失败: ${error.message}`);
+      toast(`鑷姩淇濆瓨澶辫触: ${error.message}`);
     });
   }, NOTES_AUTOSAVE_DELAY_MS);
 }
@@ -2318,6 +2297,33 @@ async function saveNotePayload(payload, options = {}) {
   }
 }
 
+async function saveNotePayloadRefactored(payload, options = {}) {
+  return saveSessionPayload(payload, {
+    ...options,
+    cancelAutosave: cancelNotesAutosave,
+    scheduleAutosave: scheduleNotesAutosave,
+    capturePayload: captureNoteEditorPayload,
+    onMissingId() {
+      toast('请先新建笔记');
+    },
+    onSaveStateChanged: syncCurrentNoteSaveIndicator,
+    onSavedToast() {
+      toast('笔记已保存');
+    },
+    onCurrentNoteSaved({ title, content, response }) {
+      if (typeof response.content === 'string' && response.content !== content) {
+        byId('noteContent').value = response.content;
+        if (notesContentView === 'rendered') {
+          renderNoteContentSurface();
+        }
+        renderNoteStructure();
+        syncCurrentNoteContentCount();
+      }
+      updateCurrentNoteMeta(title);
+    }
+  });
+}
+
 export async function saveCurrentNote(options = {}) {
   if (!state.notes.currentId) {
     if (!options.silent) {
@@ -2332,9 +2338,9 @@ export async function saveCurrentNote(options = {}) {
 
   const payload = captureNoteEditorPayload(state.notes.currentId);
   if (!payload) return;
-  payload.changeVersion = notesChangeVersion;
+  payload.changeVersion = getNoteSessionChangeVersion();
   const manual = options.manual === true;
-  return saveNotePayload(payload, {
+  return saveNotePayloadRefactored(payload, {
     ...options,
     saveIntent: manual ? 'manual' : (options.saveIntent || 'autosave')
   });
@@ -2376,18 +2382,36 @@ async function performSelectNote(targetId) {
 }
 
 export async function selectNote(id) {
-  const targetId = String(id || '').trim();
-  if (!targetId) return;
-  noteSwitchChain = noteSwitchChain
-    .then(() => performSelectNote(targetId))
-    .catch((error) => {
+  return selectSessionNote(id, {
+    cancelAutosave: cancelNotesAutosave,
+    capturePayload: captureNoteEditorPayload,
+    resetExtractViewState,
+    extractViewActive,
+    saveExtractAggregateView,
+    onBeforeSwitch(targetId) {
+      if (editingNoteTitleId && editingNoteTitleId !== targetId) {
+        editingNoteTitleId = '';
+      }
+    },
+    onSwitchError(error) {
       toast(`切换失败: ${error.message}`);
-    });
-  return noteSwitchChain;
+    },
+    applyLoadedNote(note) {
+      setCurrentNoteTitle(note.title || '', note.id);
+      byId('noteContent').value = note.content || '';
+      if (notesContentView === 'rendered') {
+        renderNoteContentSurface();
+      }
+      syncCurrentNoteContentCount();
+      syncCurrentNoteSaveIndicator();
+      renderNotesList();
+      renderNoteStructure();
+    }
+  });
 }
 
 export function initNotesHandlers() {
-  notesUnloadFlushDone = false;
+  resetNoteSessionUnloadState();
   notesSidebarCompact = Number(state.app?.notes_sidebar_compact || 0) === 1;
   notesExtractCollapsed = Number(state.app?.notes_extract_collapsed || 0) === 1;
   EXTRACT_SLOTS.forEach((slot) => {
@@ -2399,14 +2423,14 @@ export function initNotesHandlers() {
     notesSidebarCompact = !notesSidebarCompact;
     syncNotesSidebar();
     void persistNotesSidebarCompact().catch((error) => {
-      toast(`列表状态保存失败: ${error.message}`);
+      toast(`鍒楄〃鐘舵€佷繚瀛樺け璐? ${error.message}`);
     });
   };
   byId('toggleNotesExtractBtn').onclick = () => {
     notesExtractCollapsed = !notesExtractCollapsed;
     syncNotesExtractTool();
     void persistNotesExtractCollapsed().catch((error) => {
-      toast(`提取栏状态保存失败: ${error.message}`);
+      toast(`鎻愬彇鏍忕姸鎬佷繚瀛樺け璐? ${error.message}`);
     });
   };
 
@@ -2510,12 +2534,12 @@ export function initNotesHandlers() {
       ? saveExtractAggregateView()
       : saveCurrentNote({ manual: true });
     saver.catch((error) => {
-      toast(`保存失败: ${error.message}`);
+      toast(`淇濆瓨澶辫触: ${error.message}`);
     });
   };
   byId('exportCurrentNoteBtn').onclick = () => {
     exportCurrentNote().catch((error) => {
-      toast(`导出失败: ${error.message}`);
+      toast(`瀵煎嚭澶辫触: ${error.message}`);
     });
   };
   byId('noteContentSearch').addEventListener('input', () => {
@@ -2549,7 +2573,7 @@ export function initNotesHandlers() {
     const structure = parseNoteStructure(byId('noteContent')?.value || '');
     const headings = Array.isArray(structure?.headings) ? structure.headings : [];
     if (!headings.length) {
-      toast('当前没有可复制的目录');
+      toast('褰撳墠娌℃湁鍙鍒剁殑鐩綍');
       return;
     }
     const outlineText = headings.map((heading) => `${'  '.repeat(Math.max(heading.level - 1, 0))}${heading.text}`).join('\n');
@@ -2557,7 +2581,7 @@ export function initNotesHandlers() {
       await navigator.clipboard.writeText(outlineText);
       toast('目录已复制');
     } catch (error) {
-      toast(`目录复制失败: ${error.message}`);
+      toast(`鐩綍澶嶅埗澶辫触: ${error.message}`);
     }
   };
 
@@ -2581,21 +2605,21 @@ export function initNotesHandlers() {
     });
     byId(`runNotesExtractBtn${slot}`).onclick = () => {
       runNotesExtraction(slot).catch((error) => {
-        toast(`提取失败: ${error.message}`);
+        toast(`鎻愬彇澶辫触: ${error.message}`);
         setExtractStatus('提取失败，请检查范围后重试。');
       });
     };
   });
   byId('exitNotesExtractBtn').onclick = () => {
     exitExtractView({ allowDiscardOnFailure: true }).catch((error) => {
-      toast(`恢复正文失败: ${error.message}`);
+      toast(`鎭㈠姝ｆ枃澶辫触: ${error.message}`);
     });
   };
 
   byId('deleteNoteBtn').onclick = async () => {
     const id = state.notes.currentId;
     if (!id) return;
-    if (!(await confirmDialog('确认删除当前笔记吗？', { title: '删除笔记', confirmText: '删除', danger: true }))) return;
+    if (!(await confirmDialog('纭鍒犻櫎褰撳墠绗旇鍚楋紵', { title: '鍒犻櫎绗旇', confirmText: '鍒犻櫎', danger: true }))) return;
 
     const payload = await api('/api/notes/delete', {
       method: 'POST',
@@ -2617,4 +2641,3 @@ export function initNotesHandlers() {
   syncNotesContentMode();
   syncNotesExtractTool();
 }
-

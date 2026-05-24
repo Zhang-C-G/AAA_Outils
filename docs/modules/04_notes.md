@@ -52,6 +52,7 @@
 - `src/config_modes/notes_mode_ui.ahk`
 - `src/config_modes/notes_mode_actions.ahk`
 - `src/storage/notes.ahk`
+- `webui/config/app-note-session.js`
 - `webui/config/app-notes.js`
 - `webui/config/server-notes.ps1`
 
