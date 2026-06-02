@@ -1,9 +1,20 @@
 import { state, byId, api, toast, confirmDialog } from './app-common.js';
 import { enhanceTopLayerSelect, refreshTopLayerSelect } from './top-layer-select.js';
-const DEFAULT_PROMPT = '\u7f16\u7a0b\u9898\uff1a\u76f4\u63a5\u7ed9\u5b8c\u6574\u53ef\u8fd0\u884c\u4ee3\u7801\uff0c\u5e76\u5728\u4ee3\u7801\u6846\u4e2d\u8f93\u51fa\uff1b\u968f\u540e\u5bf9\u6838\u5fc3\u601d\u8def\u505a\u7b80\u77ed\u8bf4\u660e\u3002\u9009\u62e9\u9898\uff1a\u5148\u519915\u5b57\u4ee5\u5185\u9898\u76ee\u603b\u7ed3\uff0c\u518d\u76f4\u63a5\u7ed9\u7b54\u6848\u3002';
-const OPACITY_LEVELS = [20, 50, 75, 100];
+import {
+  DEFAULT_PROMPT,
+  OPACITY_LEVELS,
+  DEFAULT_OVERLAY_BALL_COLOR,
+  assistantDefaults,
+  normalizeAssistantOpacity,
+  normalizeAssistantColor,
+  normalizeAssistantModelOptions,
+  normalizeAssistantVoiceModelOptions,
+  isBrokenAssistantPrompt,
+  normalizeAssistantTemplates,
+  ensureAssistantActiveTemplate
+} from './app-assistant-settings.js';
+
 const ADVANCED_VISIBLE_STORAGE_KEY = 'assistant_advanced_visible';
-const DEFAULT_OVERLAY_BALL_COLOR = '#111111';
 
 let assistantAutoSaveTimer = 0;
 let assistantAutoSaveInFlight = false;
@@ -92,13 +103,6 @@ function defaults() {
       history: []
     }
   };
-}
-
-function normalizeAssistantColor(value, fallback = DEFAULT_OVERLAY_BALL_COLOR) {
-  const raw = String(value || '').trim();
-  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toUpperCase();
-  if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw.toUpperCase()}`;
-  return fallback.toUpperCase();
 }
 
 function renderAssistantOverlayBallColor(value) {
@@ -213,30 +217,6 @@ async function runAssistantAutoSave() {
   }
 }
 
-function normalizeModelOptions(options) {
-  const src = Array.isArray(options) ? options : [];
-  const out = [];
-  const seen = new Set();
-  for (const m of src) {
-    const id = String(m?.id || '').trim();
-    if (!id) continue;
-    const key = id.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({
-      id,
-      name: String(m?.name || id).trim() || id,
-      enabled: Number(m?.enabled ?? 1) === 0 ? 0 : 1
-    });
-  }
-  return out.length ? out : defaults().model_options;
-}
-
-function normalizeVoiceModelOptions(options) {
-  const list = normalizeModelOptions(options);
-  return list.length ? list : defaults().voice_model_options;
-}
-
 function renderSelectOptions(selectId, options, selectedValue, fallbackValue) {
   const sel = byId(selectId);
   sel.innerHTML = '';
@@ -256,12 +236,12 @@ function renderSelectOptions(selectId, options, selectedValue, fallbackValue) {
 }
 
 function renderModelOptions(selectedModel) {
-  const list = normalizeModelOptions(state.assistant.model_options);
+  const list = normalizeAssistantModelOptions(state.assistant.model_options);
   state.assistant.model = renderSelectOptions('assistantModel', list, selectedModel, 'doubao-seed-2-0-lite-260215');
 }
 
 function renderVoiceModelOptions(selectedModel) {
-  const list = normalizeVoiceModelOptions(state.assistant.voice_model_options);
+  const list = normalizeAssistantVoiceModelOptions(state.assistant.voice_model_options);
   state.assistant.voice_model = renderSelectOptions('assistantVoiceModel', list, selectedModel, 'local_windows_default');
 }
 
@@ -420,8 +400,8 @@ function syncCurrentTemplateFromUi() {
   }
 
   let nextPrompt = String(byId('assistantPrompt').value || '').trim();
-  if (isBrokenPrompt(nextPrompt)) {
-    nextPrompt = defaults().prompt;
+  if (isBrokenAssistantPrompt(nextPrompt)) {
+    nextPrompt = assistantDefaults().prompt;
   }
 
   state.assistant.templates[idx].name = nextName;
@@ -431,25 +411,25 @@ function syncCurrentTemplateFromUi() {
 }
 
 export function applyAssistantState(payload) {
-  const fallback = defaults();
+  const fallback = assistantDefaults();
   const incoming = payload.assistant || state.assistant || {};
 
   state.assistant = {
     ...fallback,
     ...incoming
   };
-  state.assistant.model_options = normalizeModelOptions(incoming.model_options || state.assistant.model_options);
-  state.assistant.voice_model_options = normalizeVoiceModelOptions(
+  state.assistant.model_options = normalizeAssistantModelOptions(incoming.model_options || state.assistant.model_options);
+  state.assistant.voice_model_options = normalizeAssistantVoiceModelOptions(
     incoming.voice_model_options || state.assistant.voice_model_options
   );
 
-  if (isBrokenPrompt(state.assistant.prompt)) {
+  if (isBrokenAssistantPrompt(state.assistant.prompt)) {
     state.assistant.prompt = fallback.prompt;
   }
   state.assistant.personal_profile = String(incoming.personal_profile ?? state.assistant.personal_profile ?? '').trim();
 
-  state.assistant.templates = normalizeTemplates(incoming.templates || state.assistant.templates, fallback.prompt);
-  state.assistant.overlay_opacity = normalizeOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
+  state.assistant.templates = normalizeAssistantTemplates(incoming.templates || state.assistant.templates, fallback.prompt);
+  state.assistant.overlay_opacity = normalizeAssistantOpacity(incoming.overlay_opacity ?? state.assistant.overlay_opacity, fallback.overlay_opacity);
   state.assistant.overlay_ball_color = normalizeAssistantColor(
     incoming.overlay_ball_color ?? state.assistant.overlay_ball_color,
     fallback.overlay_ball_color
@@ -493,7 +473,7 @@ function readAssistantFromUi() {
   syncCurrentTemplateFromUi();
 
   state.assistant.enabled = 1;
-  state.assistant.overlay_opacity = normalizeOpacity(state.assistant.overlay_opacity, 75);
+  state.assistant.overlay_opacity = normalizeAssistantOpacity(state.assistant.overlay_opacity, 75);
   state.assistant.overlay_ball_color = normalizeAssistantColor(
     byId('assistantOverlayBallColor')?.value || state.assistant.overlay_ball_color,
     DEFAULT_OVERLAY_BALL_COLOR
@@ -509,7 +489,7 @@ function readAssistantFromUi() {
   state.assistant.voice_input_device_id = String(getVoiceDeviceSelect()?.value || '').trim();
   state.assistant.rate_limit_enabled = byId('assistantRateEnabled').checked ? 1 : 0;
   state.assistant.rate_limit_per_hour = Math.min(10000, Math.max(1, Math.round(Number(byId('assistantRatePerHour').value || 100))));
-  state.assistant.api_endpoint = (state.assistant.api_endpoint || defaults().api_endpoint).trim() || defaults().api_endpoint;
+  state.assistant.api_endpoint = (state.assistant.api_endpoint || assistantDefaults().api_endpoint).trim() || assistantDefaults().api_endpoint;
   state.assistant.personal_profile = String(byId('assistantProfile')?.value || '').trim();
   state.assistant.api_key = '';
   state.assistant.keep_api_key = Number(state.assistant.has_api_key || 0) !== 0 ? 1 : 0;
@@ -522,7 +502,7 @@ function readAssistantFromUi() {
   state.assistant.voice_model_api_key = '';
   state.assistant.keep_voice_model_api_key = Number(state.assistant.has_voice_model_api_key || 0) !== 0 ? 1 : 0;
 
-  ensureActiveTemplate();
+  ensureAssistantActiveTemplate(state.assistant, fallback);
 }
 
 export async function saveAssistantSettings(options = {}) {
@@ -655,7 +635,7 @@ export function initAssistantHandlers() {
         i += 1;
         name = `template_${i}`;
       }
-      state.assistant.templates.push({ name, prompt: defaults().prompt });
+      state.assistant.templates.push({ name, prompt: assistantDefaults().prompt });
       state.assistant.active_template = name;
       renderTemplateControls();
       scheduleAssistantAutoSave(true);

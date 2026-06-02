@@ -16,7 +16,8 @@
     shell_theme_mode: 'solid',
     shell_theme_primary: '#111111',
     shell_theme_secondary: '#2A2A2A',
-    shell_theme_accent: '#F3F3F3'
+    shell_theme_accent: '#F3F3F3',
+    app_language: 'fr'
   },
   assistant: {
     enabled: 1,
@@ -137,6 +138,13 @@ const confirmState = {
   active: null
 };
 
+function tr(text) {
+  if (typeof window !== 'undefined' && typeof window.__appTranslate === 'function') {
+    return window.__appTranslate(text);
+  }
+  return String(text ?? '');
+}
+
 function ensureToastHost() {
   if (toastState.host && document.body.contains(toastState.host)) {
     return toastState.host;
@@ -170,9 +178,9 @@ function ensureConfirmHost() {
 function inferToastType(message, type = '') {
   if (type) return type;
   const text = String(message || '');
-  if (/失败|错误|异常|invalid|error|failed|无法|未能/i.test(text)) return 'error';
-  if (/警告|注意|提醒|warning/i.test(text)) return 'warning';
-  if (/成功|已保存|已恢复|已完成|已打开|已触发|已更新|录入成功|启动|生成/i.test(text)) return 'success';
+  if (/失败|错误|异常|invalid|error|failed|无法|未能|échec|erreur/i.test(text)) return 'error';
+  if (/警告|注意|提醒|warning|attention/i.test(text)) return 'warning';
+  if (/成功|已保存|已恢复|已完成|已打开|已触发|已更新|录入成功|启动|生成|enregistré|restauré|démarré|réussi/i.test(text)) return 'success';
   return 'info';
 }
 
@@ -188,12 +196,12 @@ function normalizeToastInput(input, options = {}) {
     return normalizeToastInput(input.message || input.msg || '', { ...input, ...options });
   }
 
-  const message = String(input || '').trim();
+  const message = tr(String(input || '').trim());
   const type = inferToastType(message, options.type || '');
   return {
     message,
     type,
-    title: String(options.title || '').trim(),
+    title: tr(String(options.title || '').trim()),
     duration: inferToastDuration(type, options.duration),
     dedupeKey: String(options.dedupeKey || `${type}:${message}`),
     persistent: options.persistent === true
@@ -252,7 +260,7 @@ export function toast(input, options = {}) {
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'toast-close';
-  closeBtn.setAttribute('aria-label', '关闭提示');
+  closeBtn.setAttribute('aria-label', tr('关闭提示'));
   closeBtn.textContent = '×';
   closeBtn.onclick = () => dropToast(id);
 
@@ -319,11 +327,11 @@ export function confirmDialog(message, options = {}) {
 
     const title = document.createElement('div');
     title.className = 'confirm-title';
-    title.textContent = String(options.title || '请确认').trim() || '请确认';
+    title.textContent = tr(String(options.title || '请确认').trim() || '请确认');
 
     const body = document.createElement('div');
     body.className = 'confirm-body';
-    body.textContent = text;
+    body.textContent = tr(text);
 
     const actions = document.createElement('div');
     actions.className = 'confirm-actions';
@@ -331,12 +339,12 @@ export function confirmDialog(message, options = {}) {
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.className = 'btn ghost';
-    cancelBtn.textContent = String(options.cancelText || '取消').trim() || '取消';
+    cancelBtn.textContent = tr(String(options.cancelText || '取消').trim() || '取消');
 
     const okBtn = document.createElement('button');
     okBtn.type = 'button';
     okBtn.className = `btn ${options.danger ? 'danger' : ''}`.trim();
-    okBtn.textContent = String(options.confirmText || '确定').trim() || '确定';
+    okBtn.textContent = tr(String(options.confirmText || '确定').trim() || '确定');
 
     const close = (result) => {
       document.removeEventListener('keydown', onKeyDown, true);
@@ -386,10 +394,10 @@ export function setDirty(v, mode = 'shortcuts') {
 
   const sub = byId('subTitle');
   if (state.dirty || state.notes.dirty || state.notesDisplay.dirty) {
-    sub.textContent = '已修改，系统将自动保存';
+    sub.textContent = tr('已修改，系统将自动保存');
     sub.classList.add('dirty-tip');
   } else {
-    sub.textContent = 'Web UI Config · 黑白风 · 阴影 · 动效';
+    sub.textContent = tr('Web UI Config · 黑白风 · 阴影 · 动效');
     sub.classList.remove('dirty-tip');
   }
 }

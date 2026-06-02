@@ -93,6 +93,7 @@ SaveData() {
     lines.Push("shell_theme_primary=" (gAppSettings.Has("shell_theme_primary") ? gAppSettings["shell_theme_primary"] : "#111111"))
     lines.Push("shell_theme_secondary=" (gAppSettings.Has("shell_theme_secondary") ? gAppSettings["shell_theme_secondary"] : "#2A2A2A"))
     lines.Push("shell_theme_accent=" (gAppSettings.Has("shell_theme_accent") ? gAppSettings["shell_theme_accent"] : "#F3F3F3"))
+    lines.Push("app_language=" (gAppSettings.Has("app_language") ? gAppSettings["app_language"] : "fr"))
     lines.Push("shortcuts_selected_category=" (gAppSettings.Has("shortcuts_selected_category") ? gAppSettings["shortcuts_selected_category"] : "fields"))
     lines.Push("capture_dir=" gCaptureDir)
     lines.Push("notes_overlay_x=" (gAppSettings.Has("notes_overlay_x") ? gAppSettings["notes_overlay_x"] : ""))

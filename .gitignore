@@ -3,6 +3,7 @@ assistant_voice_sessions.jsonl
 assistant_rate.ini
 usage.ini
 config.ini.autobak
+backups/shortcuts/*.json
 captures/latest.png
 captures/cap_*.png
 notes/_snapshots/

@@ -44,6 +44,7 @@ EnsureDataFile() {
         . "shell_theme_primary=#111111`n"
         . "shell_theme_secondary=#2A2A2A`n"
         . "shell_theme_accent=#F3F3F3`n"
+        . "app_language=fr`n"
         . "capture_dir=" A_ScriptDir "\\captures`n"
         . "`n[Capture]`n"
         . "upload_endpoint=https://0x0.st`n"
@@ -237,6 +238,7 @@ LoadAppSettings() {
         "shell_theme_primary", "#111111",
         "shell_theme_secondary", "#2A2A2A",
         "shell_theme_accent", "#F3F3F3",
+        "app_language", "fr",
         "shortcuts_selected_category", "fields",
         "capture_dir", A_ScriptDir "\\captures",
         "notes_overlay_x", "",
@@ -258,6 +260,9 @@ LoadAppSettings() {
         } else if (row["key"] = "shell_theme_mode") {
             modeValue := StrLower(Trim(row["value"]))
             settings["shell_theme_mode"] := (modeValue = "gradient") ? "gradient" : "solid"
+        } else if (row["key"] = "app_language") {
+            langValue := StrLower(Trim(row["value"]))
+            settings["app_language"] := (langValue = "zh" || langValue = "zh-cn") ? "zh" : "fr"
         } else if (row["key"] = "shell_theme_primary") {
             primary := Trim(row["value"])
             if (primary != "") {

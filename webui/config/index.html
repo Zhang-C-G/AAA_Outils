@@ -1,9 +1,9 @@
 ﻿<!doctype html>
-<html lang="zh-CN">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Raccourci Control Web UI</title>
+  <title>Interface Web Raccourci Control</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -48,9 +48,24 @@
           </table>
         </div>
 
-        <div class="row-actions">
-          <button id="addRowBtn" class="btn">新增条目</button>
-          <button id="deleteTabBtn" class="btn danger">删除当前栏目</button>
+        <div class="row-actions shortcuts-data-actions">
+          <div class="shortcuts-backup-group">
+            <button id="backupShortcutsBtn" class="btn ghost" type="button" title="写入项目 backups/shortcuts 目录">备份字段</button>
+            <button id="restoreShortcutsBtn" class="btn ghost" type="button" title="从最近一次备份恢复栏目与条目">从最近备份恢复</button>
+            <label class="shortcuts-export-format">
+              <span>导出为</span>
+              <select id="exportShortcutsFormat">
+                <option value="json">JSON</option>
+                <option value="ini">INI 片段</option>
+                <option value="csv">CSV</option>
+              </select>
+            </label>
+            <button id="exportShortcutsBtn" class="btn ghost" type="button">导出字段</button>
+          </div>
+          <div class="shortcuts-row-group">
+            <button id="addRowBtn" class="btn">新增条目</button>
+            <button id="deleteTabBtn" class="btn danger">删除当前栏目</button>
+          </div>
         </div>
       </section>
     </section>

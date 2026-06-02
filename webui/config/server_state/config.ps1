@@ -39,6 +39,16 @@ function Normalize-TestingSubview {
   return 'assistant_benchmark'
 }
 
+function Normalize-AppLanguage {
+  param([string]$Language)
+
+  $value = ([string]$Language).Trim().ToLowerInvariant()
+  if ($value -eq 'zh' -or $value -eq 'zh-cn') {
+    return 'zh'
+  }
+  return 'fr'
+}
+
 function Ensure-BuiltinCategories {
   param($Cats)
 
@@ -254,6 +264,7 @@ function Get-ConfigState {
     shell_theme_primary = '#111111'
     shell_theme_secondary = '#2A2A2A'
     shell_theme_accent = '#F3F3F3'
+    app_language = 'fr'
     shortcuts_selected_category = 'fields'
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
@@ -298,6 +309,9 @@ function Get-ConfigState {
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_accent')) {
     $app['shell_theme_accent'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_accent']) '#F3F3F3'
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('app_language')) {
+    $app['app_language'] = Normalize-AppLanguage ([string]$ini['App']['app_language'])
   }
 
   return [ordered]@{
@@ -342,6 +356,7 @@ function Get-AppShellState {
     shell_theme_primary = '#111111'
     shell_theme_secondary = '#2A2A2A'
     shell_theme_accent = '#F3F3F3'
+    app_language = 'fr'
     shortcuts_selected_category = 'fields'
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('active_mode')) {
@@ -386,6 +401,9 @@ function Get-AppShellState {
   }
   if ($ini.Contains('App') -and $ini['App'].Contains('shell_theme_accent')) {
     $app['shell_theme_accent'] = Normalize-AppThemeColor ([string]$ini['App']['shell_theme_accent']) '#F3F3F3'
+  }
+  if ($ini.Contains('App') -and $ini['App'].Contains('app_language')) {
+    $app['app_language'] = Normalize-AppLanguage ([string]$ini['App']['app_language'])
   }
 
   $result = [ordered]@{
@@ -507,6 +525,7 @@ function Write-ConfigState {
   $currentThemePrimary = '#111111'
   $currentThemeSecondary = '#2A2A2A'
   $currentThemeAccent = '#F3F3F3'
+  $currentAppLanguage = 'fr'
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('active_mode')) {
     $currentMode = Normalize-Mode([string]$currentIni['App']['active_mode'])
   }
@@ -550,6 +569,9 @@ function Write-ConfigState {
   if ($currentIni.Contains('App') -and $currentIni['App'].Contains('shell_theme_accent')) {
     $currentThemeAccent = Normalize-AppThemeColor ([string]$currentIni['App']['shell_theme_accent']) '#F3F3F3'
   }
+  if ($currentIni.Contains('App') -and $currentIni['App'].Contains('app_language')) {
+    $currentAppLanguage = Normalize-AppLanguage ([string]$currentIni['App']['app_language'])
+  }
   $appPayload = Get-Prop $Payload 'app' $null
   $mode = Normalize-Mode([string](Get-Prop $appPayload 'active_mode' $currentMode))
   $modeOrder = Normalize-ModeOrder((Get-Prop $appPayload 'mode_order' $currentOrder))
@@ -565,6 +587,7 @@ function Write-ConfigState {
   $themePrimary = Normalize-AppThemeColor ([string](Get-Prop $appPayload 'shell_theme_primary' $currentThemePrimary)) '#111111'
   $themeSecondary = Normalize-AppThemeColor ([string](Get-Prop $appPayload 'shell_theme_secondary' $currentThemeSecondary)) '#2A2A2A'
   $themeAccent = Normalize-AppThemeColor ([string](Get-Prop $appPayload 'shell_theme_accent' $currentThemeAccent)) '#F3F3F3'
+  $appLanguage = Normalize-AppLanguage ([string](Get-Prop $appPayload 'app_language' $currentAppLanguage))
   if ([string]::IsNullOrWhiteSpace($selectedCategory)) {
     $selectedCategory = $currentSelectedCategory
   }
@@ -580,6 +603,7 @@ function Write-ConfigState {
   $lines.Add('shell_theme_primary=' + $themePrimary)
   $lines.Add('shell_theme_secondary=' + $themeSecondary)
   $lines.Add('shell_theme_accent=' + $themeAccent)
+  $lines.Add('app_language=' + $appLanguage)
   $lines.Add('shortcuts_selected_category=' + $selectedCategory)
 
   $capture = Get-CaptureSettings
@@ -917,6 +941,30 @@ function Set-AppShortcutsSelectedCategory {
   Write-Ini $ini
 
   Write-AppLog 'shortcuts_category_save' ('shortcuts_selected_category=' + $selectedCategory)
+}
+
+function Set-AppLanguage {
+  param([string]$Language)
+
+  $ini = Read-Ini $DataFile
+  if (-not $ini.Contains('App')) {
+    $ini['App'] = [ordered]@{}
+  }
+  if (-not $ini['App'].Contains('active_mode')) {
+    $ini['App']['active_mode'] = 'shortcuts'
+  } else {
+    $ini['App']['active_mode'] = Normalize-Mode ([string]$ini['App']['active_mode'])
+  }
+  if (-not $ini['App'].Contains('mode_order')) {
+    $ini['App']['mode_order'] = [string]::Join(',', (Get-DefaultModeOrder))
+  } else {
+    $ini['App']['mode_order'] = [string]::Join(',', (Normalize-ModeOrder([string]$ini['App']['mode_order'])))
+  }
+  $ini['App']['app_language'] = Normalize-AppLanguage $Language
+  Write-Ini $ini
+
+  [IO.File]::WriteAllText($ActionFile, 'reload', [Text.Encoding]::UTF8)
+  Write-AppLog 'app_language_save' ('app_language=' + $ini['App']['app_language'])
 }
 
 

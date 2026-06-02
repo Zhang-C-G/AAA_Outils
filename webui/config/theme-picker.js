@@ -1,3 +1,5 @@
+import { t } from './app-i18n.js';
+
 const DEFAULT_THEME = Object.freeze({
   mode: 'solid',
   primary: '#111111',
@@ -91,7 +93,7 @@ function createPresetButton(preset, onSelect) {
   button.dataset.presetId = preset.id;
   button.innerHTML = `
     <span class="shell-theme-preset-swatch"></span>
-    <span class="shell-theme-preset-label">${preset.label}</span>
+    <span class="shell-theme-preset-label">${t(preset.label)}</span>
   `;
   const swatch = button.querySelector('.shell-theme-preset-swatch');
   swatch.style.background = preset.mode === 'gradient'
@@ -105,34 +107,43 @@ export function mountThemePicker(host, options = {}) {
   if (!host) return null;
 
   const onChange = typeof options.onChange === 'function' ? options.onChange : () => {};
+  const onLanguageChange = typeof options.onLanguageChange === 'function' ? options.onLanguageChange : () => {};
   const initialTheme = normalizeThemeSettings(options.value || DEFAULT_THEME);
+  const initialLanguage = String(options.language || 'fr').trim().toLowerCase() === 'zh' ? 'zh' : 'fr';
   let current = { ...initialTheme };
 
   host.innerHTML = `
     <div class="shell-theme-panel">
       <div class="shell-theme-panel-head">
         <div>
-          <strong>主题设置</strong>
-          <span>预设和色轮修改后立即生效</span>
+          <strong>${t('主题设置')}</strong>
+          <span>${t('预设和色轮修改后立即生效')}</span>
         </div>
-        <button type="button" class="btn ghost shell-theme-close">关闭</button>
+        <button type="button" class="btn ghost shell-theme-close">${t('关闭')}</button>
       </div>
+      <label class="assistant-topmost-field">
+        <span>${t('语言')}</span>
+        <select id="shellThemeLanguage">
+          <option value="fr">${t('法语')}</option>
+          <option value="zh">${t('中文')}</option>
+        </select>
+      </label>
       <div class="shell-theme-preview" id="shellThemePreview"></div>
       <div class="shell-theme-segment">
-        <button type="button" class="shell-theme-segment-btn" data-mode="solid">纯色</button>
-        <button type="button" class="shell-theme-segment-btn" data-mode="gradient">渐变</button>
+        <button type="button" class="shell-theme-segment-btn" data-mode="solid">${t('纯色')}</button>
+        <button type="button" class="shell-theme-segment-btn" data-mode="gradient">${t('渐变')}</button>
       </div>
       <div class="shell-theme-preset-grid" id="shellThemePresetGrid"></div>
       <div class="shell-theme-fields">
         <label class="assistant-color-field">
-          <span>主色</span>
+          <span>${t('主色')}</span>
           <div class="assistant-color-picker-row">
             <input id="shellThemePrimary" type="color" />
             <input id="shellThemePrimaryText" type="text" readonly />
           </div>
         </label>
         <label class="assistant-color-field">
-          <span>副色</span>
+          <span>${t('副色')}</span>
           <div class="assistant-color-picker-row">
             <input id="shellThemeSecondary" type="color" />
             <input id="shellThemeSecondaryText" type="text" readonly />
@@ -148,6 +159,7 @@ export function mountThemePicker(host, options = {}) {
   const primaryText = host.querySelector('#shellThemePrimaryText');
   const secondary = host.querySelector('#shellThemeSecondary');
   const secondaryText = host.querySelector('#shellThemeSecondaryText');
+  const language = host.querySelector('#shellThemeLanguage');
   const segmentButtons = Array.from(host.querySelectorAll('.shell-theme-segment-btn'));
 
   function syncUi() {
@@ -203,6 +215,8 @@ export function mountThemePicker(host, options = {}) {
     current.secondary = normalizeHex(secondary.value, current.secondary);
     emitChange();
   };
+  language.value = initialLanguage;
+  language.onchange = () => onLanguageChange(language.value);
 
   host.querySelector('.shell-theme-close').onclick = () => {
     host.classList.add('hidden');
@@ -214,6 +228,9 @@ export function mountThemePicker(host, options = {}) {
     setValue(nextTheme) {
       current = normalizeThemeSettings(nextTheme);
       syncUi();
+    },
+    setLanguage(nextLanguage) {
+      language.value = String(nextLanguage || 'fr').trim().toLowerCase() === 'zh' ? 'zh' : 'fr';
     },
     open() {
       host.classList.remove('hidden');

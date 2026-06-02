@@ -27,6 +27,7 @@ $moduleRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $moduleRoot 'server-assistant.ps1')
 . (Join-Path $moduleRoot 'server-resume.ps1')
 . (Join-Path $moduleRoot 'server-testing.ps1')
+. (Join-Path $moduleRoot 'server-shortcuts.ps1')
 
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://127.0.0.1:$Port/")
@@ -69,7 +70,68 @@ while ($true) {
       $promptsCount = @((Get-Prop $dataObj 'prompts' @())).Count
       Write-AppLog 'config_save_payload' ("categories=$catCount hasData=$hasData hasHotkeys=$hasHotkeys rows(fields=$fieldsCount,prompts=$promptsCount,quick_fields=$qfCount)")
       Write-ConfigState $payload
+      try {
+        Save-ShortcutsFieldsBackup -Reason 'auto_save' -Categories (Get-Prop $payload 'categories' @()) -Data (Get-Prop $payload 'data' $null) | Out-Null
+      } catch {
+        Write-AppLog 'shortcuts_fields_backup_auto_failed' $_.Exception.Message
+      }
       Send-Json $res ([ordered]@{ ok=$true })
+    }
+    elseif ($path -eq '/api/shortcuts/backup' -and $method -eq 'POST') {
+      $result = Save-ShortcutsFieldsBackup -Reason 'manual'
+      Send-Json $res $result
+    }
+    elseif ($path -eq '/api/shortcuts/backups' -and $method -eq 'GET') {
+      Send-Json $res ([ordered]@{
+        ok = $true
+        dir = (Get-ShortcutsBackupDir)
+        items = (Get-ShortcutsFieldsBackupList)
+      })
+    }
+    elseif ($path -eq '/api/shortcuts/export' -and $method -eq 'GET') {
+      $format = ([string]$req.QueryString['format']).Trim().ToLowerInvariant()
+      if ($format -eq '') { $format = 'json' }
+      $export = Get-ShortcutsFieldsExportObject -Source 'export'
+      $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+      if ($format -eq 'ini') {
+        $text = ConvertTo-ShortcutsFieldsIniText -ExportObject $export
+        $bytes = [Text.Encoding]::UTF8.GetBytes($text)
+        Send-Bytes $res $bytes 'text/plain; charset=utf-8' ("shortcuts_fields_$stamp.ini")
+      }
+      elseif ($format -eq 'csv') {
+        $lines = New-Object System.Collections.Generic.List[string]
+        $lines.Add('category_id,category_name,key,value,usage')
+        foreach ($cat in @($export.categories)) {
+          $catId = [string](Get-Prop $cat 'id' '')
+          $catName = [string](Get-Prop $cat 'name' $catId)
+          $lookup = Try-GetDataRows -PayloadData $export.data -CategoryId $catId
+          if (-not $lookup.found) { continue }
+          foreach ($row in @($lookup.rows)) {
+            $key = ([string](Get-Prop $row 'key' '')).Trim()
+            if ($key -eq '') { continue }
+            $value = ([string](Get-Prop $row 'value' ''))
+            $usage = [string](Get-Prop $row 'usage' 0)
+            $escapedValue = '"' + ($value -replace '"', '""') + '"'
+            $escapedName = '"' + ($catName -replace '"', '""') + '"'
+            $escapedKey = '"' + ($key -replace '"', '""') + '"'
+            $lines.Add("$catId,$escapedName,$escapedKey,$escapedValue,$usage")
+          }
+        }
+        $text = [string]::Join([Environment]::NewLine, $lines)
+        $bytes = [Text.Encoding]::UTF8.GetBytes($text)
+        Send-Bytes $res $bytes 'text/csv; charset=utf-8' ("shortcuts_fields_$stamp.csv")
+      }
+      else {
+        $json = $export | ConvertTo-Json -Depth 30
+        $bytes = [Text.Encoding]::UTF8.GetBytes($json)
+        Send-Bytes $res $bytes 'application/json; charset=utf-8' ("shortcuts_fields_$stamp.json")
+      }
+    }
+    elseif ($path -eq '/api/shortcuts/restore' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      $fileName = [string](Get-Prop $payload 'file' 'latest.json')
+      $result = Restore-ShortcutsFieldsBackup -FileName $fileName
+      Send-Json $res $result
     }
     elseif ($path -eq '/api/version/save' -and $method -eq 'POST') {
       Copy-Item -LiteralPath $DataFile -Destination $SnapshotFile -Force
@@ -122,6 +184,11 @@ while ($true) {
     elseif ($path -eq '/api/app/theme' -and $method -eq 'POST') {
       $payload = Read-BodyJson $req
       Set-AppTheme -Theme $payload
+      Send-Json $res ([ordered]@{ ok=$true })
+    }
+    elseif ($path -eq '/api/app/language' -and $method -eq 'POST') {
+      $payload = Read-BodyJson $req
+      Set-AppLanguage -Language ([string](Get-Prop $payload 'app_language' 'fr'))
       Send-Json $res ([ordered]@{ ok=$true })
     }
     elseif ($path -eq '/api/app/shortcuts-category' -and $method -eq 'POST') {

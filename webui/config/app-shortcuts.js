@@ -240,6 +240,162 @@ async function runAutoSave() {
   }
 }
 
+const SHORTCUTS_EXPORT_FORMAT = 'raccourci-shortcuts-fields-v1';
+
+function buildShortcutsExportPayload() {
+  const categories = state.categories.map((cat) => ({
+    id: String(cat?.id || '').trim(),
+    name: String(cat?.name || '').trim(),
+    builtin: cat?.builtin ? 1 : 0
+  })).filter((cat) => cat.id);
+
+  const data = buildSanitizedData();
+  return {
+    format: SHORTCUTS_EXPORT_FORMAT,
+    exported_at: new Date().toISOString(),
+    source: 'web_ui',
+    categories,
+    data
+  };
+}
+
+function triggerTextDownload(filename, mimeType, text) {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function triggerBlobDownload(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function parseContentDispositionFilename(headerValue, fallback) {
+  const raw = String(headerValue || '').trim();
+  const match = /filename="([^"]+)"/i.exec(raw);
+  return match?.[1] || fallback;
+}
+
+function shortcutsExportStamp() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+}
+
+function buildShortcutsIniText(payload) {
+  const lines = ['[Categories]'];
+  for (const cat of payload.categories) {
+    lines.push(`${cat.id}=${cat.name || cat.id}`);
+  }
+  for (const cat of payload.categories) {
+    const section = cat.id === 'fields'
+      ? 'Fields'
+      : (cat.id === 'prompts'
+        ? 'Prompts'
+        : (cat.id === 'quick_fields' ? 'QuickFields' : `Category_${cat.id}`));
+    lines.push('');
+    lines.push(`[${section}]`);
+    const rows = Array.isArray(payload.data?.[cat.id]) ? payload.data[cat.id] : [];
+    for (const row of rows) {
+      const key = String(row?.key || '').trim();
+      if (!key) continue;
+      const value = String(row?.value || '').replace(/\r?\n/g, ' ');
+      lines.push(`${key}=${value}`);
+    }
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+function buildShortcutsCsvText(payload) {
+  const lines = ['category_id,category_name,key,value,usage'];
+  for (const cat of payload.categories) {
+    const rows = Array.isArray(payload.data?.[cat.id]) ? payload.data[cat.id] : [];
+    for (const row of rows) {
+      const key = String(row?.key || '').trim();
+      if (!key) continue;
+      const value = String(row?.value || '');
+      const usage = Number.isFinite(Number(row?.usage)) ? Math.max(0, Math.trunc(Number(row.usage))) : 0;
+      const esc = (text) => `"${String(text).replace(/"/g, '""')}"`;
+      lines.push([
+        cat.id,
+        esc(cat.name || cat.id),
+        esc(key),
+        esc(value),
+        usage
+      ].join(','));
+    }
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+async function downloadShortcutsExportFromServer(format) {
+  const stamp = shortcutsExportStamp();
+  const res = await fetch(`/api/shortcuts/export?format=${encodeURIComponent(format)}`, { cache: 'no-store' });
+  if (!res.ok) {
+    let message = `导出失败 (${res.status})`;
+    try {
+      const txt = await res.text();
+      if (txt) message = txt;
+    } catch {}
+    throw new Error(message);
+  }
+  const blob = await res.blob();
+  const fallback = `shortcuts_fields_${stamp}.${format === 'ini' ? 'ini' : (format === 'csv' ? 'csv' : 'json')}`;
+  const filename = parseContentDispositionFilename(res.headers.get('Content-Disposition'), fallback);
+  triggerBlobDownload(filename, blob);
+}
+
+export async function backupShortcutsFields() {
+  if (state.dirty) {
+    await saveShortcuts({ silent: true });
+  }
+  const payload = await api('/api/shortcuts/backup', { method: 'POST', body: '{}' });
+  if (!payload?.ok) {
+    throw new Error(payload?.error || '备份失败');
+  }
+  return payload;
+}
+
+export async function restoreShortcutsFieldsFromLatestBackup() {
+  const payload = await api('/api/shortcuts/restore', {
+    method: 'POST',
+    body: JSON.stringify({ file: 'latest.json' })
+  });
+  if (!payload?.ok) {
+    throw new Error(payload?.error || '恢复失败');
+  }
+  return payload;
+}
+
+export async function exportShortcutsFields() {
+  if (state.dirty) {
+    await saveShortcuts({ silent: true });
+  }
+
+  const format = String(byId('exportShortcutsFormat')?.value || 'json').trim().toLowerCase();
+  if (format === 'json') {
+    const payload = buildShortcutsExportPayload();
+    const stamp = shortcutsExportStamp();
+    triggerTextDownload(
+      `shortcuts_fields_${stamp}.json`,
+      'application/json;charset=utf-8',
+      `${JSON.stringify(payload, null, 2)}\n`
+    );
+    return { format, mode: 'local' };
+  }
+
+  await downloadShortcutsExportFromServer(format);
+  return { format, mode: 'server' };
+}
+
 function buildSanitizedData() {
   const out = {};
   for (const cat of state.categories) {
@@ -728,6 +884,49 @@ export function initShortcutsHandlers() {
     toast('已恢复默认快捷键');
     scheduleAutoSave();
   };
+
+  const backupShortcutsBtn = byId('backupShortcutsBtn');
+  if (backupShortcutsBtn) {
+    backupShortcutsBtn.onclick = () => {
+      backupShortcutsFields()
+        .then((result) => {
+          toast(`字段已备份：${result.file || 'latest.json'}`);
+        })
+        .catch((error) => toast(`备份失败: ${error.message}`));
+    };
+  }
+
+  const exportShortcutsBtn = byId('exportShortcutsBtn');
+  if (exportShortcutsBtn) {
+    exportShortcutsBtn.onclick = () => {
+      exportShortcutsFields()
+        .then((result) => {
+          const label = result.format === 'csv' ? 'CSV' : (result.format === 'ini' ? 'INI' : 'JSON');
+          toast(`已导出为 ${label}`);
+        })
+        .catch((error) => toast(`导出失败: ${error.message}`));
+    };
+  }
+
+  const restoreShortcutsBtn = byId('restoreShortcutsBtn');
+  if (restoreShortcutsBtn) {
+    restoreShortcutsBtn.onclick = async () => {
+      if (!(await confirmDialog(
+        '将从 backups/shortcuts/latest.json 恢复所有栏目与条目，并覆盖当前配置中的对应内容。是否继续？',
+        { title: '从最近备份恢复', confirmText: '恢复', danger: true }
+      ))) {
+        return;
+      }
+      try {
+        await restoreShortcutsFieldsFromLatestBackup();
+        const payload = await api('/api/state');
+        applyShortcutsState(payload);
+        toast('已从最近备份恢复字段');
+      } catch (error) {
+        toast(`恢复失败: ${error.message}`);
+      }
+    };
+  }
 
 }
 

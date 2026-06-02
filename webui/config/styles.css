@@ -291,6 +291,23 @@ select {
 }
 textarea { min-height: 56px; resize: vertical; }
 .row-actions { display: flex; justify-content: space-between; margin-top: 12px; }
+.shortcuts-data-actions { align-items: center; gap: 12px; flex-wrap: wrap; }
+.shortcuts-backup-group,
+.shortcuts-row-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.shortcuts-export-format {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted, #666);
+}
+.shortcuts-export-format select {
+  min-width: 108px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #d8d8d8);
+  background: var(--bg-panel, #fff);
+}
 .side h2 { font-size: 18px; margin: 8px 0; }
 .mini-actions { margin-bottom: 8px; }
 .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }

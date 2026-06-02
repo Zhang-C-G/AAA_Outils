@@ -623,14 +623,26 @@ async function switchModeInternal(mode, options = {}) {
     await saveCurrentNotesDisplayNote();
   }
 
+  const saveBtnSafe = byId('saveBtn');
+  if (saveBtnSafe) {
+    saveBtnSafe.textContent = getSaveButtonLabel(mode);
+  }
+
   state.app.active_mode = mode;
   setModeUi(mode);
 
   const saveBtn = byId('saveBtn');
   if (saveBtn) {
-    saveBtn.textContent = getSaveButtonLabel(mode);
+    saveBtn.textContent =
+      mode === 'shortcuts' ? t('保存') :
+      (mode === 'hotkeys' ? t('保存快捷键') :
+      (mode === 'notes' ? t('保存笔记') :
+      (mode === 'notes_display' ? t('保存笔记显示内容') :
+      (mode === 'capture' ? t('保存截图设置') :
+      (mode === 'assistant' ? t('保存助手设置') :
+      (mode === 'resume' ? t('简历自动保存') :
+      (mode === 'api_center' ? t('刷新 API 信息') : t('执行测试')))))));
   }
-
 
   const persistedMode = (mode === 'hotkeys' || mode === 'testing') ? 'shortcuts' : mode;
   if (persist) {
