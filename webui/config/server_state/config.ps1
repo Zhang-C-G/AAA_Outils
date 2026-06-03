@@ -199,8 +199,10 @@ function Get-ConfigState {
     if ($id -eq '') { continue }
 
     $section = Get-CategorySection $id
+    $descSection = Get-CategoryDescriptionSection $id
     $usageSection = 'Usage_' + $id
     $usage = if ($usageIni.Contains($usageSection)) { $usageIni[$usageSection] } else { [ordered]@{} }
+    $descriptions = if ($ini.Contains($descSection)) { $ini[$descSection] } else { [ordered]@{} }
 
     $rows = @()
     if ($ini.Contains($section)) {
@@ -210,6 +212,7 @@ function Get-ConfigState {
         $rows += [ordered]@{
           key = [string]$k
           value = [string]$ini[$section][$k]
+          desc = if ($descriptions.Contains($k)) { [string]$descriptions[$k] } else { '' }
           usage = $u
         }
       }
@@ -450,26 +453,46 @@ function Write-ConfigState {
   foreach ($cat in $cats) {
     $id = [string]$cat.id
     $section = Get-CategorySection $id
+    $descSection = Get-CategoryDescriptionSection $id
     $lines.Add('')
     $lines.Add("[$section]")
 
     $lookup = Try-GetDataRows -PayloadData $payloadData -CategoryId $id
     if ($lookup.found) {
       $incomingLines = New-Object System.Collections.Generic.List[string]
+      $incomingDescLines = New-Object System.Collections.Generic.List[string]
       foreach ($row in $lookup.rows) {
         $key = ([string](Get-Prop $row 'key' '')).Trim()
         if ($key -eq '') { continue }
 
         $value = ([string](Get-Prop $row 'value' '')) -replace '[\r\n]+', ' '
+        $desc = ([string](Get-Prop $row 'desc' '')) -replace '[\r\n]+', ' '
         $incomingLines.Add("$key=$value")
+        if (-not [string]::IsNullOrWhiteSpace($desc)) {
+          $incomingDescLines.Add("$key=$desc")
+        }
       }
 
       foreach ($line in $incomingLines) {
         $lines.Add($line)
       }
+      if ($incomingDescLines.Count -gt 0) {
+        $lines.Add('')
+        $lines.Add("[$descSection]")
+        foreach ($line in $incomingDescLines) {
+          $lines.Add($line)
+        }
+      }
     } elseif ($currentIni.Contains($section)) {
       foreach ($k in $currentIni[$section].Keys) {
         $lines.Add(([string]$k + '=' + [string]$currentIni[$section][$k]))
+      }
+      if ($currentIni.Contains($descSection)) {
+        $lines.Add('')
+        $lines.Add("[$descSection]")
+        foreach ($k in $currentIni[$descSection].Keys) {
+          $lines.Add(([string]$k + '=' + [string]$currentIni[$descSection][$k]))
+        }
       }
     }
   }

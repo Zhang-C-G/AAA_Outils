@@ -213,6 +213,11 @@ function Get-CategorySection {
   return 'Category_' + $Id
 }
 
+function Get-CategoryDescriptionSection {
+  param([string]$Id)
+  return (Get-CategorySection $Id) + '_Descriptions'
+}
+
 function Normalize-Mode {
   param([string]$Mode)
   $m = ($Mode + '').Trim().ToLowerInvariant()

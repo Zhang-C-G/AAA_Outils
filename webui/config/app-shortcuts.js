@@ -304,24 +304,36 @@ function buildShortcutsIniText(payload) {
     lines.push('');
     lines.push(`[${section}]`);
     const rows = Array.isArray(payload.data?.[cat.id]) ? payload.data[cat.id] : [];
+    const descSection = `${section}_Descriptions`;
+    const descLines = [];
     for (const row of rows) {
       const key = String(row?.key || '').trim();
       if (!key) continue;
       const value = String(row?.value || '').replace(/\r?\n/g, ' ');
       lines.push(`${key}=${value}`);
+      const desc = String(row?.desc || '').replace(/\r?\n/g, ' ').trim();
+      if (desc) {
+        descLines.push(`${key}=${desc}`);
+      }
+    }
+    if (descLines.length) {
+      lines.push('');
+      lines.push(`[${descSection}]`);
+      lines.push(...descLines);
     }
   }
   return `${lines.join('\n')}\n`;
 }
 
 function buildShortcutsCsvText(payload) {
-  const lines = ['category_id,category_name,key,value,usage'];
+  const lines = ['category_id,category_name,key,value,desc,usage'];
   for (const cat of payload.categories) {
     const rows = Array.isArray(payload.data?.[cat.id]) ? payload.data[cat.id] : [];
     for (const row of rows) {
       const key = String(row?.key || '').trim();
       if (!key) continue;
       const value = String(row?.value || '');
+      const desc = String(row?.desc || '');
       const usage = Number.isFinite(Number(row?.usage)) ? Math.max(0, Math.trunc(Number(row.usage))) : 0;
       const esc = (text) => `"${String(text).replace(/"/g, '""')}"`;
       lines.push([
@@ -329,6 +341,7 @@ function buildShortcutsCsvText(payload) {
         esc(cat.name || cat.id),
         esc(key),
         esc(value),
+        esc(desc),
         usage
       ].join(','));
     }
@@ -406,6 +419,7 @@ function buildSanitizedData() {
       .map((r) => ({
         key: String(r?.key || '').trim(),
         value: String(r?.value || ''),
+        desc: String(r?.desc || ''),
         usage: Number.isFinite(Number(r?.usage)) ? Math.max(0, Math.trunc(Number(r.usage))) : 0
       }))
       .filter((r) => r.key !== '');
@@ -552,6 +566,7 @@ function renderRows() {
     tr.innerHTML = `
       <td><input type="text" value="${escapeHtml(row.key || '')}" data-k="key" /></td>
       <td><textarea data-k="value">${escapeHtml(row.value || '')}</textarea></td>
+      <td><textarea data-k="desc" placeholder="说明这个快捷词是做什么的">${escapeHtml(row.desc || '')}</textarea></td>
       <td>${row.usage ?? 0}</td>
       <td><button class="btn danger" data-act="delete">删</button></td>
     `;
@@ -562,6 +577,11 @@ function renderRows() {
     };
     tr.querySelector('[data-k="value"]').oninput = (e) => {
       row.value = e.target.value;
+      setDirty(true, 'shortcuts');
+      scheduleAutoSave();
+    };
+    tr.querySelector('[data-k="desc"]').oninput = (e) => {
+      row.desc = e.target.value;
       setDirty(true, 'shortcuts');
       scheduleAutoSave();
     };
@@ -733,6 +753,14 @@ export function applyShortcutsState(payload) {
     state.categories.splice(Math.min(2, state.categories.length), 0, { id: 'quick_fields', name: '快捷字段', builtin: 1 });
     state.data.quick_fields ||= [];
   }
+  for (const cat of state.categories) {
+    state.data[cat.id] = (Array.isArray(state.data[cat.id]) ? state.data[cat.id] : []).map((row) => ({
+      key: String(row?.key || ''),
+      value: String(row?.value || ''),
+      desc: String(row?.desc || row?.description || ''),
+      usage: Number.isFinite(Number(row?.usage)) ? Math.max(0, Math.trunc(Number(row.usage))) : 0
+    }));
+  }
 
   const persistedSelectedCategory = String(state.app?.shortcuts_selected_category || '').trim();
   if (persistedSelectedCategory && state.categories.find((c) => c.id === persistedSelectedCategory)) {
@@ -771,7 +799,8 @@ function validateBeforeSave() {
     for (const row of rows) {
       const key = String(row.key || '').trim();
       const val = String(row.value || '').trim();
-      if (!key && !val) continue;
+      const desc = String(row.desc || '').trim();
+      if (!key && !val && !desc) continue;
       if (!key) throw new Error(`栏目【${cat.name}】存在空触发词`);
       const low = key.toLowerCase();
       if (seen.has(low)) throw new Error(`栏目【${cat.name}】触发词重复：${key}`);
@@ -869,7 +898,7 @@ export function initShortcutsHandlers() {
     const catId = state.selectedCategoryId;
     if (!catId) return;
     state.data[catId] ||= [];
-    state.data[catId].push({ key: '', value: '', usage: 0 });
+    state.data[catId].push({ key: '', value: '', desc: '', usage: 0 });
     setDirty(true, 'shortcuts');
     renderRows();
   };

@@ -37,6 +37,7 @@ function New-ShortcutsFieldsExportObject {
         $rows += [ordered]@{
           key = $key
           value = [string](Get-Prop $row 'value' '')
+          desc = [string](Get-Prop $row 'desc' '')
           usage = [Math]::Max(0, $usage)
         }
       }
@@ -198,15 +199,28 @@ function ConvertTo-ShortcutsFieldsIniText {
     $id = ([string](Get-Prop $cat 'id' '')).Trim()
     if ($id -eq '') { continue }
     $section = Get-CategorySection $id
+    $descSection = Get-CategoryDescriptionSection $id
     $lines.Add('')
     $lines.Add("[$section]")
     $lookup = Try-GetDataRows -PayloadData $exportData -CategoryId $id
+    $descLines = New-Object System.Collections.Generic.List[string]
     if ($lookup.found) {
       foreach ($row in @($lookup.rows)) {
         $key = ([string](Get-Prop $row 'key' '')).Trim()
         if ($key -eq '') { continue }
         $value = ([string](Get-Prop $row 'value' '')) -replace '[\r\n]+', ' '
+        $desc = ([string](Get-Prop $row 'desc' '')) -replace '[\r\n]+', ' '
         $lines.Add("$key=$value")
+        if (-not [string]::IsNullOrWhiteSpace($desc)) {
+          $descLines.Add("$key=$desc")
+        }
+      }
+      if ($descLines.Count -gt 0) {
+        $lines.Add('')
+        $lines.Add("[$descSection]")
+        foreach ($line in $descLines) {
+          $lines.Add($line)
+        }
       }
     }
   }

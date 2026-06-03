@@ -100,7 +100,7 @@ while ($true) {
       }
       elseif ($format -eq 'csv') {
         $lines = New-Object System.Collections.Generic.List[string]
-        $lines.Add('category_id,category_name,key,value,usage')
+        $lines.Add('category_id,category_name,key,value,desc,usage')
         foreach ($cat in @($export.categories)) {
           $catId = [string](Get-Prop $cat 'id' '')
           $catName = [string](Get-Prop $cat 'name' $catId)
@@ -110,11 +110,13 @@ while ($true) {
             $key = ([string](Get-Prop $row 'key' '')).Trim()
             if ($key -eq '') { continue }
             $value = ([string](Get-Prop $row 'value' ''))
+            $desc = ([string](Get-Prop $row 'desc' ''))
             $usage = [string](Get-Prop $row 'usage' 0)
             $escapedValue = '"' + ($value -replace '"', '""') + '"'
+            $escapedDesc = '"' + ($desc -replace '"', '""') + '"'
             $escapedName = '"' + ($catName -replace '"', '""') + '"'
             $escapedKey = '"' + ($key -replace '"', '""') + '"'
-            $lines.Add("$catId,$escapedName,$escapedKey,$escapedValue,$usage")
+            $lines.Add("$catId,$escapedName,$escapedKey,$escapedValue,$escapedDesc,$usage")
           }
         }
         $text = [string]::Join([Environment]::NewLine, $lines)
